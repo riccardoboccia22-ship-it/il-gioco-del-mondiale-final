@@ -1,25 +1,22 @@
 import './globals.css';
-import type { Metadata, Viewport } from 'next';
+import type { Metadata } from 'next'; // Rimosso Viewport da qui per evitare l'errore
 import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
 import { Toaster } from 'react-hot-toast'; 
 
 const inter = Inter({ subsets: ['latin'] });
 
-// Definizione del Viewport e Theme Color (Fondamentale per la PWA e mobile)
-export const viewport: Viewport = {
-  themeColor: '#eab308', // Giallo del tema
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // Disabilita lo zoom con le dita per sembrare una vera app
-};
-
-// Metadati e configurazione PWA
+// Configurazione unica: Metadati + PWA + Viewport
 export const metadata: Metadata = {
   title: 'Mondiale 2026 - Pronostici', 
   description: 'Gestisci i tuoi pronostici per il mondiale',
-  manifest: '/manifest.json', // Collega il file d'identità della PWA
+  manifest: '/manifest.json',
+  
+  // Configurazione mobile e colori (Sostituiscono l'oggetto viewport separato)
+  themeColor: '#eab308',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
+  
+  // Impostazioni specifiche per iOS
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
