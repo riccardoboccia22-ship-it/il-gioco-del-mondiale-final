@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, ShieldCheck, Award, Goal, Target,
-  Flame, ArrowUpToLine, ArrowDownToLine, Star, X
+  Flame, ArrowUpToLine, ArrowDownToLine, Star, X, CheckCircle2
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -98,8 +98,9 @@ export default function AdminPage() {
   }
 
   const syncLeaderboard = async (isManual = true) => {
-    if (isManual && !window.confirm('Ricalcolare punti e spareggi?')) return;
+    if (isManual && !window.confirm('Ricalcolare punti e spareggi per tutti?')) return;
     setSyncing(true);
+    const syncToast = !isManual ? toast.loading('Aggiornamento classifica...') : null;
     try {
       const [{ data: profs }, { data: allMatches }, { data: allPreds }, { data: offBonuses }, { data: userBonuses }, { data: offBracket }, { data: userBrackets }] = await Promise.all([
         supabase.from('profiles').select('*'), supabase.from('matches').select('*').eq('is_finished', true),
@@ -107,9 +108,11 @@ export default function AdminPage() {
         supabase.from('user_bonus_answers').select('*'), supabase.from('official_bracket').select('*'), supabase.from('brackets').select('*'),
       ]);
       if (!profs) return;
+
       const updates = profs.map(profile => {
         let pG = 0, pB = 0, pBon = 0, pEx = 0;
         let sW = 0, sF = 0, sSF = 0, sQF = 0, sR16 = 0, sR32 = 0;
+
         const uPreds = allPreds?.filter(p => p.user_id === profile.id) || [];
         uPreds.forEach(pred => {
           const m = allMatches?.find(m => m.id === pred.match_id);
@@ -123,6 +126,7 @@ export default function AdminPage() {
             else if (ph === mh || pa === ma) pG += 2;
           }
         });
+
         const uBrackets = userBrackets?.filter(b => b.user_id === profile.id) || [];
         uBrackets.forEach(ub => {
           const uS = normalizeStage(ub.stage);
@@ -132,6 +136,7 @@ export default function AdminPage() {
             if (uS === 'WINNER') sW += pts; else if (uS === 'F') sF += pts; else if (uS === 'SF') sSF += pts; else if (uS === 'QF') sQF += pts; else if (uS === 'R16') sR16 += pts; else if (uS === 'R32') sR32 += pts;
           }
         });
+
         const ub = userBonuses?.find(b => b.user_id === profile.id);
         if (ub && offBonuses) {
           const bMap: any = { top_scorer: 10, mvp_world_cup: 10, best_goalkeeper: 10, high_scoring_match: 5, highest_scoring_group: 5, lowest_scoring_group: 5, total_red_cards: 3, total_penalties: 3, total_own_goals: 3 };
@@ -139,21 +144,30 @@ export default function AdminPage() {
         }
         return { ...profile, points: pG + pB + pBon, points_groups: pG, points_bracket: pB, points_bonus: pBon, exact_matches: pEx, pts_winner: sW, pts_f: sF, pts_sf: sSF, pts_qf: sQF, pts_r16: sR16, pts_r32: sR32 };
       });
+
       const sorted = [...updates].sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points; if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
-        if (b.points_bonus !== a.points_bonus) return b.points_bonus - a.points_bonus; if (b.pts_winner !== a.pts_winner) return b.pts_winner - a.pts_winner;
-        if (b.pts_f !== a.pts_f) return b.pts_f - a.pts_f; if (b.pts_sf !== a.pts_sf) return b.pts_sf - a.pts_sf; if (b.pts_qf !== a.pts_qf) return b.pts_qf - a.pts_qf;
-        if (b.pts_r16 !== a.pts_r16) return b.pts_r16 - a.pts_r16; if (b.pts_r32 !== a.pts_r32) return b.pts_r32 - a.pts_r32;
+        if (b.points !== a.points) return b.points - a.points; 
+        if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
+        if (b.points_bonus !== a.points_bonus) return b.points_bonus - a.points_bonus; 
+        if (b.pts_winner !== a.pts_winner) return b.pts_winner - a.pts_winner;
+        if (b.pts_f !== a.pts_f) return b.pts_f - a.pts_f; 
+        if (b.pts_sf !== a.pts_sf) return b.pts_sf - a.pts_sf; 
+        if (b.pts_qf !== a.pts_qf) return b.pts_qf - a.pts_qf;
+        if (b.pts_r16 !== a.pts_r16) return b.pts_r16 - a.pts_r16; 
+        if (b.pts_r32 !== a.pts_r32) return b.pts_r32 - a.pts_r32;
         return (a.username || '').localeCompare(b.username || '');
       });
+
       const ranked = sorted.map((u, i) => ({ ...u, ranking: (i + 1).toString() }));
       await supabase.from('profiles').upsert(ranked, { onConflict: 'id' });
-      if (isManual) toast.success('Classifica aggiornata!'); fetchData();
+      if (syncToast) toast.dismiss(syncToast);
+      if (isManual) toast.success('Punti ricalcolati!'); fetchData();
     } catch (err: any) { toast.error(err.message); } finally { setSyncing(false); }
   };
 
   const updateScore = async (id: number) => {
-    const h = (document.getElementById(`h-${id}`) as HTMLInputElement).value, a = (document.getElementById(`a-${id}`) as HTMLInputElement).value;
+    const h = (document.getElementById(`h-${id}`) as HTMLInputElement).value;
+    const a = (document.getElementById(`a-${id}`) as HTMLInputElement).value;
     const isFin = h !== '' && a !== '';
     const { error } = await supabase.from('matches').update({ home_score_final: isFin ? parseInt(h) : null, away_score_final: isFin ? parseInt(a) : null, is_finished: isFin }).eq('id', id);
     if (!error) { toast.success('Risultato salvato!'); await syncLeaderboard(false); }
@@ -169,7 +183,7 @@ export default function AdminPage() {
   const resetBonuses = async () => { if (window.confirm('Svuotare bonus ufficiali?')) { await supabase.from('official_bonuses').upsert({ id: '00000000-0000-0000-0000-000000000000', total_red_cards: null }); setBonusData({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' }); await syncLeaderboard(false); } };
   const saveQualif = async () => {
     const t = (document.getElementById('q_team') as HTMLSelectElement).value, s = (document.getElementById('q_stage') as HTMLSelectElement).value;
-    if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Qualificata salvata!'); await syncLeaderboard(false); } }
+    if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
   };
   const deleteQualif = async (id: any) => { await supabase.from('official_bracket').delete().eq('id', id); await syncLeaderboard(false); };
   const togglePayment = async (uId: string, s: boolean) => { await supabase.from('profiles').update({ is_paid: !s }).eq('id', uId); fetchData(); };
@@ -181,20 +195,21 @@ export default function AdminPage() {
   if (!isAdmin) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-500 font-black">ACCESSO NEGATO</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-3 pb-40 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden">
       <header className="text-center mb-8 pt-4">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter mb-4">Control Tower</h1>
-        <button onClick={() => syncLeaderboard(true)} disabled={syncing} className="w-full max-w-xs bg-emerald-600 px-6 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
+        <button onClick={() => syncLeaderboard(true)} disabled={syncing} className="w-full bg-emerald-600 px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-xl shadow-emerald-600/20">
           <RefreshCw size={18} className={`inline mr-2 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Sync...' : 'Sincronizza Classifica'}
+          {syncing ? 'Sincronizzazione...' : 'Sincronizza Classifica'}
         </button>
       </header>
 
-      <div className="max-w-3xl mx-auto space-y-4">
-        {/* ISCRIZIONI */}
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden">
-          <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3"><Users className="text-emerald-500" size={20} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({profiles.length})</h2></div>
+      <div className="max-w-3xl mx-auto space-y-5">
+        
+        {/* SEZIONE 1: ISCRIZIONI */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+          <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({profiles.length})</h2></div>
             {openSection.iscrizioni ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.iscrizioni && (
@@ -206,8 +221,8 @@ export default function AdminPage() {
                     <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => togglePayment(p.id, p.is_paid)} className={`px-3 py-2 rounded-lg text-[8px] font-black uppercase ${p.is_paid ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}>{p.is_paid ? 'PAGATO' : 'SOLDI'}</button>
-                    <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-lg"><Trash2 size={14} /></button>
+                    <button onClick={() => togglePayment(p.id, p.is_paid)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${p.is_paid ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}>{p.is_paid ? 'PAGATO' : 'SOLDI'}</button>
+                    <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl"><Trash2 size={16} /></button>
                   </div>
                 </div>
               ))}
@@ -215,37 +230,57 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* RISULTATI GIRONI */}
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
-          <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={20} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
+        {/* SEZIONE 2: RISULTATI GIRONI (CARTE GRANDI) */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+          <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
             {openSection.risultati ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.risultati && (
-            <div className="p-4 space-y-4 bg-slate-950/50">
-              <input type="text" placeholder="CERCA SQUADRA..." className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-[10px] font-black uppercase outline-none focus:border-yellow-500" onChange={e => setSearchTerm(e.target.value)} />
+            <div className="p-4 space-y-6 bg-slate-950/30">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
+                <input type="text" placeholder="CERCA SQUADRA..." className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase outline-none focus:border-yellow-500" onChange={e => setSearchTerm(e.target.value)} />
+              </div>
               <div className="grid gap-4">
                 {matches.filter(m => m.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || m.away_team.toLowerCase().includes(searchTerm.toLowerCase())).map(m => {
                   const hasR = m.is_finished && m.home_score_final !== null;
                   return (
-                    <div key={m.id} className={`bg-slate-900 p-4 rounded-2xl border ${hasR ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/5' : 'border-slate-800'}`}>
-                      <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2"><span className="text-[8px] font-black text-slate-600 uppercase italic">#{m.id}</span></div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                          <img src={`https://flagcdn.com/w40/${flagMap[m.home_team.toLowerCase()] || 'un'}.png`} className="w-6 h-4 object-cover rounded-sm" alt="" />
-                          <span className="text-[9px] font-black uppercase truncate w-full italic text-center">{m.home_team}</span>
-                        </div>
-                        <div className="flex items-center gap-1 px-1">
-                          <input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} className="w-10 h-10 bg-slate-950 rounded-lg text-center font-black text-yellow-500 border border-slate-700 outline-none text-sm" />
-                          <span className="text-slate-700 font-black text-xs">-</span>
-                          <input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-950 rounded-lg text-center font-black text-yellow-500 border border-slate-700 outline-none text-sm" />
-                        </div>
-                        <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                          <img src={`https://flagcdn.com/w40/${flagMap[m.away_team.toLowerCase()] || 'un'}.png`} className="w-6 h-4 object-cover rounded-sm" alt="" />
-                          <span className="text-[9px] font-black uppercase truncate w-full italic text-center">{m.away_team}</span>
-                        </div>
-                        <button onClick={() => updateScore(m.id)} className={`ml-2 p-3 rounded-xl ${hasR ? 'bg-emerald-500 text-slate-950' : 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/10'}`}><Target size={16} /></button>
+                    <div key={m.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${hasR ? 'border-emerald-500/40 shadow-xl' : 'border-slate-800 shadow-lg'}`}>
+                      <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-2">
+                        <span className="text-[10px] font-black text-slate-500 uppercase italic">Match #{m.id}</span>
+                        {hasR && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
                       </div>
+
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        {/* Casa */}
+                        <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                          <img src={`https://flagcdn.com/w40/${flagMap[m.home_team.toLowerCase()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow-md" alt="" />
+                          <span className="text-[10px] font-black uppercase text-center truncate w-full italic text-white">{m.home_team}</span>
+                        </div>
+
+                        {/* Input Centrali */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" />
+                          <span className="text-slate-700 font-black">-</span>
+                          <input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" />
+                        </div>
+
+                        {/* Trasferta */}
+                        <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                          <img src={`https://flagcdn.com/w40/${flagMap[m.away_team.toLowerCase()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow-md" alt="" />
+                          <span className="text-[10px] font-black uppercase text-center truncate w-full italic text-white">{m.away_team}</span>
+                        </div>
+                      </div>
+
+                      {/* TASTO CONFERMA GRANDE */}
+                      <button 
+                        onClick={() => updateScore(m.id)} 
+                        className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase text-xs tracking-widest transition-all active:scale-95 ${hasR ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'}`}
+                      >
+                        <CheckCircle2 size={16} />
+                        {hasR ? 'Aggiorna Risultato' : 'Conferma Risultato'}
+                      </button>
                     </div>
                   );
                 })}
@@ -254,27 +289,33 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* TABELLONE */}
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden">
-          <button onClick={() => setOpenSection({ ...openSection, tabellone: !openSection.tabellone })} className="w-full p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3"><Trophy className="text-blue-500" size={20} /><h2 className="text-lg font-black uppercase italic tracking-tight">Fase Finale</h2></div>
+        {/* SEZIONE 3: TABELLONE FINALE */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+          <button onClick={() => setOpenSection({ ...openSection, tabellone: !openSection.tabellone })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Trophy className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Fase Finale</h2></div>
             {openSection.tabellone ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.tabellone && (
-            <div className="p-4 space-y-4 bg-slate-950/50">
-              <select id="q_team" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-[10px] text-white uppercase outline-none focus:border-blue-500"><option value="">SQUADRA...</option>{TEAMS_2026.map(t => (<option key={t} value={t}>{t}</option>))}</select>
-              <select id="q_stage" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-[10px] text-white uppercase outline-none focus:border-blue-500">{STAGES.map(s => (<option key={s.id} value={s.id}>{s.label}</option>))}</select>
-              <button onClick={saveQualif} className="w-full bg-blue-600 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all">REGISTRA</button>
+            <div className="p-5 space-y-5 bg-slate-950/30">
               <div className="space-y-3">
+                <select id="q_team" className="w-full bg-slate-900 border-2 border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-blue-500 appearance-none"><option value="">SELEZIONA SQUADRA...</option>{TEAMS_2026.map(t => (<option key={t} value={t}>{t}</option>))}</select>
+                <select id="q_stage" className="w-full bg-slate-900 border-2 border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-blue-500 appearance-none">{STAGES.map(s => (<option key={s.id} value={s.id}>{s.label}</option>))}</select>
+              </div>
+              <button onClick={saveQualif} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all">CONFERMA QUALIFICATA</button>
+              
+              <div className="space-y-4 pt-4">
                 {STAGES.map(stg => {
                   const items = officialBracket.filter(o => normalizeStage(o.stage) === stg.id);
                   if (items.length === 0) return null;
                   return (
-                    <div key={stg.id} className="bg-slate-900 border border-slate-800/50 p-3 rounded-2xl">
-                      <h3 className="text-[8px] font-black text-blue-500 uppercase mb-2 border-b border-slate-800/50 pb-1">{stg.label}</h3>
+                    <div key={stg.id} className="bg-slate-900 border border-slate-800/50 p-4 rounded-3xl">
+                      <h3 className="text-[10px] font-black text-blue-500 uppercase mb-3 border-b border-slate-800/50 pb-2 tracking-[0.2em]">{stg.label}</h3>
                       <div className="flex flex-wrap gap-2">
                         {items.map(o => (
-                          <div key={o.id} className="bg-slate-950 border border-slate-800 px-3 py-2 rounded-lg flex items-center gap-2"><span className="text-[9px] font-black uppercase italic text-white">{o.team_name}</span><button onClick={() => deleteQualif(o.id)} className="text-rose-500 p-1"><X size={10} /></button></div>
+                          <div key={o.id} className="bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase italic text-white">{o.team_name}</span>
+                            <button onClick={() => deleteQualif(o.id)} className="text-rose-500 hover:bg-rose-500/10 p-1 rounded-lg transition-colors"><X size={14} /></button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -285,81 +326,81 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* BONUS UFFICIALI (TUTTI E 9) */}
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
-          <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3"><Star className="text-purple-500" size={20} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Ufficiali</h2></div>
+        {/* SEZIONE 4: BONUS UFFICIALI (9 CAMPI) */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+          <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Ufficiali</h2></div>
             {openSection.bonus ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.bonus && (
-            <div className="p-4 bg-slate-950/50">
-              <form onSubmit={saveBonuses} className="space-y-4">
-                <div className="grid grid-cols-1 gap-3">
-                  {/* Premi Principali */}
-                  <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">MVP Mondiale</span><input value={bonusData.mvp_world_cup} onChange={e => setBonusData({ ...bonusData, mvp_world_cup: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black uppercase text-purple-400 text-[10px]" /></div>
-                  <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Capocannoniere</span><input value={bonusData.top} onChange={e => setBonusData({ ...bonusData, top: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black uppercase text-purple-400 text-[10px]" /></div>
-                  <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Miglior Portiere</span><input value={bonusData.best_goalkeeper} onChange={e => setBonusData({ ...bonusData, best_goalkeeper: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black uppercase text-purple-400 text-[10px]" /></div>
+            <div className="p-5 bg-slate-950/30">
+              <form onSubmit={saveBonuses} className="space-y-5">
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Premi Individuali */}
+                  <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">MVP Mondiale (10pt)</span><input value={bonusData.mvp_world_cup} onChange={e => setBonusData({ ...bonusData, mvp_world_cup: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
+                  <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Capocannoniere (10pt)</span><input value={bonusData.top} onChange={e => setBonusData({ ...bonusData, top: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
+                  <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Miglior Portiere (10pt)</span><input value={bonusData.best_goalkeeper} onChange={e => setBonusData({ ...bonusData, best_goalkeeper: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
                   
-                  {/* Statistiche Partite/Gironi */}
-                  <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Match + Gol</span><select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black uppercase text-blue-400 text-[10px]"><option value="">SELEZIONA...</option>{matches.filter(m => !m.home_team.includes('TBD')).map(m => (<option key={m.id} value={`${m.home_team} - ${m.away_team}`}>{m.home_team} - {m.away_team}</option>))}</select></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Girone + Gol</span><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black uppercase text-blue-400 text-[10px]">{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
-                    <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Girone - Gol</span><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black uppercase text-blue-400 text-[10px]">{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
+                  {/* Statistiche Partite */}
+                  <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Match con più gol (5pt)</span><select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA PARTITA...</option>{matches.filter(m => !m.home_team.includes('TBD')).map(m => (<option key={m.id} value={`${m.home_team} - ${m.away_team}`}>{m.home_team} - {m.away_team}</option>))}</select></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone + Gol (5pt)</span><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs">{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone - Gol (5pt)</span><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs">{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                   </div>
 
-                  {/* Contatori Numerici */}
+                  {/* Numeri */}
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Autogol</span><input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black text-emerald-400 text-[10px]" /></div>
-                    <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Rigori</span><input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black text-emerald-400 text-[10px]" /></div>
-                    <div className="space-y-1"><span className="text-[8px] font-black uppercase text-slate-500 ml-1">Rossi</span><input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl font-black text-emerald-400 text-[10px]" /></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Autogol (3pt)</span><input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs" /></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Rigori (3pt)</span><input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs" /></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Rossi (3pt)</span><input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs" /></div>
                   </div>
                 </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={resetBonuses} className="p-4 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-xl"><Trash2 size={18} /></button>
-                  <button type="submit" className="flex-1 bg-purple-600 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest italic shadow-lg shadow-purple-600/20 active:scale-95 transition-all">SALVA BONUS</button>
+
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={resetBonuses} className="p-5 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={24} /></button>
+                  <button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl shadow-purple-600/20 active:scale-95 transition-all">SALVA BONUS UFFICIALI</button>
                 </div>
               </form>
             </div>
           )}
         </section>
 
-        {/* STATISTICHE (COMPLETE) */}
+        {/* SEZIONE 5: STATISTICHE (COMPLETE) */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
-          <button onClick={() => setOpenSection({ ...openSection, statistiche: !openSection.statistiche })} className="w-full p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3"><BarChart3 className="text-cyan-500" size={20} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche</h2></div>
+          <button onClick={() => setOpenSection({ ...openSection, statistiche: !openSection.statistiche })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><BarChart3 className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Globali</h2></div>
             {openSection.statistiche ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.statistiche && (
-            <div className="p-4 bg-slate-950/50 space-y-6">
-              {/* Medie */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-center"><p className="text-[7px] font-black text-slate-500 uppercase">Rossi Avg</p><p className="text-sm font-black text-cyan-400">{getAverage('total_red_cards')}</p></div>
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-center"><p className="text-[7px] font-black text-slate-500 uppercase">Rigori Avg</p><p className="text-sm font-black text-cyan-400">{getAverage('total_penalties')}</p></div>
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-center"><p className="text-[7px] font-black text-slate-500 uppercase">Autogol Avg</p><p className="text-sm font-black text-cyan-400">{getAverage('total_own_goals')}</p></div>
+            <div className="p-5 bg-slate-950/50 space-y-6">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rossi Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_red_cards')}</p></div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rigori Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_penalties')}</p></div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Autogol Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_own_goals')}</p></div>
               </div>
               
-              {/* Classifiche Voti */}
-              <div className="grid grid-cols-1 gap-4 pt-2">
+              <div className="grid grid-cols-1 gap-4 pt-4">
                 {[
                   { label: 'MVP Mondiale', key: 'mvp_world_cup' },
                   { label: 'Capocannoniere', key: 'top_scorer' },
                   { label: 'Miglior Portiere', key: 'best_goalkeeper' },
                 ].map((s) => (
-                  <div key={s.key} className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                    <p className="text-[8px] font-black text-slate-500 uppercase mb-2 border-b border-slate-800/50 pb-1">{s.label} (Top 3)</p>
+                  <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic">{s.label} (Top Voti)</p>
                     {getTopPicks(s.key).map(([name, count]: any) => (
-                      <div key={name} className="flex justify-between text-[9px] font-black uppercase italic mb-1">
+                      <div key={name} className="flex justify-between text-[10px] font-black uppercase italic mb-1">
                         <span className="truncate pr-2 text-white">{name}</span>
                         <span className="text-cyan-500 font-mono">{count} voti</span>
                       </div>
                     ))}
-                    {getTopPicks(s.key).length === 0 && <p className="text-[8px] text-slate-700 italic text-center py-1">Nessun voto</p>}
+                    {getTopPicks(s.key).length === 0 && <p className="text-[8px] text-slate-700 italic text-center py-2 uppercase">Nessun voto</p>}
                   </div>
                 ))}
               </div>
             </div>
           )}
         </section>
+
       </div>
     </div>
   );
