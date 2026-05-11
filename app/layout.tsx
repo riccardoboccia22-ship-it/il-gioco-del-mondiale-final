@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next'; // Rimosso Viewport da qui per evitare l'errore
+import type { Metadata } from 'next'; 
 import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
 import { Toaster } from 'react-hot-toast'; 
@@ -8,11 +8,11 @@ const inter = Inter({ subsets: ['latin'] });
 
 // Configurazione unica: Metadati + PWA + Viewport
 export const metadata: Metadata = {
-  title: 'Mondiale 2026 - Pronostici', 
+  title: 'Il Gioco del Mondiale 2026!', 
   description: 'Gestisci i tuoi pronostici per il mondiale',
   manifest: '/manifest.json',
   
-  // Configurazione mobile e colori (Sostituiscono l'oggetto viewport separato)
+  // Configurazione mobile e colori
   themeColor: '#eab308',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Mondiale 2026',
+    title: 'Mondiale 2026!', // Nome corto per iPhone (max 12-15 caratteri consigliati)
   },
 };
 
