@@ -149,7 +149,7 @@ export default function RegolamentoPage() {
           </div>
         </section>
 
-        {/* 5. SPAREGGI (NUOVO) */}
+        {/* 5. SPAREGGI */}
         <section className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-2 h-full bg-orange-500"></div>
           <div className="flex items-center gap-3 mb-6">
@@ -157,31 +157,39 @@ export default function RegolamentoPage() {
             <h2 className="text-xl font-black uppercase italic tracking-tight">4. Criteri di Spareggio</h2>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            Cosa succede se due o più giocatori terminano il torneo con gli <strong>stessi Punti Totali</strong>? Il sistema calcolerà automaticamente le posizioni in classifica applicando, in ordine, i seguenti criteri:
+            Se due o più giocatori terminano il torneo a pari punti, la posizione in classifica viene determinata seguendo rigorosamente questo ordine di priorità:
           </p>
 
           <div className="space-y-3">
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700">1</div>
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">1</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-xs">Risultati Esatti (Gironi)</h3>
-                <p className="text-[10px] text-slate-500 mt-1">Vince chi ha indovinato più punteggi esatti perfetti (+10pt) nella prima fase del torneo.</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Risultati Esatti (Gironi)</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Chi ha indovinato più punteggi perfetti da +10 PT.</p>
               </div>
             </div>
             
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700">2</div>
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">2</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-xs">Punti Bonus Totali</h3>
-                <p className="text-[10px] text-slate-500 mt-1">Se permane la parità, la spunta chi ha totalizzato il maggior numero di punti dalle Domande Bonus.</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Punti Bonus Totali</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Maggior punteggio ottenuto nelle domande extra.</p>
               </div>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700">3</div>
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">3</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-xs">Ordine Alfabetico</h3>
-                <p className="text-[10px] text-slate-500 mt-1">Ultima spiaggia. L'app vi ordinerà per lettera del nome, ma la gloria del premio verrà divisa equamente tra voi!</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Qualità del Tabellone</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Si confrontano i punti fatti nelle singole fasi (chi ha fatto più punti nel turno più avanzato vince). Ordine: Campione Mondiale → Finaliste → Semifinali → Quarti → Ottavi → Sedicesimi.</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-slate-500 shrink-0 border border-slate-700 text-xs">4</div>
+              <div>
+                <h3 className="font-black text-slate-400 uppercase text-[10px] tracking-wider">Ordine Alfabetico</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Ultimo criterio in caso di assoluta parità in tutto il resto.</p>
               </div>
             </div>
           </div>
