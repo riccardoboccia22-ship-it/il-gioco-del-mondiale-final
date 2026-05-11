@@ -19,6 +19,11 @@ import {
   ShieldCheck,
   Award,
   X,
+  Goal,
+  Target,
+  Flame,
+  ArrowUpToLine,
+  ArrowDownToLine,
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -33,124 +38,34 @@ const STAGES = [
 ];
 
 const GROUPS = [
-  'Gruppo A',
-  'Gruppo B',
-  'Gruppo C',
-  'Gruppo D',
-  'Gruppo E',
-  'Gruppo F',
-  'Gruppo G',
-  'Gruppo H',
-  'Gruppo I',
-  'Gruppo J',
-  'Gruppo K',
-  'Gruppo L',
+  'Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F',
+  'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L',
 ];
 
 const TEAMS_2026 = [
-  'Algeria',
-  'Arabia Saudita',
-  'Argentina',
-  'Australia',
-  'Austria',
-  'Belgio',
-  'Bosnia ed Erzegovina',
-  'Brasile',
-  'Canada',
-  'Capo Verde',
-  'Colombia',
-  'Corea del Sud',
-  "Costa d'avorio",
-  'Croazia',
-  'Curaçao',
-  'Ecuador',
-  'Egitto',
-  'Francia',
-  'Germania',
-  'Ghana',
-  'Giappone',
-  'Giordania',
-  'Haiti',
-  'Inghilterra',
-  'Iran',
-  'Iraq',
-  'Marocco',
-  'Messico',
-  'Norvegia',
-  'Nuova Zelanda',
-  'Olanda',
-  'Panama',
-  'Paraguay',
-  'Portogallo',
-  'Qatar',
-  'Repubblica Ceca',
-  'Repubblica Democratica del Congo',
-  'Scozia',
-  'Senegal',
-  'Spagna',
-  'Stati Uniti',
-  'Sudafrica',
-  'Svezia',
-  'Svizzera',
-  'Tunisia',
-  'Turchia',
-  'Uruguay',
-  'Uzbekistan',
+  'Algeria', 'Arabia Saudita', 'Argentina', 'Australia', 'Austria', 'Belgio',
+  'Bosnia ed Erzegovina', 'Brasile', 'Canada', 'Capo Verde', 'Colombia',
+  'Corea del Sud', "Costa d'avorio", 'Croazia', 'Curaçao', 'Ecuador', 'Egitto',
+  'Francia', 'Germania', 'Ghana', 'Giappone', 'Giordania', 'Haiti', 'Inghilterra',
+  'Iran', 'Iraq', 'Marocco', 'Messico', 'Norvegia', 'Nuova Zelanda', 'Olanda',
+  'Panama', 'Paraguay', 'Portogallo', 'Qatar', 'Repubblica Ceca',
+  'Repubblica Democratica del Congo', 'Scozia', 'Senegal', 'Spagna',
+  'Stati Uniti', 'Sudafrica', 'Svezia', 'Svizzera', 'Tunisia', 'Turchia',
+  'Uruguay', 'Uzbekistan',
 ].sort();
 
 const flagMap: { [key: string]: string } = {
-  algeria: 'dz',
-  'arabia saudita': 'sa',
-  argentina: 'ar',
-  australia: 'au',
-  austria: 'at',
-  belgio: 'be',
-  'bosnia ed erzegovina': 'ba',
-  'bosnia erzegovina': 'ba',
-  brasile: 'br',
-  canada: 'ca',
-  'capo verde': 'cv',
-  colombia: 'co',
-  'corea del sud': 'kr',
-  "costa d'avorio": 'ci',
-  croazia: 'hr',
-  curaçao: 'cw',
-  curacao: 'cw',
-  ecuador: 'ec',
-  egitto: 'eg',
-  francia: 'fr',
-  germania: 'de',
-  ghana: 'gh',
-  giappone: 'jp',
-  giordania: 'jo',
-  haiti: 'ht',
-  inghilterra: 'gb-eng',
-  iran: 'ir',
-  iraq: 'iq',
-  marocco: 'ma',
-  messico: 'mx',
-  norvegia: 'no',
-  'nuova zelanda': 'nz',
-  olanda: 'nl',
-  panama: 'pa',
-  paraguay: 'py',
-  portogallo: 'pt',
-  qatar: 'qa',
-  'repubblica ceca': 'cz',
-  'repubblica democratica del congo': 'cd',
-  congo: 'cd',
-  scozia: 'gb-sct',
-  senegal: 'sn',
-  spagna: 'es',
-  'stati uniti': 'us',
-  usa: 'us',
-  sudafrica: 'za',
-  svezia: 'se',
-  svizzera: 'ch',
-  tunisia: 'tn',
-  turchia: 'tr',
-  uruguay: 'uy',
-  uzbekistan: 'uz',
+  algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', brasile: 'br',
+  canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr',
+  "costa d'avorio": 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw', ecuador: 'ec',
+  egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp',
+  giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq',
+  marocco: 'ma', messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', olanda: 'nl',
+  panama: 'pa', paraguay: 'py', portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz',
+  'repubblica democratica del congo': 'cd', congo: 'cd', scozia: 'gb-sct', senegal: 'sn',
+  spagna: 'es', 'stati uniti': 'us', usa: 'us', sudafrica: 'za', svezia: 'se',
+  svizzera: 'ch', tunisia: 'tn', turchia: 'tr', uruguay: 'uy', uzbekistan: 'uz',
 };
 
 const normalizeStage = (s: string) => {
@@ -159,8 +74,7 @@ const normalizeStage = (s: string) => {
   if (u.includes('OTTAV') || u === 'R16') return 'R16';
   if (u.includes('QUART') || u === 'QF') return 'QF';
   if (u.includes('SEMIFINAL') || u === 'SF') return 'SF';
-  if (u.includes('VINCITOR') || u.includes('CAMPIONE') || u === 'WINNER')
-    return 'WINNER';
+  if (u.includes('VINCITOR') || u.includes('CAMPIONE') || u === 'WINNER') return 'WINNER';
   if (u.includes('FINAL') || u === 'F') return 'F';
   return u;
 };
@@ -286,8 +200,9 @@ export default function AdminPage() {
         let pGroups = 0;
         let pBracket = 0;
         let pBonus = 0;
+        let pExactMatches = 0; // NUOVO: Contatore risultati esatti
 
-        // 1. CALCOLO GIRONI
+        // 1. CALCOLO GIRONI E RISULTATI ESATTI
         const uPreds = allPreds?.filter((p) => p.user_id === profile.id) || [];
         uPreds.forEach((pred) => {
           const m = allMatches?.find((m) => m.id === pred.match_id);
@@ -298,7 +213,11 @@ export default function AdminPage() {
             const ma = Number(m.away_score_final);
             const pRes = ph > pa ? '1' : ph < pa ? '2' : 'X';
             const mRes = mh > ma ? '1' : mh < ma ? '2' : 'X';
-            if (ph === mh && pa === ma) pGroups += 10;
+            
+            if (ph === mh && pa === ma) {
+              pGroups += 10;
+              pExactMatches += 1; // Incrementiamo se è un risultato perfetto!
+            }
             else if (pRes === mRes && (ph === mh || pa === ma)) pGroups += 6;
             else if (pRes === mRes) pGroups += 4;
             else if (ph === mh || pa === ma) pGroups += 2;
@@ -323,27 +242,28 @@ export default function AdminPage() {
           }
         });
 
-        // 3. CALCOLO BONUS
+        // 3. CALCOLO BONUS (CON I NUOVI PUNTEGGI)
         const ub = userBonuses?.find((b) => b.user_id === profile.id);
         if (ub && offBonuses) {
-          const bonusKeys = [
-            'total_red_cards',
-            'total_penalties',
-            'total_own_goals',
-            'top_scorer',
-            'mvp_world_cup',
-            'best_goalkeeper',
-            'high_scoring_match',
-            'highest_scoring_group',
-            'lowest_scoring_group',
-          ];
-          bonusKeys.forEach((k) => {
+          const bonusPointsMap: { [key: string]: number } = {
+            top_scorer: 10,
+            mvp_world_cup: 10,
+            best_goalkeeper: 10,
+            high_scoring_match: 5,
+            highest_scoring_group: 5,
+            lowest_scoring_group: 5,
+            total_red_cards: 3,
+            total_penalties: 3,
+            total_own_goals: 3,
+          };
+
+          Object.entries(bonusPointsMap).forEach(([k, pts]) => {
             if (
               offBonuses[k] != null &&
               String(offBonuses[k]).trim().toLowerCase() ===
                 String(ub[k]).trim().toLowerCase()
             ) {
-              pBonus += 10;
+              pBonus += pts;
             }
           });
         }
@@ -354,10 +274,24 @@ export default function AdminPage() {
           points_groups: pGroups,
           points_bracket: pBracket,
           points_bonus: pBonus,
+          exact_matches: pExactMatches, // Salviamo nel db il numero di risultati esatti
+          previous_ranking: profile.ranking ? parseInt(profile.ranking) : null,
         };
       });
 
-      const sorted = [...updates].sort((a, b) => b.points - a.points);
+      // ORDINAMENTO CON TIE-BREAKER AVANZATO
+      const sorted = [...updates].sort((a, b) => {
+        // 1. Punti totali (chi ne ha di più)
+        if (b.points !== a.points) return b.points - a.points;
+        // 2. Tie-Breaker 1: Risultati Esatti (chi ne ha di più)
+        if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
+        // 3. Tie-Breaker 2: Punti Bonus (chi ha fatto più punti extra)
+        if (b.points_bonus !== a.points_bonus) return b.points_bonus - a.points_bonus;
+        // 4. Tie-Breaker 3: Ordine Alfabetico
+        return (a.username || '').localeCompare(b.username || '');
+      });
+
+      // Assegnazione della posizione
       const ranked = sorted.map((u, i) => ({
         ...u,
         ranking: (i + 1).toString(),
@@ -369,7 +303,7 @@ export default function AdminPage() {
       if (error) throw error;
 
       if (syncToast) toast.dismiss(syncToast);
-      if (isManual) toast.success('Classifica sincronizzata manualmente!');
+      if (isManual) toast.success('Classifica e Spareggi sincronizzati!');
       else toast.success('Punti ricalcolati automaticamente!');
 
       fetchData();
@@ -427,7 +361,6 @@ export default function AdminPage() {
     }
   };
 
-  // NUOVA FUNZIONE: Reset Bonus Ufficiali
   const resetBonuses = async () => {
     if (
       !window.confirm(
@@ -502,7 +435,6 @@ export default function AdminPage() {
     if (!error) fetchData();
   };
 
-  // NUOVA FUNZIONE: Eliminazione Utente Completa
   const deleteUser = async (userId: string, username: string) => {
     if (
       !window.confirm(
@@ -512,7 +444,6 @@ export default function AdminPage() {
       return;
     setSyncing(true);
     try {
-      // Pulizia a cascata del database per evitare record orfani
       await supabase.from('predictions').delete().eq('user_id', userId);
       await supabase.from('brackets').delete().eq('user_id', userId);
       await supabase.from('user_bonus_answers').delete().eq('user_id', userId);
@@ -620,7 +551,7 @@ export default function AdminPage() {
                     </p>
                     <p className="text-[9px] text-slate-500 font-mono mt-1">
                       {p.points || 0} PT ({p.points_groups}G +{' '}
-                      {p.points_bracket}F + {p.points_bonus}B)
+                      {p.points_bracket}F + {p.points_bonus}B) - Esatti: {p.exact_matches || 0}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -634,7 +565,6 @@ export default function AdminPage() {
                     >
                       {p.is_paid ? 'PAGATO' : 'DA PAGARE'}
                     </button>
-                    {/* TASTO ELIMINA UTENTE */}
                     <button
                       onClick={() => deleteUser(p.id, p.username)}
                       className="p-2 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-transparent hover:border-rose-500"
@@ -841,7 +771,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* BONUS UFFICIALI (MIGLIORATI E ALLINEATI) */}
+        {/* BONUS UFFICIALI */}
         <section className="bg-slate-900/50 border border-slate-800 rounded-[2rem] overflow-hidden shadow-xl">
           <button
             onClick={() =>
@@ -860,78 +790,13 @@ export default function AdminPage() {
           {openSection.bonus && (
             <div className="border-t border-slate-800 p-6">
               <form onSubmit={saveBonuses} className="space-y-6">
-                {/* NUMERI */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Rossi
-                    </span>
-                    <input
-                      value={bonusData.red}
-                      onChange={(e) =>
-                        setBonusData({ ...bonusData, red: e.target.value })
-                      }
-                      type="number"
-                      className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-purple-400 outline-none focus:border-purple-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Rigori
-                    </span>
-                    <input
-                      value={bonusData.penalties}
-                      onChange={(e) =>
-                        setBonusData({
-                          ...bonusData,
-                          penalties: e.target.value,
-                        })
-                      }
-                      type="number"
-                      className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-purple-400 outline-none focus:border-purple-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Autogol
-                    </span>
-                    <input
-                      value={bonusData.own_goals}
-                      onChange={(e) =>
-                        setBonusData({
-                          ...bonusData,
-                          own_goals: e.target.value,
-                        })
-                      }
-                      type="number"
-                      className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-purple-400 outline-none focus:border-purple-500"
-                    />
-                  </div>
-                </div>
-
-                {/* I 3 PREMI PRINCIPALI ALLINEATI IN GRIGLIA */}
+                
+                {/* 1. I 3 PREMI PRINCIPALI (10pt) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Capocannoniere
-                    </span>
-                    <div className="relative">
-                      <Award
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500/50"
-                        size={16}
-                      />
-                      <input
-                        value={bonusData.top}
-                        onChange={(e) =>
-                          setBonusData({ ...bonusData, top: e.target.value })
-                        }
-                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black uppercase outline-none focus:border-purple-500 text-purple-400"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      MVP Mondiale
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>MVP Mondiale</span>
+                      <span className="text-purple-500">10pt</span>
                     </span>
                     <div className="relative">
                       <Trophy
@@ -951,8 +816,28 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Miglior Portiere
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Capocannoniere</span>
+                      <span className="text-purple-500">10pt</span>
+                    </span>
+                    <div className="relative">
+                      <Award
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-500/50"
+                        size={16}
+                      />
+                      <input
+                        value={bonusData.top}
+                        onChange={(e) =>
+                          setBonusData({ ...bonusData, top: e.target.value })
+                        }
+                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black uppercase outline-none focus:border-purple-500 text-purple-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Miglior Portiere</span>
+                      <span className="text-purple-500">10pt</span>
                     </span>
                     <div className="relative">
                       <ShieldCheck
@@ -973,85 +858,160 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* 2. MATCH E GIRONI (5pt) */}
                 <div className="space-y-1">
-                  <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                    Match con più gol
+                  <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                    <span>Match con più gol</span>
+                    <span className="text-blue-500">5pt</span>
                   </span>
-                  <select
-                    value={bonusData.high}
-                    onChange={(e) =>
-                      setBonusData({ ...bonusData, high: e.target.value })
-                    }
-                    className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black uppercase outline-none focus:border-purple-500 text-purple-400 appearance-none"
-                  >
-                    <option value="" className="text-slate-500">
-                      SELEZIONA PARTITA...
-                    </option>
-                    {matches
-                      .filter((m) => !m.home_team.includes('TBD'))
-                      .map((m) => (
-                        <option
-                          key={m.id}
-                          value={`${m.home_team} - ${m.away_team}`}
-                        >
-                          {m.home_team} - {m.away_team}
-                        </option>
-                      ))}
-                  </select>
+                  <div className="relative">
+                    <Flame className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500/50" size={16} />
+                    <select
+                      value={bonusData.high}
+                      onChange={(e) =>
+                        setBonusData({ ...bonusData, high: e.target.value })
+                      }
+                      className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black uppercase outline-none focus:border-blue-500 text-blue-400 appearance-none"
+                    >
+                      <option value="" className="text-slate-500">
+                        SELEZIONA PARTITA...
+                      </option>
+                      {matches
+                        .filter((m) => !m.home_team.includes('TBD'))
+                        .map((m) => (
+                          <option
+                            key={m.id}
+                            value={`${m.home_team} - ${m.away_team}`}
+                          >
+                            {m.home_team} - {m.away_team}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Girone + Gol
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Girone + Gol</span>
+                      <span className="text-blue-500">5pt</span>
                     </span>
-                    <select
-                      value={bonusData.high_group}
-                      onChange={(e) =>
-                        setBonusData({
-                          ...bonusData,
-                          high_group: e.target.value,
-                        })
-                      }
-                      className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black uppercase outline-none focus:border-purple-500 text-purple-400 appearance-none"
-                    >
-                      <option value="" className="text-slate-500">
-                        SELEZIONA...
-                      </option>
-                      {GROUPS.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
+                    <div className="relative">
+                      <ArrowUpToLine className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500/50" size={16} />
+                      <select
+                        value={bonusData.high_group}
+                        onChange={(e) =>
+                          setBonusData({
+                            ...bonusData,
+                            high_group: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black uppercase outline-none focus:border-blue-500 text-blue-400 appearance-none"
+                      >
+                        <option value="" className="text-slate-500">
+                          SELEZIONA...
                         </option>
-                      ))}
-                    </select>
+                        {GROUPS.map((g) => (
+                          <option key={g} value={g}>
+                            {g}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
-                      Girone - Gol
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Girone - Gol</span>
+                      <span className="text-blue-500">5pt</span>
                     </span>
-                    <select
-                      value={bonusData.low_group}
-                      onChange={(e) =>
-                        setBonusData({
-                          ...bonusData,
-                          low_group: e.target.value,
-                        })
-                      }
-                      className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black uppercase outline-none focus:border-purple-500 text-purple-400 appearance-none"
-                    >
-                      <option value="" className="text-slate-500">
-                        SELEZIONA...
-                      </option>
-                      {GROUPS.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
+                    <div className="relative">
+                      <ArrowDownToLine className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500/50" size={16} />
+                      <select
+                        value={bonusData.low_group}
+                        onChange={(e) =>
+                          setBonusData({
+                            ...bonusData,
+                            low_group: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black uppercase outline-none focus:border-blue-500 text-blue-400 appearance-none"
+                      >
+                        <option value="" className="text-slate-500">
+                          SELEZIONA...
                         </option>
-                      ))}
-                    </select>
+                        {GROUPS.map((g) => (
+                          <option key={g} value={g}>
+                            {g}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-2">
+                {/* 3. NUMERI (3pt) */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Autogol</span>
+                      <span className="text-emerald-500">3pt</span>
+                    </span>
+                    <div className="relative">
+                      <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500/50" size={16} />
+                      <input
+                        value={bonusData.own_goals}
+                        onChange={(e) =>
+                          setBonusData({
+                            ...bonusData,
+                            own_goals: e.target.value,
+                          })
+                        }
+                        type="number"
+                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black text-emerald-400 outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Rigori</span>
+                      <span className="text-emerald-500">3pt</span>
+                    </span>
+                    <div className="relative">
+                      <Goal className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500/50" size={16} />
+                      <input
+                        value={bonusData.penalties}
+                        onChange={(e) =>
+                          setBonusData({
+                            ...bonusData,
+                            penalties: e.target.value,
+                          })
+                        }
+                        type="number"
+                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black text-emerald-400 outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="flex items-center justify-between text-[9px] font-black uppercase text-slate-500 ml-2 tracking-widest">
+                      <span>Rossi</span>
+                      <span className="text-emerald-500">3pt</span>
+                    </span>
+                    <div className="relative">
+                      <Zap className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500/50" size={16} />
+                      <input
+                        value={bonusData.red}
+                        onChange={(e) =>
+                          setBonusData({ ...bonusData, red: e.target.value })
+                        }
+                        type="number"
+                        className="w-full bg-slate-950 border border-slate-800 pl-11 pr-4 py-4 rounded-xl font-black text-emerald-400 outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PULSANTI */}
+                <div className="flex gap-3 pt-4">
                   <button
                     type="button"
                     onClick={resetBonuses}
@@ -1065,7 +1025,7 @@ export default function AdminPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-purple-600 py-5 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl shadow-purple-600/20 italic"
+                    className="flex-1 bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl shadow-purple-600/20 italic"
                   >
                     SALVA BONUS UFFICIALI
                   </button>
@@ -1124,8 +1084,8 @@ export default function AdminPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { label: 'Capocannoniere', key: 'top_scorer' },
                   { label: 'MVP Mondiale', key: 'mvp_world_cup' },
+                  { label: 'Capocannoniere', key: 'top_scorer' },
                   { label: 'Miglior Portiere', key: 'best_goalkeeper' },
                 ].map((s) => (
                   <div

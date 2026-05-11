@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { BookOpen, Timer } from 'lucide-react'; 
 
 export default function ProfilePage() {
   const [username, setUsername] = useState('');
@@ -20,12 +21,41 @@ export default function ProfilePage() {
     rank: '--',
     isPaid: false,
   });
+  
+  // Stati per il Countdown
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [isExpired, setIsExpired] = useState(false);
+  
   const router = useRouter();
-
   const ADMIN_EMAIL = 'ricky@mondiale.it';
 
   useEffect(() => {
     checkUser();
+  }, []);
+
+  // Effetto per il Countdown
+  useEffect(() => {
+    // Data di inizio ufficiale del Mondiale
+    const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = WORLD_CUP_START_DATE - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        setIsExpired(true);
+      } else {
+        setTimeLeft({
+          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((distance % (1000 * 60)) / 1000),
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   async function checkUser() {
@@ -56,7 +86,6 @@ export default function ProfilePage() {
     e.preventDefault();
     setLoading(true);
     
-    // FIX: Rimuoviamo gli spazi vuoti dall'username per creare una email finta valida per Supabase
     const safeUsernameForEmail = username.trim().toLowerCase().replace(/\s+/g, '');
     const fakeEmail = `${safeUsernameForEmail}@mondiale.it`;
 
@@ -71,7 +100,7 @@ export default function ProfilePage() {
       } else if (data.user) {
         await supabase.from('profiles').insert([{
           id: data.user.id,
-          username: username.trim(), // Salviamo il vero nome con gli spazi se ci sono
+          username: username.trim(),
           points: 0,
           points_groups: 0,
           points_bracket: 0,
@@ -138,6 +167,40 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* COUNTDOWN BOX */}
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+              <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
+              <div className="text-center mb-4 flex items-center justify-center gap-2">
+                <Timer size={16} className={isExpired ? "text-rose-500" : "text-yellow-500"} />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  {isExpired ? 'Pronostici Chiusi' : 'Chiusura Pronostici'}
+                </p>
+              </div>
+              
+              {isExpired ? (
+                <div className="text-center py-2">
+                  <p className="text-xl font-black text-rose-500 uppercase italic">Il Mondiale è Iniziato!</p>
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Non è più possibile modificare le scelte</p>
+                </div>
+              ) : (
+                <div className="flex justify-center gap-2 sm:gap-3">
+                  {[
+                    { label: 'Giorni', value: timeLeft.days },
+                    { label: 'Ore', value: timeLeft.hours },
+                    { label: 'Min', value: timeLeft.minutes },
+                    { label: 'Sec', value: timeLeft.seconds },
+                  ].map((t) => (
+                    <div key={t.label} className="bg-slate-950 border border-slate-800 w-16 h-16 rounded-2xl flex flex-col items-center justify-center shadow-inner">
+                      <span className="text-2xl font-black text-white leading-none mb-1">
+                        {t.value.toString().padStart(2, '0')}
+                      </span>
+                      <span className="text-[8px] font-black uppercase text-yellow-500 tracking-widest">{t.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* BOX PUNTEGGIO E RANKING */}
             <div className="bg-yellow-500 p-6 rounded-[2.5rem] flex items-center justify-between shadow-xl shadow-yellow-500/10">
               <div>
@@ -169,23 +232,32 @@ export default function ProfilePage() {
               <button onClick={() => router.push('/matches')} className="w-full py-5 bg-white text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 shadow-xl">
                 Fase a Gironi ⚽
               </button>
+              
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => router.push('/bracket')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[9px] hover:border-yellow-500/50 transition-all shadow-md">
                   Fase Finale 🏆
                 </button>
                 <button onClick={() => router.push('/bonus')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[9px] hover:border-yellow-500/50 transition-all shadow-md">
-                  Super Bonus ⭐
+                  Bonus ⭐
                 </button>
               </div>
-              <button onClick={() => router.push('/leaderboard')} className="w-full py-4 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-slate-950 transition-all">
-                Classifica 🥇
-              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => router.push('/leaderboard')} className="py-4 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-slate-950 transition-all">
+                  Classifica 🥇
+                </button>
+                <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-800/30 border border-slate-700/50 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2">
+                  <BookOpen size={14} /> Regolamento
+                </button>
+              </div>
+
               {checkIsAdmin() && (
-                <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-red-600/10 text-red-500 border border-red-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] hover:bg-red-600 hover:text-white transition-all">
+                <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-red-600/10 text-red-500 border border-red-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] hover:bg-red-600 hover:text-white transition-all mt-4">
                   ⚙️ Pannello Admin
                 </Link>
               )}
-              <button onClick={handleLogout} className="w-full py-4 text-slate-600 font-black rounded-2xl uppercase tracking-[0.2em] text-[8px] hover:text-rose-500 transition-all">
+              
+              <button onClick={handleLogout} className="w-full py-4 text-slate-600 font-black rounded-2xl uppercase tracking-[0.2em] text-[8px] hover:text-rose-500 transition-all mt-2">
                 Esci dal Gioco
               </button>
             </div>

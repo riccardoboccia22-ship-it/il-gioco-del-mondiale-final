@@ -391,6 +391,10 @@ export default function MatchesPage() {
             ([groupName, groupMatchesArray]) => {
               if (groupMatchesArray.length === 0) return null;
               const isOpen = openGroups[groupName];
+              
+              // Troviamo le bandiere delle squadre di questo specifico girone
+              const groupInfo = tournamentGroups.find((g) => g.name === groupName);
+              const groupFlags = groupInfo?.teams.map((t) => getFlagCode(t)).filter(Boolean) || [];
 
               return (
                 <div
@@ -408,7 +412,7 @@ export default function MatchesPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
                           isOpen
                             ? 'bg-yellow-500 text-slate-950'
                             : 'bg-slate-800 text-slate-500'
@@ -416,13 +420,23 @@ export default function MatchesPage() {
                       >
                         {groupName.split(' ')[1] || '?'}
                       </div>
-                      <div className="text-left">
+                      
+                      {/* Titolo e Bandierine CON DIMENSIONE FISSA */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-left">
                         <h2 className="font-black text-base sm:text-lg uppercase italic text-white tracking-tight">
                           {groupName}
                         </h2>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                          {groupMatchesArray.length} Partite
-                        </p>
+                        
+                        <div className="flex gap-1.5 sm:gap-2">
+                           {groupFlags.map((flagCode, index) => (
+                             <img 
+                               key={index}
+                               src={`https://flagcdn.com/w40/${flagCode}.png`}
+                               className="w-6 h-4 sm:w-7 sm:h-5 object-cover rounded-sm border border-slate-800 shadow-sm"
+                               alt=""
+                             />
+                           ))}
+                        </div>
                       </div>
                     </div>
 
@@ -480,7 +494,7 @@ export default function MatchesPage() {
                                 {hFlag ? (
                                   <img
                                     src={`https://flagcdn.com/w80/${hFlag}.png`}
-                                    className="w-7 h-auto rounded-sm shadow-sm"
+                                    className="w-7 h-5 object-cover rounded-sm shadow-sm"
                                     alt=""
                                   />
                                 ) : (
@@ -542,7 +556,7 @@ export default function MatchesPage() {
                                 {aFlag ? (
                                   <img
                                     src={`https://flagcdn.com/w80/${aFlag}.png`}
-                                    className="w-7 h-auto rounded-sm shadow-sm"
+                                    className="w-7 h-5 object-cover rounded-sm shadow-sm"
                                     alt=""
                                   />
                                 ) : (

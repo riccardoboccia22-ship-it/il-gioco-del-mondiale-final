@@ -1,7 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Trophy, Medal, Crown, Star, ArrowUp } from 'lucide-react';
+import { 
+  Trophy, 
+  Medal, 
+  Crown, 
+  ChevronUp, 
+  ChevronDown, 
+  Minus 
+} from 'lucide-react';
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -38,10 +45,23 @@ export default function LeaderboardPage() {
     if (rank === 2) return <Medal className="text-slate-300" size={20} />;
     if (rank === 3) return <Medal className="text-amber-700" size={20} />;
     return (
-      <span className="text-slate-500 text-[10px] font-black italic ml-1">
+      <span className="text-slate-500 text-[10px] font-black italic">
         #{rank}
       </span>
     );
+  };
+
+  const getTrendIcon = (currentRank: number, previousRank: number | null | undefined) => {
+    // Se non c'è una posizione precedente o è invariata
+    if (!previousRank || currentRank == previousRank) {
+      return <Minus className="text-slate-700" size={14} strokeWidth={3} />;
+    }
+    // Se la posizione attuale è minore di quella precedente (es. da 5° a 2°), è salito
+    if (currentRank < previousRank) {
+      return <ChevronUp className="text-emerald-500" size={16} strokeWidth={3} />;
+    }
+    // Altrimenti è sceso
+    return <ChevronDown className="text-rose-500" size={16} strokeWidth={3} />;
   };
 
   if (loading)
@@ -67,7 +87,7 @@ export default function LeaderboardPage() {
 
       <div className="max-w-3xl mx-auto">
         <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic">
-          <div className="flex-1">Giocatore</div>
+          <div className="flex-1 pl-12 sm:pl-16">Giocatore</div>
           <div className="flex gap-3 sm:gap-6 md:gap-10 pr-2">
             <div className="w-6 sm:w-8 text-center">
               <span className="sm:hidden">Gir</span>
@@ -95,10 +115,18 @@ export default function LeaderboardPage() {
               }`}
             >
               <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-6 sm:w-8 flex justify-center shrink-0">
-                  {getRankIcon(player.ranking)}
+                
+                {/* BLOCCO POSIZIONE E TREND */}
+                <div className="w-10 sm:w-14 flex items-center justify-between shrink-0 bg-slate-950/50 p-1.5 rounded-xl border border-slate-800/50">
+                  <div className="flex-1 flex justify-center">
+                    {getRankIcon(player.ranking)}
+                  </div>
+                  <div className="flex-1 flex justify-center">
+                    {getTrendIcon(player.ranking, player.previous_ranking)}
+                  </div>
                 </div>
 
+                {/* NOME GIOCATORE E QUOTA */}
                 <div className="flex flex-col min-w-0 flex-1">
                   <p className="font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none mb-1 truncate w-full">
                     {player.username}
@@ -115,6 +143,7 @@ export default function LeaderboardPage() {
                 </div>
               </div>
 
+              {/* PUNTEGGI */}
               <div className="flex items-center gap-3 sm:gap-6 md:gap-10 shrink-0 ml-2">
                 <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">
                   {player.points_groups}

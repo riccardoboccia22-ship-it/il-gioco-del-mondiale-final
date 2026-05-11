@@ -101,7 +101,6 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
-// Funzione intelligente per accorciare i nomi troppo lunghi
 const formatTeamName = (name: string) => {
   if (!name) return '';
   if (name.trim().toLowerCase() === 'repubblica democratica del congo')
@@ -226,7 +225,7 @@ export default function TuttiPronosticiPage() {
       </header>
 
       <div className="max-w-2xl mx-auto space-y-4">
-        {/* --- GIRONI CON NOMI FORMATTATI --- */}
+        {/* --- GIRONI --- */}
         {activeTab === 'GIRONI' &&
           data.matches.map((match: any) => {
             const homeFlag = getFlagUrl(match.home_team);
@@ -260,7 +259,6 @@ export default function TuttiPronosticiPage() {
                   </div>
 
                   <div className="flex-1 flex items-center justify-center gap-1.5 sm:gap-4 w-full">
-                    {/* SQUADRA CASA */}
                     <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2 text-right min-w-0">
                       <span className="font-black uppercase italic text-[9px] sm:text-xs tracking-tight truncate">
                         {formatTeamName(match.home_team)}
@@ -278,14 +276,12 @@ export default function TuttiPronosticiPage() {
                       )}
                     </div>
 
-                    {/* RISULTATO CENTRALE */}
                     <div className="w-12 sm:w-14 shrink-0 text-center bg-slate-950 py-1 sm:py-1.5 rounded-lg font-black text-yellow-500 border border-slate-800 text-[10px] sm:text-sm">
                       {isFinished
                         ? `${match.home_score_final}-${match.away_score_final}`
                         : 'VS'}
                     </div>
 
-                    {/* SQUADRA TRASFERTA */}
                     <div className="flex flex-1 items-center justify-start gap-1.5 sm:gap-2 text-left min-w-0">
                       {awayFlag ? (
                         <img
@@ -365,10 +361,23 @@ export default function TuttiPronosticiPage() {
               (b: any) => b.user_id === user.id
             );
             const isExpanded = expandedBracketUser === user.id;
+
+            let userBracketTotal = 0;
+            userPicks.forEach((p: any) => {
+              const uStg = normalizeStage(p.stage);
+              const isCorrect = data.officialResults.some(
+                (off: any) =>
+                  normalizeStage(off.stage) === uStg &&
+                  off.team_name?.trim().toLowerCase() ===
+                    p.team_name?.trim().toLowerCase()
+              );
+              if (isCorrect) userBracketTotal += STAGE_POINTS[uStg] || 0;
+            });
+
             return (
               <div
                 key={user.id}
-                className={`bg-slate-900/40 border rounded-[2.5rem] overflow-hidden ${
+                className={`bg-slate-900/40 border rounded-[2.5rem] overflow-hidden transition-all shadow-xl ${
                   isExpanded ? 'border-blue-500/30' : 'border-slate-800'
                 }`}
               >
@@ -378,9 +387,14 @@ export default function TuttiPronosticiPage() {
                   }
                   className="w-full p-6 flex items-center justify-between"
                 >
-                  <span className="font-black uppercase italic text-sm">
-                    {user.username}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="font-black uppercase italic text-sm">
+                      {user.username}
+                    </span>
+                    <span className="text-[10px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                      {userBracketTotal} PT
+                    </span>
+                  </div>
                   <ChevronDown
                     className={`transition-transform ${
                       isExpanded ? 'rotate-180' : ''
@@ -389,31 +403,69 @@ export default function TuttiPronosticiPage() {
                 </button>
                 {isExpanded && (
                   <div className="p-6 bg-slate-950/60 space-y-4 border-t border-slate-800">
-                    {['R32', 'R16', 'QF', 'SF', 'F', 'WINNER'].map((stg) => (
-                      <div key={stg}>
+                    {[
+                      { id: 'R32', label: 'SEDICESIMI' },
+                      { id: 'R16', label: 'OTTAVI' },
+                      { id: 'QF', label: 'QUARTI DI FINALE' },
+                      { id: 'SF', label: 'SEMIFINALE' },
+                      { id: 'F', label: 'FINALE' },
+                      { id: 'WINNER', label: 'CAMPIONE' },
+                    ].map((stg) => (
+                      <div key={stg.id}>
                         <p className="text-[8px] font-black text-slate-500 uppercase mb-1">
-                          {stg}
+                          {stg.label}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {userPicks
-                            .filter((p) => normalizeStage(p.stage) === stg)
-                            .map((p) => (
-                              <span
-                                key={p.id}
-                                className="bg-slate-900 px-3 py-1 rounded-lg border border-slate-800 text-[10px] font-black uppercase flex items-center gap-2"
-                              >
-                                {getFlagUrl(p.team_name) ? (
-                                  <img
-                                    src={getFlagUrl(p.team_name)!}
-                                    className="w-4 h-auto rounded-sm"
-                                    alt=""
-                                  />
-                                ) : (
-                                  <Shield size={10} />
-                                )}
-                                {formatTeamName(p.team_name)}
-                              </span>
-                            ))}
+                            .filter(
+                              (p: any) => normalizeStage(p.stage) === stg.id
+                            )
+                            .map((p: any) => {
+                              const officialTeamsInStage =
+                                data.officialResults.filter(
+                                  (off: any) =>
+                                    normalizeStage(off.stage) === stg.id
+                                );
+                              const isCorrect = officialTeamsInStage.some(
+                                (off: any) =>
+                                  off.team_name?.trim().toLowerCase() ===
+                                  p.team_name?.trim().toLowerCase()
+                              );
+
+                              const isStageFull =
+                                officialTeamsInStage.length >=
+                                (STAGE_CAPACITY[stg.id] || 99);
+                              const isWrong = isStageFull && !isCorrect;
+
+                              return (
+                                <span
+                                  key={p.id}
+                                  className={`px-3 py-1 rounded-lg border text-[10px] font-black uppercase flex items-center gap-2 transition-all ${
+                                    isCorrect
+                                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                      : isWrong
+                                      ? 'bg-rose-500/10 border-rose-950 text-rose-800 opacity-50'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400'
+                                  }`}
+                                >
+                                  {getFlagUrl(p.team_name) ? (
+                                    <img
+                                      src={getFlagUrl(p.team_name)!}
+                                      className="w-4 h-auto rounded-sm"
+                                      alt=""
+                                    />
+                                  ) : (
+                                    <Shield size={10} />
+                                  )}
+                                  {formatTeamName(p.team_name)}
+                                  {isCorrect && (
+                                    <span className="ml-1 text-[8px]">
+                                      + {STAGE_POINTS[stg.id]}
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })}
                         </div>
                       </div>
                     ))}
@@ -423,7 +475,7 @@ export default function TuttiPronosticiPage() {
             );
           })}
 
-        {/* --- BONUS --- */}
+        {/* --- BONUS CON NUOVO ORDINE --- */}
         {activeTab === 'BONUS' &&
           data.profiles.map((user: any) => {
             const b = data.userBonuses.find(
@@ -494,58 +546,67 @@ export default function TuttiPronosticiPage() {
                   <div className="p-6 bg-slate-950/60 space-y-2 border-t border-slate-800">
                     {[
                       {
-                        id: 'Rossi',
-                        val: b?.total_red_cards,
-                        ok: checks.red,
-                        icon: <Zap size={12} />,
-                      },
-                      {
-                        id: 'Rigori',
-                        val: b?.total_penalties,
-                        ok: checks.pen,
-                        icon: <Goal size={12} />,
-                      },
-                      {
-                        id: 'Autogol',
-                        val: b?.total_own_goals,
-                        ok: checks.own,
-                        icon: <Target size={12} />,
+                        id: 'MVP',
+                        val: b?.mvp_world_cup,
+                        ok: checks.mvp,
+                        pts: 10,
+                        icon: <Trophy size={12} />,
                       },
                       {
                         id: 'Capocannoniere',
                         val: b?.top_scorer,
                         ok: checks.top,
+                        pts: 10,
                         icon: <Award size={12} />,
-                      },
-                      {
-                        id: 'MVP',
-                        val: b?.mvp_world_cup,
-                        ok: checks.mvp,
-                        icon: <Trophy size={12} />,
                       },
                       {
                         id: 'Miglior Portiere',
                         val: b?.best_goalkeeper,
                         ok: checks.gk,
+                        pts: 10,
                         icon: <ShieldCheck size={12} />,
                       },
                       {
                         id: 'Match Top Gol',
                         val: b?.high_scoring_match,
                         ok: checks.high,
+                        pts: 5,
                         icon: <Flame size={12} />,
                       },
                       {
                         id: 'Girone +',
                         val: b?.highest_scoring_group,
                         ok: checks.hg,
+                        pts: 5,
                         icon: <ArrowUpToLine size={12} />,
                       },
                       {
                         id: 'Girone -',
                         val: b?.lowest_scoring_group,
                         ok: checks.lg,
+                        pts: 5,
                         icon: <ArrowDownToLine size={12} />,
+                      },
+                      {
+                        id: 'Autogol',
+                        val: b?.total_own_goals,
+                        ok: checks.own,
+                        pts: 3,
+                        icon: <Target size={12} />,
+                      },
+                      {
+                        id: 'Rigori',
+                        val: b?.total_penalties,
+                        ok: checks.pen,
+                        pts: 3,
+                        icon: <Goal size={12} />,
+                      },
+                      {
+                        id: 'Rossi',
+                        val: b?.total_red_cards,
+                        ok: checks.red,
+                        pts: 3,
+                        icon: <Zap size={12} />,
                       },
                     ].map((bonus) => (
                       <div
@@ -553,7 +614,7 @@ export default function TuttiPronosticiPage() {
                         className={`flex justify-between items-center p-3 rounded-xl border ${
                           bonus.ok
                             ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                            : 'bg-slate-950 border-slate-800'
+                            : 'bg-slate-950 border-slate-800 text-slate-500'
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -562,9 +623,16 @@ export default function TuttiPronosticiPage() {
                             {bonus.id}
                           </span>
                         </div>
-                        <span className="text-[10px] font-black uppercase truncate max-w-[120px] text-right">
-                          {bonus.val || '--'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase truncate max-w-[120px] text-right">
+                            {bonus.val || '--'}
+                          </span>
+                          {bonus.ok && (
+                            <span className="text-[8px] font-black text-emerald-400">
+                              +{bonus.pts}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
