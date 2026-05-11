@@ -16,11 +16,16 @@ export const metadata: Metadata = {
   themeColor: '#eab308',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   
-  // Impostazioni specifiche per iOS
+  // Impostazioni specifiche per iOS (iPhone)
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Mondiale 2026!', // Nome corto per iPhone (max 12-15 caratteri consigliati)
+    title: 'Mundialito', // Il nome che apparirà sotto l'icona su iPhone
+  },
+
+  // Forza Safari a usare la coppa d'oro come icona
+  icons: {
+    apple: '/icon-512x512.png',
   },
 };
 
