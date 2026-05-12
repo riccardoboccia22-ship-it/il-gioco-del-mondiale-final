@@ -4,8 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
-  BarChart3, RefreshCw, ShieldCheck, Award, Goal, Target,
-  Flame, ArrowUpToLine, ArrowDownToLine, Star, X, CheckCircle2
+  BarChart3, RefreshCw, Star, X, CheckCircle2
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -57,7 +56,7 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
-// Funzione salva-spazio visivo per i nomi lunghi su mobile
+// UX MOBILE: Funzione salva-spazio visivo per i nomi lunghi
 const formatTeamName = (teamName: string) => {
   if (!teamName) return '';
   const lowerName = teamName.toLowerCase().trim();
@@ -166,7 +165,7 @@ export default function AdminPage() {
           points_bonus: pBon, 
           exact_matches: pEx, 
           pts_winner: sW, pts_f: sF, pts_sf: sSF, pts_qf: sQF, pts_r16: sR16, pts_r32: sR32,
-          previous_ranking: profile.ranking
+          previous_ranking: profile.ranking // Salvataggio posizione precedente
         };
       });
 
@@ -188,7 +187,6 @@ export default function AdminPage() {
       
       if (syncToast) toast.dismiss(syncToast);
       
-      // UX: Differenziamo il messaggio se è manuale o automatico
       if (isManual) {
         toast.success('Punti ricalcolati forzatamente!');
       } else {
@@ -249,9 +247,48 @@ export default function AdminPage() {
     if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
   };
   const deleteQualif = async (id: any) => { await supabase.from('official_bracket').delete().eq('id', id); await syncLeaderboard(false); };
-  const togglePayment = async (uId: string, s: boolean) => { await supabase.from('profiles').update({ is_paid: !s }).eq('id', uId); fetchData(); };
+  
+  // UX ADMIN: Optimistic Update per i pagamenti
+  const updatePaymentMethod = async (uId: string, method: string) => {
+    const isPaid = method !== ''; 
+    
+    // Aggiorna istantaneamente la grafica senza aspettare il database
+    setProfiles(prevProfiles => 
+      prevProfiles.map(p => 
+        p.id === uId ? { ...p, is_paid: isPaid, payment_method: method } : p
+      )
+    );
+
+    // Salva nel database in background
+    const { error } = await supabase.from('profiles').update({ 
+      is_paid: isPaid,
+      payment_method: method
+    }).eq('id', uId);
+    
+    if (error) {
+      toast.error('Errore. Esegui lo script SQL su Supabase per la colonna payment_method!');
+      fetchData(); // Rollback visuale in caso di errore
+    } else {
+      toast.success('Metodo di pagamento aggiornato!');
+    }
+  };
+
   const deleteUser = async (uId: string, name: string) => { if (window.confirm(`Eliminare ${name}?`)) { await supabase.from('predictions').delete().eq('user_id', uId); await supabase.from('brackets').delete().eq('user_id', uId); await supabase.from('user_bonus_answers').delete().eq('user_id', uId); await supabase.from('profiles').delete().eq('id', uId); fetchData(); await syncLeaderboard(false); } };
-  const getAverage = (k: string) => { const v = allUserBonuses.filter(b => b[k] != null).map(b => Number(b[k])); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : 0; };
+  
+  // CALCOLO MEDIE AVANZATO: Sicuro, a 1 o 2 decimali ed elegantemente formattato
+  const getAverage = (k: string) => { 
+    const v = allUserBonuses
+      .filter(b => b[k] != null && String(b[k]).trim() !== '')
+      .map(b => Number(b[k]))
+      .filter(n => !isNaN(n)); // Assicura che si tratti di numeri reali
+    
+    if (!v.length) return '0';
+    
+    const avg = v.reduce((a, b) => a + b, 0) / v.length;
+    // toLocaleString imposterà in base al browser (o possiamo forzare 'it-IT') con max 1 cifra decimale pulita
+    return avg.toLocaleString('it-IT', { maximumFractionDigits: 1 }); 
+  };
+
   const getTopPicks = (k: string) => { const counts: any = {}; allUserBonuses.forEach(b => { if (b[k]) { const v = b[k].trim().toUpperCase(); counts[v] = (counts[v] || 0) + 1; } }); return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3); };
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
@@ -260,7 +297,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden">
       
-      {/* HEADER PULITO: Via il mega-bottone, aggiunta piccola icona in alto a destra per il Sync Manuale "di emergenza" */}
       <header className="text-center mb-8 pt-4 relative">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter mb-2">Control Tower</h1>
         <button 
@@ -275,7 +311,7 @@ export default function AdminPage() {
 
       <div className="max-w-3xl mx-auto space-y-5">
         
-        {/* SEZIONE 1: ISCRIZIONI */}
+        {/* SEZIONE 1: ISCRIZIONI E QUOTE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({profiles.length})</h2></div>
@@ -290,7 +326,27 @@ export default function AdminPage() {
                     <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => togglePayment(p.id, p.is_paid)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${p.is_paid ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}>{p.is_paid ? 'PAGATO' : 'SOLDI'}</button>
+                    
+                    <div className="relative">
+                      <select
+                        value={p.payment_method || (p.is_paid ? 'Pagato' : '')}
+                        onChange={(e) => updatePaymentMethod(p.id, e.target.value)}
+                        className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${
+                          p.is_paid || p.payment_method
+                            ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                            : 'bg-slate-900 text-rose-500 border border-rose-500/30'
+                        }`}
+                      >
+                        <option value="">NON PAGATO</option>
+                        <option value="Pagato" hidden>PAGATO ✓</option> 
+                        <option value="Satispay">SATISPAY</option>
+                        <option value="PayPal">PAYPAL</option>
+                        <option value="Contanti">CONTANTI</option>
+                        <option value="Bonifico">BONIFICO</option>
+                      </select>
+                      <ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} />
+                    </div>
+
                     <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl"><Trash2 size={16} /></button>
                   </div>
                 </div>
@@ -448,7 +504,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 5: STATISTICHE */}
+        {/* SEZIONE 5: STATISTICHE (AGGIORNATA CON I 6 BOX) */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
           <button onClick={() => setOpenSection({ ...openSection, statistiche: !openSection.statistiche })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><BarChart3 className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Globali</h2></div>
@@ -457,26 +513,43 @@ export default function AdminPage() {
           {openSection.statistiche && (
             <div className="p-5 bg-slate-950/50 space-y-6">
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rossi Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_red_cards')}</p></div>
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rigori Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_penalties')}</p></div>
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Autogol Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_own_goals')}</p></div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
+                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rossi Avg</p>
+                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_red_cards')}>{getAverage('total_red_cards')}</p>
+                </div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
+                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rigori Avg</p>
+                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_penalties')}>{getAverage('total_penalties')}</p>
+                </div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
+                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Autogol Avg</p>
+                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_own_goals')}>{getAverage('total_own_goals')}</p>
+                </div>
               </div>
               
-              <div className="grid grid-cols-1 gap-4 pt-4">
+              {/* NUOVA GRIGLIA PER I 6 BONUS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
                 {[
                   { label: 'MVP Mondiale', key: 'mvp_world_cup' },
                   { label: 'Capocannoniere', key: 'top_scorer' },
                   { label: 'Miglior Portiere', key: 'best_goalkeeper' },
+                  { label: 'Match con più Gol', key: 'high_scoring_match' },
+                  { label: 'Girone con più Gol', key: 'highest_scoring_group' },
+                  { label: 'Girone con meno Gol', key: 'lowest_scoring_group' },
                 ].map((s) => (
-                  <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
-                    <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic">{s.label} (Top Voti)</p>
-                    {getTopPicks(s.key).map(([name, count]: any) => (
-                      <div key={name} className="flex justify-between text-[10px] font-black uppercase italic mb-1">
-                        <span className="truncate pr-2 text-white">{name}</span>
-                        <span className="text-cyan-500 font-mono">{count} voti</span>
-                      </div>
-                    ))}
-                    {getTopPicks(s.key).length === 0 && <p className="text-[8px] text-slate-700 italic text-center py-2 uppercase">Nessun voto</p>}
+                  <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
+                    <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic">{s.label}</p>
+                    <div className="flex-1 flex flex-col justify-start">
+                      {getTopPicks(s.key).map(([name, count]: any) => (
+                        <div key={name} className="flex justify-between text-[10px] font-black uppercase italic mb-1.5">
+                          <span className="truncate pr-2 text-white">{name}</span>
+                          <span className="text-cyan-500 font-mono shrink-0">{count} voti</span>
+                        </div>
+                      ))}
+                      {getTopPicks(s.key).length === 0 && (
+                        <p className="text-[8px] text-slate-700 italic text-center py-2 uppercase mt-auto">Nessun voto registrato</p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
