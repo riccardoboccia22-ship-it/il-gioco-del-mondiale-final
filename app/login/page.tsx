@@ -10,9 +10,13 @@ import { BookOpen, Timer } from 'lucide-react';
 export default function ProfilePage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false); // Per il bottone di submit
   const [isRegistering, setIsRegistering] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  
+  // ---> IL NUOVO STATO FONDAMENTALE <---
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
   const [stats, setStats] = useState({
     total: 0,
     groups: 0,
@@ -59,32 +63,39 @@ export default function ProfilePage() {
   }, []);
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-      if (profile) {
-        setUserProfile({ ...user, username: profile.username || 'Guerriero' });
-        setStats({
-          total: profile.points || 0,
-          groups: profile.points_groups || 0,
-          bracket: profile.points_bracket || 0,
-          bonus: profile.points_bonus || 0,
-          rank: profile.ranking || '--',
-          isPaid: profile.is_paid || false,
-        });
+        if (profile) {
+          setUserProfile({ ...user, username: profile.username || 'Guerriero' });
+          setStats({
+            total: profile.points || 0,
+            groups: profile.points_groups || 0,
+            bracket: profile.points_bracket || 0,
+            bonus: profile.points_bonus || 0,
+            rank: profile.ranking || '--',
+            isPaid: profile.is_paid || false,
+          });
+        }
       }
+    } catch (error) {
+      console.error("Errore check utente:", error);
+    } finally {
+      // Qualunque cosa accada, ferma il caricamento
+      setIsPageLoading(false);
     }
   }
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setAuthLoading(true);
     
     const safeUsernameForEmail = username.trim().toLowerCase().replace(/\s+/g, '');
     const fakeEmail = `${safeUsernameForEmail}@mondiale.it`;
@@ -122,7 +133,7 @@ export default function ProfilePage() {
         window.location.reload();
       }
     }
-    setLoading(false);
+    setAuthLoading(false);
   };
 
   const handleLogout = async () => {
@@ -140,6 +151,15 @@ export default function ProfilePage() {
     navigator.clipboard.writeText("Quota Mondiale 2026 - Contattare Ricky per saldo");
     toast.success("Info pagamento copiate!");
   };
+
+  // SCHERMATA DI CARICAMENTO (Niente più Flash!)
+  if (isPageLoading) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans">
+         <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6 pb-32 flex items-start justify-center font-sans">
@@ -274,8 +294,8 @@ export default function ProfilePage() {
             <form onSubmit={handleAuth} className="space-y-4">
               <input type="text" placeholder="USERNAME" className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={username} onChange={(e) => setUsername(e.target.value)} required />
               <input type="password" placeholder="PASSWORD" className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="submit" disabled={loading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs mt-4 active:scale-95 shadow-xl shadow-yellow-500/10 transition-all">
-                {loading ? 'Sincronizzazione...' : isRegistering ? 'Crea Account' : 'Inizia a Giocare'}
+              <button type="submit" disabled={authLoading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs mt-4 active:scale-95 shadow-xl shadow-yellow-500/10 transition-all">
+                {authLoading ? 'Sincronizzazione...' : isRegistering ? 'Crea Account' : 'Inizia a Giocare'}
               </button>
             </form>
             <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 transition-colors uppercase tracking-widest italic text-center">
