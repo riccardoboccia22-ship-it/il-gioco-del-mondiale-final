@@ -180,7 +180,33 @@ export default function AdminPage() {
     if (!error) { toast.success('Bonus salvati!'); await syncLeaderboard(false); }
   };
 
-  const resetBonuses = async () => { if (window.confirm('Svuotare bonus ufficiali?')) { await supabase.from('official_bonuses').upsert({ id: '00000000-0000-0000-0000-000000000000', total_red_cards: null }); setBonusData({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' }); await syncLeaderboard(false); } };
+  const resetBonuses = async () => { 
+    if (window.confirm('Svuotare TUTTI i bonus ufficiali? I punteggi verranno ricalcolati.')) { 
+      const payload = {
+        id: '00000000-0000-0000-0000-000000000000',
+        total_red_cards: null,
+        total_penalties: null,
+        total_own_goals: null,
+        top_scorer: null,
+        mvp_world_cup: null,
+        best_goalkeeper: null,
+        high_scoring_match: null,
+        highest_scoring_group: null,
+        lowest_scoring_group: null
+      };
+      
+      const { error } = await supabase.from('official_bonuses').upsert(payload, { onConflict: 'id' }); 
+      
+      if (!error) {
+        toast.success('Bonus azzerati con successo!');
+        setBonusData({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' }); 
+        await syncLeaderboard(false); 
+      } else {
+        toast.error('Errore durante il reset: ' + error.message);
+      }
+    } 
+  };
+
   const saveQualif = async () => {
     const t = (document.getElementById('q_team') as HTMLSelectElement).value, s = (document.getElementById('q_stage') as HTMLSelectElement).value;
     if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
@@ -230,7 +256,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 2: RISULTATI GIRONI (CARTE GRANDI) */}
+        {/* SEZIONE 2: RISULTATI GIRONI (AUTO-FOCUS IMPLEMENTATO) */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
@@ -259,11 +285,26 @@ export default function AdminPage() {
                           <span className="text-[10px] font-black uppercase text-center truncate w-full italic text-white">{m.home_team}</span>
                         </div>
 
-                        {/* Input Centrali */}
+                        {/* Input Centrali con Auto-Focus */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" />
+                          <input 
+                            id={`h-${m.id}`} 
+                            type="number" 
+                            defaultValue={m.home_score_final ?? ''} 
+                            onChange={(e) => {
+                              if (e.target.value !== '') {
+                                document.getElementById(`a-${m.id}`)?.focus();
+                              }
+                            }}
+                            className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" 
+                          />
                           <span className="text-slate-700 font-black">-</span>
-                          <input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" />
+                          <input 
+                            id={`a-${m.id}`} 
+                            type="number" 
+                            defaultValue={m.away_score_final ?? ''} 
+                            className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" 
+                          />
                         </div>
 
                         {/* Trasferta */}
@@ -326,7 +367,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 4: BONUS UFFICIALI (9 CAMPI) */}
+        {/* SEZIONE 4: BONUS UFFICIALI */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Ufficiali</h2></div>
@@ -344,8 +385,8 @@ export default function AdminPage() {
                   {/* Statistiche Partite */}
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Match con più gol (5pt)</span><select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA PARTITA...</option>{matches.filter(m => !m.home_team.includes('TBD')).map(m => (<option key={m.id} value={`${m.home_team} - ${m.away_team}`}>{m.home_team} - {m.away_team}</option>))}</select></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone + Gol (5pt)</span><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs">{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
-                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone - Gol (5pt)</span><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs">{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone + Gol (5pt)</span><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone - Gol (5pt)</span><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                   </div>
 
                   {/* Numeri */}

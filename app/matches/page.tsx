@@ -517,18 +517,23 @@ export default function MatchesPage() {
                                     disabled={isExpired}
                                     placeholder="-"
                                     className="w-10 h-10 sm:w-11 sm:h-11 bg-slate-900 border border-slate-800 rounded-xl text-center font-black text-yellow-500 text-lg focus:border-yellow-500 outline-none transition-all disabled:opacity-30"
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                       handleInputChange(
                                         match.id,
                                         'home',
                                         e.target.value
-                                      )
-                                    }
+                                      );
+                                      // LOGICA AUTO-FOCUS
+                                      if (e.target.value !== '') {
+                                        document.getElementById(`away-input-${match.id}`)?.focus();
+                                      }
+                                    }}
                                   />
                                   <span className="text-slate-800 font-black">
                                     :
                                   </span>
                                   <input
+                                    id={`away-input-${match.id}`} // ID NECESSARIO PER L'AUTO-FOCUS
                                     type="number"
                                     value={predictions[match.id]?.away ?? ''}
                                     disabled={isExpired}
