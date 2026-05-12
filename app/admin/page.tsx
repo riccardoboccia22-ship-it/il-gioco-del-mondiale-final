@@ -57,6 +57,21 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
+// Funzione salva-spazio visivo per i nomi lunghi su mobile
+const formatTeamName = (teamName: string) => {
+  if (!teamName) return '';
+  const lowerName = teamName.toLowerCase().trim();
+  if (lowerName === 'repubblica democratica del congo') return 'R. D. Congo';
+  if (lowerName === 'bosnia ed erzegovina') return 'Bosnia';
+  if (lowerName === 'bosnia erzegovina') return 'Bosnia';
+  if (lowerName === 'repubblica ceca') return 'Rep. Ceca';
+  if (lowerName === 'arabia saudita') return 'Arabia S.';
+  if (lowerName === 'corea del sud') return 'Corea Sud';
+  if (lowerName === 'stati uniti') return 'USA';
+  if (lowerName === 'nuova zelanda') return 'N. Zelanda';
+  return teamName;
+};
+
 export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -206,7 +221,6 @@ export default function AdminPage() {
       }
     } 
   };
-
   const saveQualif = async () => {
     const t = (document.getElementById('q_team') as HTMLSelectElement).value, s = (document.getElementById('q_stage') as HTMLSelectElement).value;
     if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
@@ -256,7 +270,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 2: RISULTATI GIRONI (AUTO-FOCUS IMPLEMENTATO) */}
+        {/* SEZIONE 2: RISULTATI GIRONI */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
@@ -272,21 +286,21 @@ export default function AdminPage() {
                 {matches.filter(m => m.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || m.away_team.toLowerCase().includes(searchTerm.toLowerCase())).map(m => {
                   const hasR = m.is_finished && m.home_score_final !== null;
                   return (
-                    <div key={m.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${hasR ? 'border-emerald-500/40 shadow-xl' : 'border-slate-800 shadow-lg'}`}>
-                      <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-2">
-                        <span className="text-[10px] font-black text-slate-500 uppercase italic">Match #{m.id}</span>
-                        {hasR && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
+                    <div key={m.id} className={`bg-slate-900 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] border transition-all ${hasR ? 'border-emerald-500/40 shadow-xl' : 'border-slate-800 shadow-md'}`}>
+                      <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2">
+                        <span className="text-[9px] font-black text-slate-500 uppercase italic">Match #{m.id}</span>
+                        {hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
                         {/* Casa */}
-                        <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
-                          <img src={`https://flagcdn.com/w40/${flagMap[m.home_team.toLowerCase()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow-md" alt="" />
-                          <span className="text-[10px] font-black uppercase text-center truncate w-full italic text-white">{m.home_team}</span>
+                        <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                          <img src={`https://flagcdn.com/w40/${flagMap[m.home_team.toLowerCase()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.home_team)}</span>
                         </div>
 
                         {/* Input Centrali con Auto-Focus */}
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1">
                           <input 
                             id={`h-${m.id}`} 
                             type="number" 
@@ -296,31 +310,31 @@ export default function AdminPage() {
                                 document.getElementById(`a-${m.id}`)?.focus();
                               }
                             }}
-                            className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" 
+                            className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" 
                           />
-                          <span className="text-slate-700 font-black">-</span>
+                          <span className="text-slate-700 font-black text-xs sm:text-base">-</span>
                           <input 
                             id={`a-${m.id}`} 
                             type="number" 
                             defaultValue={m.away_score_final ?? ''} 
-                            className="w-12 h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-lg focus:border-yellow-500" 
+                            className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" 
                           />
                         </div>
 
                         {/* Trasferta */}
-                        <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
-                          <img src={`https://flagcdn.com/w40/${flagMap[m.away_team.toLowerCase()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow-md" alt="" />
-                          <span className="text-[10px] font-black uppercase text-center truncate w-full italic text-white">{m.away_team}</span>
+                        <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                          <img src={`https://flagcdn.com/w40/${flagMap[m.away_team.toLowerCase()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.away_team)}</span>
                         </div>
                       </div>
 
                       {/* TASTO CONFERMA GRANDE */}
                       <button 
                         onClick={() => updateScore(m.id)} 
-                        className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase text-xs tracking-widest transition-all active:scale-95 ${hasR ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'}`}
+                        className={`w-full py-3 sm:py-4 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] sm:text-xs tracking-widest transition-all active:scale-95 ${hasR ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'}`}
                       >
-                        <CheckCircle2 size={16} />
-                        {hasR ? 'Aggiorna Risultato' : 'Conferma Risultato'}
+                        <CheckCircle2 size={16} className="shrink-0" />
+                        <span className="truncate">{hasR ? 'Aggiorna Risultato' : 'Conferma Risultato'}</span>
                       </button>
                     </div>
                   );
@@ -367,7 +381,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 4: BONUS UFFICIALI */}
+        {/* SEZIONE 4: BONUS UFFICIALI (9 CAMPI) */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Ufficiali</h2></div>
