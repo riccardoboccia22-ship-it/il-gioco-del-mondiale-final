@@ -115,7 +115,7 @@ export default function AdminPage() {
   const syncLeaderboard = async (isManual = true) => {
     if (isManual && !window.confirm('Ricalcolare punti e spareggi per tutti?')) return;
     setSyncing(true);
-    const syncToast = !isManual ? toast.loading('Aggiornamento classifica...') : null;
+    const syncToast = !isManual ? toast.loading('Calcolo Classifica...') : null;
     try {
       const [{ data: profs }, { data: allMatches }, { data: allPreds }, { data: offBonuses }, { data: userBonuses }, { data: offBracket }, { data: userBrackets }] = await Promise.all([
         supabase.from('profiles').select('*'), supabase.from('matches').select('*').eq('is_finished', true),
@@ -157,7 +157,17 @@ export default function AdminPage() {
           const bMap: any = { top_scorer: 10, mvp_world_cup: 10, best_goalkeeper: 10, high_scoring_match: 5, highest_scoring_group: 5, lowest_scoring_group: 5, total_red_cards: 3, total_penalties: 3, total_own_goals: 3 };
           Object.entries(bMap).forEach(([k, pts]: any) => { if (offBonuses[k] != null && String(offBonuses[k]).trim().toLowerCase() === String(ub[k]).trim().toLowerCase()) pBon += pts; });
         }
-        return { ...profile, points: pG + pB + pBon, points_groups: pG, points_bracket: pB, points_bonus: pBon, exact_matches: pEx, pts_winner: sW, pts_f: sF, pts_sf: sSF, pts_qf: sQF, pts_r16: sR16, pts_r32: sR32 };
+        
+        return { 
+          ...profile, 
+          points: pG + pB + pBon, 
+          points_groups: pG, 
+          points_bracket: pB, 
+          points_bonus: pBon, 
+          exact_matches: pEx, 
+          pts_winner: sW, pts_f: sF, pts_sf: sSF, pts_qf: sQF, pts_r16: sR16, pts_r32: sR32,
+          previous_ranking: profile.ranking
+        };
       });
 
       const sorted = [...updates].sort((a, b) => {
@@ -175,8 +185,17 @@ export default function AdminPage() {
 
       const ranked = sorted.map((u, i) => ({ ...u, ranking: (i + 1).toString() }));
       await supabase.from('profiles').upsert(ranked, { onConflict: 'id' });
+      
       if (syncToast) toast.dismiss(syncToast);
-      if (isManual) toast.success('Punti ricalcolati!'); fetchData();
+      
+      // UX: Differenziamo il messaggio se è manuale o automatico
+      if (isManual) {
+        toast.success('Punti ricalcolati forzatamente!');
+      } else {
+        toast.success('Classifica aggiornata in automatico! 🏆');
+      }
+      
+      fetchData();
     } catch (err: any) { toast.error(err.message); } finally { setSyncing(false); }
   };
 
@@ -185,14 +204,17 @@ export default function AdminPage() {
     const a = (document.getElementById(`a-${id}`) as HTMLInputElement).value;
     const isFin = h !== '' && a !== '';
     const { error } = await supabase.from('matches').update({ home_score_final: isFin ? parseInt(h) : null, away_score_final: isFin ? parseInt(a) : null, is_finished: isFin }).eq('id', id);
-    if (!error) { toast.success('Risultato salvato!'); await syncLeaderboard(false); }
+    if (!error) { 
+      toast.success('Risultato Match Salvato!'); 
+      await syncLeaderboard(false); 
+    }
   };
 
   const saveBonuses = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { id: '00000000-0000-0000-0000-000000000000', total_red_cards: bonusData.red ? parseInt(bonusData.red) : null, total_penalties: bonusData.penalties ? parseInt(bonusData.penalties) : null, total_own_goals: bonusData.own_goals ? parseInt(bonusData.own_goals) : null, top_scorer: bonusData.top.trim() || null, mvp_world_cup: bonusData.mvp_world_cup.trim() || null, best_goalkeeper: bonusData.best_goalkeeper.trim() || null, high_scoring_match: bonusData.high || null, highest_scoring_group: bonusData.high_group || null, lowest_scoring_group: bonusData.low_group || null };
     const { error } = await supabase.from('official_bonuses').upsert(payload, { onConflict: 'id' });
-    if (!error) { toast.success('Bonus salvati!'); await syncLeaderboard(false); }
+    if (!error) { toast.success('Bonus Ufficiali Salvati!'); await syncLeaderboard(false); }
   };
 
   const resetBonuses = async () => { 
@@ -221,6 +243,7 @@ export default function AdminPage() {
       }
     } 
   };
+
   const saveQualif = async () => {
     const t = (document.getElementById('q_team') as HTMLSelectElement).value, s = (document.getElementById('q_stage') as HTMLSelectElement).value;
     if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
@@ -236,11 +259,17 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden">
-      <header className="text-center mb-8 pt-4">
-        <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter mb-4">Control Tower</h1>
-        <button onClick={() => syncLeaderboard(true)} disabled={syncing} className="w-full bg-emerald-600 px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-xl shadow-emerald-600/20">
-          <RefreshCw size={18} className={`inline mr-2 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Sincronizzazione...' : 'Sincronizza Classifica'}
+      
+      {/* HEADER PULITO: Via il mega-bottone, aggiunta piccola icona in alto a destra per il Sync Manuale "di emergenza" */}
+      <header className="text-center mb-8 pt-4 relative">
+        <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter mb-2">Control Tower</h1>
+        <button 
+          onClick={() => syncLeaderboard(true)} 
+          disabled={syncing} 
+          className="absolute right-2 top-4 p-2 text-slate-500 hover:text-emerald-500 transition-colors"
+          title="Forza Ricalcolo Classifica"
+        >
+          <RefreshCw size={20} className={syncing ? 'animate-spin text-emerald-500' : ''} />
         </button>
       </header>
 
@@ -299,7 +328,7 @@ export default function AdminPage() {
                           <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.home_team)}</span>
                         </div>
 
-                        {/* Input Centrali con Auto-Focus */}
+                        {/* Input Centrali */}
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1">
                           <input 
                             id={`h-${m.id}`} 
@@ -328,7 +357,6 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* TASTO CONFERMA GRANDE */}
                       <button 
                         onClick={() => updateScore(m.id)} 
                         className={`w-full py-3 sm:py-4 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] sm:text-xs tracking-widest transition-all active:scale-95 ${hasR ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'}`}
@@ -381,7 +409,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 4: BONUS UFFICIALI (9 CAMPI) */}
+        {/* SEZIONE 4: BONUS UFFICIALI */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Ufficiali</h2></div>
@@ -420,7 +448,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 5: STATISTICHE (COMPLETE) */}
+        {/* SEZIONE 5: STATISTICHE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
           <button onClick={() => setOpenSection({ ...openSection, statistiche: !openSection.statistiche })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><BarChart3 className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Globali</h2></div>

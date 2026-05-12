@@ -10,7 +10,7 @@ import {
   ChevronUp,
   Clock,
   Info,
-  Trash2,
+  Eraser,
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -194,7 +194,7 @@ export default function MatchesPage() {
 
     if (
       window.confirm(
-        'Sei sicuro di voler svuotare e cancellare i pronostici di questo girone?'
+        'Vuoi svuotare e azzerare i pronostici inseriti per questo girone?'
       )
     ) {
       setSaving(true);
@@ -440,15 +440,16 @@ export default function MatchesPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       {!isExpired && (
-                        <div
+                        <button
                           onClick={(e) => resetGroup(e, groupMatchesArray)}
-                          className="p-2 sm:p-3 bg-slate-950 border border-slate-800 rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-95"
-                          title={`Svuota ${groupName}`}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-500 hover:text-rose-500 hover:border-rose-500/50 transition-all active:scale-95"
+                          title={`Azzera i pronostici del ${groupName}`}
                         >
-                          <Trash2 size={14} />
-                        </div>
+                          <Eraser size={14} />
+                          <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Azzera</span>
+                        </button>
                       )}
                       <div className="p-2 sm:p-3">
                         {isOpen ? (

@@ -140,20 +140,11 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
 
-                  {/* NOME GIOCATORE E QUOTA */}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <p className="font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none mb-1 truncate w-full">
+                  {/* NOME GIOCATORE */}
+                  <div className="flex flex-col min-w-0 flex-1 justify-center">
+                    <p className="font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full">
                       {player.username}
                     </p>
-                    {player.is_paid ? (
-                      <span className="text-[6px] sm:text-[7px] font-black text-emerald-500 uppercase tracking-widest">
-                        Quota OK ✓
-                      </span>
-                    ) : (
-                      <span className="text-[6px] sm:text-[7px] font-black text-rose-500 uppercase tracking-widest animate-pulse">
-                        Manca Quota!
-                      </span>
-                    )}
                   </div>
                 </div>
 
