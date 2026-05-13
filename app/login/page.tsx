@@ -1,309 +1,124 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Trophy, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { toast } from 'react-hot-toast';
-import { BookOpen, Timer } from 'lucide-react'; 
 
-export default function ProfilePage() {
+function AuthForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Controlla se l'utente arriva dal tasto "Accetta la Sfida"
+  const isRegisterMode = searchParams.get('mode') === 'register';
+  
+  const [isRegistering, setIsRegistering] = useState(isRegisterMode);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [authLoading, setAuthLoading] = useState(false); // Per il bottone di submit
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
-  
-  // ---> IL NUOVO STATO FONDAMENTALE <---
-  const [isPageLoading, setIsPageLoading] = useState(true);
-
-  const [stats, setStats] = useState({
-    total: 0,
-    groups: 0,
-    bracket: 0,
-    bonus: 0,
-    rank: '--',
-    isPaid: false,
-  });
-  
-  // Stati per il Countdown
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-  const [isExpired, setIsExpired] = useState(false);
-  
-  const router = useRouter();
-  const ADMIN_EMAIL = 'ricky@mondiale.it';
-
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  // Effetto per il Countdown
-  useEffect(() => {
-    // Data di inizio ufficiale del Mondiale
-    const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
-
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = WORLD_CUP_START_DATE - now;
-
-      if (distance < 0) {
-        clearInterval(timer);
-        setIsExpired(true);
-      } else {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000),
-        });
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  async function checkUser() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profile) {
-          setUserProfile({ ...user, username: profile.username || 'Guerriero' });
-          setStats({
-            total: profile.points || 0,
-            groups: profile.points_groups || 0,
-            bracket: profile.points_bracket || 0,
-            bonus: profile.points_bonus || 0,
-            rank: profile.ranking || '--',
-            isPaid: profile.is_paid || false,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Errore check utente:", error);
-    } finally {
-      // Qualunque cosa accada, ferma il caricamento
-      setIsPageLoading(false);
-    }
-  }
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthLoading(true);
-    
-    const safeUsernameForEmail = username.trim().toLowerCase().replace(/\s+/g, '');
-    const fakeEmail = `${safeUsernameForEmail}@mondiale.it`;
+    setIsLoading(true);
+    setError('');
+
+    // Genera la finta email basata sull'username per Supabase
+    const safeUsername = username.trim().toLowerCase().replace(/\s+/g, '');
+    const fakeEmail = `${safeUsername}@mondiale.it`;
 
     if (isRegistering) {
-      const { data, error } = await supabase.auth.signUp({
+      // LOGICA REGISTRAZIONE
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: fakeEmail,
         password: password,
       });
 
-      if (error) {
-        toast.error('Errore: Username occupato o password troppo corta');
+      if (signUpError) {
+        setError('Errore: Username già occupato o password troppo corta.');
       } else if (data.user) {
         await supabase.from('profiles').insert([{
           id: data.user.id,
           username: username.trim(),
           points: 0,
-          points_groups: 0,
-          points_bracket: 0,
-          points_bonus: 0,
           is_paid: false,
         }]);
-        toast.success('Registrazione completata!');
-        router.refresh();
-        window.location.reload();
+        router.push('/profile');
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
+      // LOGICA ACCESSO
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: fakeEmail,
         password: password,
       });
-      if (error) toast.error('Credenziali errate');
-      else {
-        router.refresh();
-        window.location.reload();
-      }
+
+      if (signInError) setError('Credenziali errate. Riprova.');
+      else router.push('/profile');
     }
-    setAuthLoading(false);
+    setIsLoading(false);
   };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    window.location.reload();
-  };
-
-  const checkIsAdmin = () => {
-    if (!userProfile) return false;
-    return userProfile.email?.toLowerCase() === ADMIN_EMAIL || userProfile.username?.toLowerCase() === 'ricky';
-  };
-
-  const copyPaymentInfo = () => {
-    navigator.clipboard.writeText("Quota Mondiale 2026 - Contattare Ricky per saldo");
-    toast.success("Info pagamento copiate!");
-  };
-
-  // SCHERMATA DI CARICAMENTO (Niente più Flash!)
-  if (isPageLoading) {
-    return (
-      <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans">
-         <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-      </main>
-    );
-  }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6 pb-32 flex items-start justify-center font-sans">
-      <div className="max-w-md w-full mt-4">
-        {userProfile ? (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            
-            {/* CARD PROFILO SUPERIORE */}
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] text-center relative shadow-2xl">
-              <div className="w-20 h-20 bg-gradient-to-tr from-yellow-600 to-yellow-400 rounded-full mx-auto mb-4 flex items-center justify-center text-slate-950 text-3xl font-black border-4 border-slate-800 shadow-xl">
-                {userProfile.username.charAt(0).toUpperCase()}
-              </div>
-              <h1 className="text-2xl font-black uppercase italic tracking-tighter">{userProfile.username}</h1>
-              
-              <div className="mt-4 flex justify-center">
-                {stats.isPaid ? (
-                  <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-black px-4 py-1.5 rounded-full border border-emerald-500/30 uppercase tracking-widest flex items-center gap-2">
-                    Quota Versata ✓
-                  </span>
-                ) : (
-                  <button onClick={copyPaymentInfo} className="bg-rose-500/10 text-rose-500 text-[9px] font-black px-4 py-1.5 rounded-full border border-rose-500/20 uppercase tracking-widest animate-pulse hover:bg-rose-500 hover:text-white transition-all">
-                    Quota Mancante ✘
-                  </button>
-                )}
-              </div>
-            </div>
+    <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative">
+      <Link href="/" className="absolute top-6 left-6 text-slate-500 hover:text-white">
+        <ArrowLeft size={24} />
+      </Link>
 
-            {/* COUNTDOWN BOX */}
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl relative overflow-hidden">
-              <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
-              <div className="text-center mb-4 flex items-center justify-center gap-2">
-                <Timer size={16} className={isExpired ? "text-rose-500" : "text-yellow-500"} />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  {isExpired ? 'Pronostici Chiusi' : 'Chiusura Pronostici'}
-                </p>
-              </div>
-              
-              {isExpired ? (
-                <div className="text-center py-2">
-                  <p className="text-xl font-black text-rose-500 uppercase italic">Il Mondiale è Iniziato!</p>
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Non è più possibile modificare le scelte</p>
-                </div>
-              ) : (
-                <div className="flex justify-center gap-2 sm:gap-3">
-                  {[
-                    { label: 'Giorni', value: timeLeft.days },
-                    { label: 'Ore', value: timeLeft.hours },
-                    { label: 'Min', value: timeLeft.minutes },
-                    { label: 'Sec', value: timeLeft.seconds },
-                  ].map((t) => (
-                    <div key={t.label} className="bg-slate-950 border border-slate-800 w-16 h-16 rounded-2xl flex flex-col items-center justify-center shadow-inner">
-                      <span className="text-2xl font-black text-white leading-none mb-1">
-                        {t.value.toString().padStart(2, '0')}
-                      </span>
-                      <span className="text-[8px] font-black uppercase text-yellow-500 tracking-widest">{t.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* BOX PUNTEGGIO E RANKING */}
-            <div className="bg-yellow-500 p-6 rounded-[2.5rem] flex items-center justify-between shadow-xl shadow-yellow-500/10">
-              <div>
-                <p className="text-[10px] font-black text-slate-950 uppercase tracking-widest opacity-70 italic">Punti Totali</p>
-                <p className="text-6xl font-black text-slate-950 tracking-tighter leading-none">{stats.total}</p>
-              </div>
-              <div className="text-right bg-slate-950/10 p-4 rounded-3xl">
-                <p className="text-[9px] font-black text-slate-950/60 uppercase tracking-widest">Ranking</p>
-                <p className="text-3xl font-black text-slate-950 leading-none">#{stats.rank}</p>
-              </div>
-            </div>
-
-            {/* GRIGLIA DETTAGLI */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Gironi', val: stats.groups },
-                { label: 'Fase Finale', val: stats.bracket },
-                { label: 'Bonus', val: stats.bonus }
-              ].map((s) => (
-                <div key={s.label} className="bg-slate-900/50 border border-slate-800 p-4 rounded-3xl text-center shadow-lg">
-                  <p className="text-[8px] font-black text-slate-500 uppercase italic mb-1">{s.label}</p>
-                  <p className="text-xl font-black text-white">{s.val}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* AZIONI DI GIOCO */}
-            <div className="space-y-3 pt-6 border-t border-slate-900">
-              <button onClick={() => router.push('/matches')} className="w-full py-5 bg-white text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 shadow-xl">
-                Fase a Gironi ⚽
-              </button>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => router.push('/bracket')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[9px] hover:border-yellow-500/50 transition-all shadow-md">
-                  Fase Finale 🏆
-                </button>
-                <button onClick={() => router.push('/bonus')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[9px] hover:border-yellow-500/50 transition-all shadow-md">
-                  Bonus ⭐
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => router.push('/leaderboard')} className="py-4 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-slate-950 transition-all">
-                  Classifica 🥇
-                </button>
-                <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-800/30 border border-slate-700/50 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2">
-                  <BookOpen size={14} /> Regolamento
-                </button>
-              </div>
-
-              {checkIsAdmin() && (
-                <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-red-600/10 text-red-500 border border-red-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] hover:bg-red-600 hover:text-white transition-all mt-4">
-                  ⚙️ Pannello Admin
-                </Link>
-              )}
-              
-              <button onClick={handleLogout} className="w-full py-4 text-slate-600 font-black rounded-2xl uppercase tracking-[0.2em] text-[8px] hover:text-rose-500 transition-all mt-2">
-                Esci dal Gioco
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* FORM LOGIN/REGISTRAZIONE */
-          <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-black text-yellow-500 uppercase italic">
-                {isRegistering ? 'Iscriviti' : 'Entra'}
-              </h1>
-              <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] mt-2 italic">World Cup 2026 Access</p>
-            </div>
-            <form onSubmit={handleAuth} className="space-y-4">
-              <input type="text" placeholder="USERNAME" className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={username} onChange={(e) => setUsername(e.target.value)} required />
-              <input type="password" placeholder="PASSWORD" className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="submit" disabled={authLoading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs mt-4 active:scale-95 shadow-xl shadow-yellow-500/10 transition-all">
-                {authLoading ? 'Sincronizzazione...' : isRegistering ? 'Crea Account' : 'Inizia a Giocare'}
-              </button>
-            </form>
-            <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 transition-colors uppercase tracking-widest italic text-center">
-              {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
-            </button>
-          </div>
-        )}
+      <div className="text-center mb-8 mt-4">
+        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
+          <Trophy size={28} className="text-yellow-500" />
+        </div>
+        <h1 className="text-3xl font-black uppercase italic text-white">
+          {isRegistering ? 'Iscriviti' : 'Bentornato'}
+        </h1>
       </div>
+
+      <form onSubmit={handleAuth} className="space-y-4">
+        <input 
+          type="text" 
+          placeholder="USERNAME" 
+          className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase"
+          value={username} 
+          onChange={(e) => setUsername(e.target.value)} 
+          required 
+        />
+        <input 
+          type="password" 
+          placeholder="PASSWORD" 
+          className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase"
+          value={password} 
+          onChange={(e) => setPassword(e.target.value)} 
+          required 
+        />
+
+        {error && <p className="text-rose-500 text-[10px] font-black uppercase text-center">{error}</p>}
+
+        <button 
+          type="submit" 
+          disabled={isLoading}
+          className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all"
+        >
+          {isLoading ? 'Sincronizzazione...' : isRegistering ? 'Crea Account 🏆' : 'Entra nel Gioco ⚽'}
+        </button>
+      </form>
+
+      <button 
+        onClick={() => setIsRegistering(!isRegistering)} 
+        className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest text-center"
+      >
+        {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
+      </button>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans">
+      <Suspense fallback={<div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>}>
+        <AuthForm />
+      </Suspense>
     </main>
   );
 }
