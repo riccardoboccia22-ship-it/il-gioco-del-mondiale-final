@@ -1,25 +1,20 @@
 import './globals.css';
-import type { Metadata, Viewport } from 'next'; 
+import type { Metadata } from 'next'; 
 import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
 import { Toaster } from 'react-hot-toast'; 
 
 const inter = Inter({ subsets: ['latin'] });
 
-// Configurazioni per mobile: Viewport e Colori del tema separati (Best practice Next.js 14+)
-export const viewport: Viewport = {
-  themeColor: '#eab308',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // Per evitare zoom indesiderati sui telefoni (fondamentale per la UX dei tuoi amici)
-};
-
-// Configurazione unica: Metadati + PWA + Open Graph (WhatsApp/Social)
+// Configurazione unica: Metadati + PWA + Open Graph
 export const metadata: Metadata = {
   title: 'Il Gioco del Mondiale 2026!', 
   description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
   manifest: '/manifest.json',
+  
+  // Reinseriti qui per compatibilità con la tua versione di Next.js
+  themeColor: '#eab308',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   
   // URL base del tuo dominio (sostituisci se il dominio reale è diverso)
   metadataBase: new URL('https://www.iltuopronostico.it'),
@@ -28,15 +23,15 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Mundialito', // Il nome che apparirà sotto l'icona su iPhone
+    title: 'Mundialito',
   },
 
-  // Forza Safari a usare l'icona
+  // Forza Safari a usare l'icona dorata
   icons: {
     apple: '/icon-512x512.png',
   },
 
-  // OPEN GRAPH: La magia per far apparire l'anteprima su WhatsApp, Facebook, Telegram
+  // OPEN GRAPH: La configurazione per WhatsApp, Facebook, Telegram
   openGraph: {
     title: 'Il Gioco del Mondiale 2026 🏆',
     description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
@@ -44,7 +39,7 @@ export const metadata: Metadata = {
     siteName: 'Mundialito 2026',
     images: [
       {
-        url: '/logo.png', // Assicurati che questo corrisponda al tuo file quadrato in /public
+        url: '/logo.png', // Assicurati che questo sia il file quadrato
         width: 800,
         height: 800,
         alt: 'Logo Mondiale 2026',
