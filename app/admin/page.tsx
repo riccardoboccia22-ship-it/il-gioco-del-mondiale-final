@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
-  BarChart3, RefreshCw, Star, X, CheckCircle2
+  BarChart3, RefreshCw, Star, X, CheckCircle2, MessageCircle
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -56,7 +56,6 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
-// UX MOBILE: Funzione salva-spazio visivo per i nomi lunghi
 const formatTeamName = (teamName: string) => {
   if (!teamName) return '';
   const lowerName = teamName.toLowerCase().trim();
@@ -165,7 +164,7 @@ export default function AdminPage() {
           points_bonus: pBon, 
           exact_matches: pEx, 
           pts_winner: sW, pts_f: sF, pts_sf: sSF, pts_qf: sQF, pts_r16: sR16, pts_r32: sR32,
-          previous_ranking: profile.ranking // Salvataggio posizione precedente
+          previous_ranking: profile.ranking
         };
       });
 
@@ -248,48 +247,49 @@ export default function AdminPage() {
   };
   const deleteQualif = async (id: any) => { await supabase.from('official_bracket').delete().eq('id', id); await syncLeaderboard(false); };
   
-  // UX ADMIN: Optimistic Update per i pagamenti
   const updatePaymentMethod = async (uId: string, method: string) => {
     const isPaid = method !== ''; 
-    
-    // Aggiorna istantaneamente la grafica senza aspettare il database
-    setProfiles(prevProfiles => 
-      prevProfiles.map(p => 
-        p.id === uId ? { ...p, is_paid: isPaid, payment_method: method } : p
-      )
-    );
-
-    // Salva nel database in background
-    const { error } = await supabase.from('profiles').update({ 
-      is_paid: isPaid,
-      payment_method: method
-    }).eq('id', uId);
-    
-    if (error) {
-      toast.error('Errore. Esegui lo script SQL su Supabase per la colonna payment_method!');
-      fetchData(); // Rollback visuale in caso di errore
-    } else {
-      toast.success('Metodo di pagamento aggiornato!');
-    }
+    setProfiles(prevProfiles => prevProfiles.map(p => p.id === uId ? { ...p, is_paid: isPaid, payment_method: method } : p));
+    const { error } = await supabase.from('profiles').update({ is_paid: isPaid, payment_method: method }).eq('id', uId);
+    if (error) { toast.error('Errore'); fetchData(); } else { toast.success('Metodo aggiornato!'); }
   };
 
   const deleteUser = async (uId: string, name: string) => { if (window.confirm(`Eliminare ${name}?`)) { await supabase.from('predictions').delete().eq('user_id', uId); await supabase.from('brackets').delete().eq('user_id', uId); await supabase.from('user_bonus_answers').delete().eq('user_id', uId); await supabase.from('profiles').delete().eq('id', uId); fetchData(); await syncLeaderboard(false); } };
   
-  // CALCOLO MEDIE AVANZATO: Sicuro, a 1 o 2 decimali ed elegantemente formattato
   const getAverage = (k: string) => { 
-    const v = allUserBonuses
-      .filter(b => b[k] != null && String(b[k]).trim() !== '')
-      .map(b => Number(b[k]))
-      .filter(n => !isNaN(n)); // Assicura che si tratti di numeri reali
-    
+    const v = allUserBonuses.filter(b => b[k] != null && String(b[k]).trim() !== '').map(b => Number(b[k])).filter(n => !isNaN(n)); 
     if (!v.length) return '0';
-    
-    const avg = v.reduce((a, b) => a + b, 0) / v.length;
-    // toLocaleString imposterà in base al browser (o possiamo forzare 'it-IT') con max 1 cifra decimale pulita
-    return avg.toLocaleString('it-IT', { maximumFractionDigits: 1 }); 
+    return (v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('it-IT', { maximumFractionDigits: 1 }); 
   };
 
   const getTopPicks = (k: string) => { const counts: any = {}; allUserBonuses.forEach(b => { if (b[k]) { const v = b[k].trim().toUpperCase(); counts[v] = (counts[v] || 0) + 1; } }); return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3); };
+
+  // LA NUOVA FUNZIONE MAGICA PER WHATSAPP
+  const copyWhatsAppReport = () => {
+    if (profiles.length === 0) return toast.error('Nessuno in classifica!');
+    const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
+    
+    let text = `🏆 *CLASSIFICA MONDIALE 2026 - AGGIORNAMENTO* 🏆\n\n`;
+    sorted.forEach((p, i) => {
+      let medal = '⚽';
+      if (i === 0) medal = '🥇';
+      if (i === 1) medal = '🥈';
+      if (i === 2) medal = '🥉';
+      // Mostriamo solo la Top 10 per non intasare le chat
+      if (i < 10) {
+        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
+      }
+    });
+
+    if (sorted.length > 10) {
+      text += `\n...e altri ${sorted.length - 10} giocatori!\n`;
+    }
+
+    text += `\n👉 Guarda la classifica completa: www.tuodominio.it/leaderboard`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Bollettino copiato! Incollalo su WhatsApp 📱', { icon: '💬' });
+  };
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-500 font-black">ACCESSO NEGATO</div>;
@@ -299,14 +299,25 @@ export default function AdminPage() {
       
       <header className="text-center mb-8 pt-4 relative">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter mb-2">Control Tower</h1>
-        <button 
-          onClick={() => syncLeaderboard(true)} 
-          disabled={syncing} 
-          className="absolute right-2 top-4 p-2 text-slate-500 hover:text-emerald-500 transition-colors"
-          title="Forza Ricalcolo Classifica"
-        >
-          <RefreshCw size={20} className={syncing ? 'animate-spin text-emerald-500' : ''} />
-        </button>
+        
+        {/* I DUE PULSANTI IN ALTO A DESTRA */}
+        <div className="absolute right-2 top-4 flex items-center gap-1">
+          <button 
+            onClick={copyWhatsAppReport} 
+            className="p-2 text-slate-500 hover:text-emerald-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg"
+            title="Copia Bollettino per WhatsApp"
+          >
+            <MessageCircle size={18} />
+          </button>
+          <button 
+            onClick={() => syncLeaderboard(true)} 
+            disabled={syncing} 
+            className={`p-2 text-slate-500 hover:text-blue-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg ${syncing ? 'animate-spin text-blue-500' : ''}`}
+            title="Forza Ricalcolo Classifica"
+          >
+            <RefreshCw size={18} />
+          </button>
+        </div>
       </header>
 
       <div className="max-w-3xl mx-auto space-y-5">
@@ -378,45 +389,22 @@ export default function AdminPage() {
                       </div>
 
                       <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
-                        {/* Casa */}
                         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
                           <img src={`https://flagcdn.com/w40/${flagMap[m.home_team.toLowerCase()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
                           <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.home_team)}</span>
                         </div>
-
-                        {/* Input Centrali */}
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1">
-                          <input 
-                            id={`h-${m.id}`} 
-                            type="number" 
-                            defaultValue={m.home_score_final ?? ''} 
-                            onChange={(e) => {
-                              if (e.target.value !== '') {
-                                document.getElementById(`a-${m.id}`)?.focus();
-                              }
-                            }}
-                            className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" 
-                          />
+                          <input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" />
                           <span className="text-slate-700 font-black text-xs sm:text-base">-</span>
-                          <input 
-                            id={`a-${m.id}`} 
-                            type="number" 
-                            defaultValue={m.away_score_final ?? ''} 
-                            className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" 
-                          />
+                          <input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" />
                         </div>
-
-                        {/* Trasferta */}
                         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
                           <img src={`https://flagcdn.com/w40/${flagMap[m.away_team.toLowerCase()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
                           <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.away_team)}</span>
                         </div>
                       </div>
 
-                      <button 
-                        onClick={() => updateScore(m.id)} 
-                        className={`w-full py-3 sm:py-4 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] sm:text-xs tracking-widest transition-all active:scale-95 ${hasR ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'}`}
-                      >
+                      <button onClick={() => updateScore(m.id)} className={`w-full py-3 sm:py-4 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] sm:text-xs tracking-widest transition-all active:scale-95 ${hasR ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-yellow-500 text-slate-950 shadow-yellow-500/20'}`}>
                         <CheckCircle2 size={16} className="shrink-0" />
                         <span className="truncate">{hasR ? 'Aggiorna Risultato' : 'Conferma Risultato'}</span>
                       </button>
@@ -475,19 +463,16 @@ export default function AdminPage() {
             <div className="p-5 bg-slate-950/30">
               <form onSubmit={saveBonuses} className="space-y-5">
                 <div className="grid grid-cols-1 gap-4">
-                  {/* Premi Individuali */}
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">MVP Mondiale (10pt)</span><input value={bonusData.mvp_world_cup} onChange={e => setBonusData({ ...bonusData, mvp_world_cup: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Capocannoniere (10pt)</span><input value={bonusData.top} onChange={e => setBonusData({ ...bonusData, top: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Miglior Portiere (10pt)</span><input value={bonusData.best_goalkeeper} onChange={e => setBonusData({ ...bonusData, best_goalkeeper: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
                   
-                  {/* Statistiche Partite */}
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Match con più gol (5pt)</span><select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA PARTITA...</option>{matches.filter(m => !m.home_team.includes('TBD')).map(m => (<option key={m.id} value={`${m.home_team} - ${m.away_team}`}>{m.home_team} - {m.away_team}</option>))}</select></div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone + Gol (5pt)</span><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                     <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone - Gol (5pt)</span><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                   </div>
 
-                  {/* Numeri */}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Autogol (3pt)</span><input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs" /></div>
                     <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Rigori (3pt)</span><input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs" /></div>
@@ -504,7 +489,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 5: STATISTICHE (AGGIORNATA CON I 6 BOX) */}
+        {/* SEZIONE 5: STATISTICHE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
           <button onClick={() => setOpenSection({ ...openSection, statistiche: !openSection.statistiche })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><BarChart3 className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Globali</h2></div>
@@ -527,7 +512,6 @@ export default function AdminPage() {
                 </div>
               </div>
               
-              {/* NUOVA GRIGLIA PER I 6 BONUS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
                 {[
                   { label: 'MVP Mondiale', key: 'mvp_world_cup' },

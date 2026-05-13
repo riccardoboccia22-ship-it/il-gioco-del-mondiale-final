@@ -184,14 +184,6 @@ export default function RegolamentoPage() {
                 <p className="text-[9px] text-slate-500 mt-1 italic">Si confrontano i punti fatti nelle singole fasi (chi ha fatto più punti nel turno più avanzato vince). Ordine: Campione Mondiale → Finaliste → Semifinali → Quarti → Ottavi → Sedicesimi.</p>
               </div>
             </div>
-
-            <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-slate-500 shrink-0 border border-slate-700 text-xs">4</div>
-              <div>
-                <h3 className="font-black text-slate-400 uppercase text-[10px] tracking-wider">Ordine Alfabetico</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Ultimo criterio in caso di assoluta parità in tutto il resto.</p>
-              </div>
-            </div>
           </div>
         </section>
 

@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Trophy, Target, Users } from 'lucide-react';
+import { Trophy, Target, Users, Share, X } from 'lucide-react';
 
 export default function LandingPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [showPwaPrompt, setShowPwaPrompt] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -14,26 +15,69 @@ export default function LandingPage() {
       setIsLoggedIn(!!user);
     };
     checkUser();
+
+    // Rileva se l'utente sta già usando la PWA installata sulla Home
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (!isStandalone) {
+      setTimeout(() => setShowPwaPrompt(true), 1500);
+    }
   }, []);
 
   if (isLoggedIn === null) {
-    return <main className="min-h-screen bg-slate-950"></main>;
+    return (
+      <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans">
+         <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+    // FIX 1: Aggiunto pt-24 e px-6 per evitare che il banner PWA si sovrapponga al contenuto
+    <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center px-6 pt-24 pb-24 relative overflow-x-hidden font-sans">
+      
+      {/* PWA INSTALL BANNER */}
+      {showPwaPrompt && (
+        <div className="absolute top-0 left-0 w-full bg-slate-900 border-b border-slate-800 p-3 sm:p-4 flex items-center justify-between z-50 animate-in slide-in-from-top duration-500 shadow-xl">
+          <div className="flex items-center gap-3 sm:gap-4 text-slate-300">
+             <div className="bg-yellow-500/20 p-2 rounded-xl border border-yellow-500/30 shrink-0">
+               <Share size={16} className="text-yellow-500" />
+             </div>
+             <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest leading-tight">
+               📱 Per non perderti, premi <strong className="text-white">Condividi</strong> e seleziona <strong className="text-white">"Aggiungi a Schermata Home"</strong>
+             </p>
+          </div>
+          <button 
+            onClick={() => setShowPwaPrompt(false)} 
+            className="p-2 shrink-0 text-slate-500 hover:text-white bg-slate-800 rounded-lg ml-2"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Effetto luce di sfondo */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-yellow-500/10 blur-[120px] rounded-full pointer-events-none"></div>
       
-      <div className="max-w-3xl w-full text-center z-10 mt-4">
-        <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-4 drop-shadow-lg">
+      <div className="max-w-3xl w-full text-center z-10">
+        
+        {/* FIX 2: Aggiunto p-4 al contenitore e object-contain all'immagine */}
+        <div className="mx-auto w-48 h-48 sm:w-64 sm:h-64 mb-8 p-4 rounded-full shadow-[0_0_50px_rgba(234,179,8,0.2)] border-2 border-yellow-500/30 animate-in zoom-in duration-700 flex items-center justify-center bg-slate-900">
+          <img 
+            src="/logo.png" 
+            alt="Logo Il Gioco del Mondiale" 
+            // object-contain assicura che il logo sia sempre interamente visibile e centrato
+            className="w-full h-full object-contain drop-shadow-md text-xs text-slate-600 flex items-center justify-center text-center"
+          />
+        </div>
+
+        <h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter mb-4 drop-shadow-lg">
           IL GIOCO DEL MONDIALE <span className="text-yellow-500">2026</span>
         </h1>
-        <p className="text-slate-400 mb-8 uppercase tracking-widest text-xs font-bold italic">
-          Il gioco dei pronostici ufficiale
+        <p className="text-slate-400 mb-10 uppercase tracking-widest text-xs font-bold italic">
+          La Convocazione Ufficiale
         </p>
 
-        {/* GUIDA RAPIDA: Visibile solo ai non registrati */}
+        {/* GUIDA RAPIDA */}
         {!isLoggedIn && (
           <div className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-6 mb-10 text-left backdrop-blur-sm shadow-xl max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-[10px] font-black uppercase text-slate-500 mb-5 tracking-widest border-b border-slate-800/50 pb-2">Come Funziona?</h2>
@@ -42,7 +86,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 flex items-center justify-center shrink-0 border border-yellow-500/20">
                   <Users size={18} className="text-yellow-500" />
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Crea il tuo profilo</strong> in pochi secondi con email o Google.</p>
+                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Crea il tuo profilo</strong> in pochi secondi con il tuo nome da battaglia.</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
@@ -54,7 +98,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
                   <Trophy size={18} className="text-blue-500" />
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Paga la quota</strong> e segui la classifica aggiornata in tempo reale!</p>
+                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Sfida gli amici</strong> e segui la classifica aggiornata in tempo reale!</p>
               </div>
             </div>
           </div>
@@ -63,9 +107,9 @@ export default function LandingPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
           <button 
             onClick={() => router.push(isLoggedIn ? '/matches' : '/login')}
-            className="px-10 py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(234,179,8,0.15)]"
+            className="px-10 py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(234,179,8,0.15)] flex items-center justify-center gap-2"
           >
-            {isLoggedIn ? 'Vai ai Pronostici' : 'Iscriviti e Gioca'}
+            {isLoggedIn ? 'Vai ai Pronostici ⚽' : 'Accetta la Sfida 🏆'}
           </button>
           
           <button 
