@@ -64,7 +64,6 @@ export default function LandingPage() {
           <img 
             src="/logo.png" 
             alt="Logo Il Gioco del Mondiale" 
-            // object-cover riempie tutto lo spazio, scale-[1.25] zooma per far combaciare l'anello d'oro
             className="w-full h-full object-cover scale-[1.25] origin-center"
           />
         </div>
@@ -105,7 +104,7 @@ export default function LandingPage() {
         
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
           <button 
-            onClick={() => router.push(isLoggedIn ? '/matches' : '/login')}
+            onClick={() => router.push(isLoggedIn ? '/matches' : '/login?mode=register')}
             className="px-10 py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(234,179,8,0.15)] flex items-center justify-center gap-2"
           >
             {isLoggedIn ? 'Vai ai Pronostici ⚽' : 'Accetta la Sfida 🏆'}
