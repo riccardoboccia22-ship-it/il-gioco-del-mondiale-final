@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
   manifest: '/manifest.json',
   
-  // Reinseriti qui per compatibilità con la tua versione di Next.js
+  // Impostazioni Viewport e Colori compatibili con la tua versione di Next.js
   themeColor: '#eab308',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   
-  // URL base del tuo dominio (sostituisci se il dominio reale è diverso)
+  // URL base del tuo dominio
   metadataBase: new URL('https://www.iltuopronostico.it'),
   
   // Impostazioni specifiche per iOS (iPhone)
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     apple: '/icon-512x512.png',
   },
 
-  // OPEN GRAPH: La configurazione per WhatsApp, Facebook, Telegram
+  // OPEN GRAPH: La configurazione corretta con URL assoluto per WhatsApp, Facebook, Telegram
   openGraph: {
     title: 'Il Gioco del Mondiale 2026 🏆',
     description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
@@ -39,7 +39,8 @@ export const metadata: Metadata = {
     siteName: 'Mundialito 2026',
     images: [
       {
-        url: '/logo.png', // Assicurati che questo sia il file quadrato
+        // URL assoluto obbligatorio per Meta/WhatsApp
+        url: 'https://www.iltuopronostico.it/logo.png', 
         width: 800,
         height: 800,
         alt: 'Logo Mondiale 2026',
