@@ -32,7 +32,6 @@ export default function LandingPage() {
   }
 
   return (
-    // FIX 1: Aggiunto pt-24 e px-6 per evitare che il banner PWA si sovrapponga al contenuto
     <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center px-6 pt-24 pb-24 relative overflow-x-hidden font-sans">
       
       {/* PWA INSTALL BANNER */}
@@ -43,7 +42,7 @@ export default function LandingPage() {
                <Share size={16} className="text-yellow-500" />
              </div>
              <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest leading-tight">
-               📱 Per non perderti, premi <strong className="text-white">Condividi</strong> e seleziona <strong className="text-white">"Aggiungi a Schermata Home"</strong>
+               📱 Per una migliore esperienza, premi <strong className="text-white">Condividi</strong> e seleziona <strong className="text-white">"Aggiungi a Schermata Home"</strong>
              </p>
           </div>
           <button 
@@ -60,13 +59,13 @@ export default function LandingPage() {
       
       <div className="max-w-3xl w-full text-center z-10">
         
-        {/* FIX 2: Aggiunto p-4 al contenitore e object-contain all'immagine */}
-        <div className="mx-auto w-48 h-48 sm:w-64 sm:h-64 mb-8 p-4 rounded-full shadow-[0_0_50px_rgba(234,179,8,0.2)] border-2 border-yellow-500/30 animate-in zoom-in duration-700 flex items-center justify-center bg-slate-900">
+        {/* NUOVO LOGO A SCHERMO INTERO NEL CERCHIO */}
+        <div className="mx-auto w-48 h-48 sm:w-64 sm:h-64 mb-8 rounded-full overflow-hidden shadow-[0_0_60px_rgba(234,179,8,0.3)] animate-in zoom-in duration-700 relative bg-slate-900">
           <img 
             src="/logo.png" 
             alt="Logo Il Gioco del Mondiale" 
-            // object-contain assicura che il logo sia sempre interamente visibile e centrato
-            className="w-full h-full object-contain drop-shadow-md text-xs text-slate-600 flex items-center justify-center text-center"
+            // object-cover riempie tutto lo spazio, scale-[1.25] zooma per far combaciare l'anello d'oro
+            className="w-full h-full object-cover scale-[1.25] origin-center"
           />
         </div>
 
