@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Trophy, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
@@ -17,7 +17,21 @@ function AuthForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Nuovo stato per evitare il "flash" del form
   const [error, setError] = useState('');
+
+  // Effetto che parte appena si apre la pagina per controllare se l'utente è già loggato
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/profile');
+      } else {
+        setIsCheckingAuth(false);
+      }
+    };
+    checkSession();
+  }, [router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +72,15 @@ function AuthForm() {
     }
     setIsLoading(false);
   };
+
+  // Finché controlla la sessione, mostra un caricamento per non far vedere il form a chi è già loggato
+  if (isCheckingAuth) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative">

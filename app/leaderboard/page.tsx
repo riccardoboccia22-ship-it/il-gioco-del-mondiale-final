@@ -22,8 +22,6 @@ export default function LeaderboardPage() {
     try {
       setLoading(true);
 
-      // Preleviamo i profili senza ordinarli per punti, perché l'ordine ufficiale (con gli spareggi) 
-      // lo ha già calcolato il pannello Admin e lo ha salvato nella colonna "ranking".
       const { data, error } = await supabase
         .from('profiles')
         .select('*');
@@ -31,7 +29,8 @@ export default function LeaderboardPage() {
       if (error) throw error;
 
       if (data) {
-        // Ordiniamo localmente i giocatori basandoci sulla colonna "ranking" dell'Admin
+        // Ordiniamo basandoci sulla colonna "ranking". 
+        // I nuovi utenti (null) finiscono in fondo (999).
         const sorted = data.sort((a, b) => {
           const rankA = a.ranking ? parseInt(a.ranking) : 999;
           const rankB = b.ranking ? parseInt(b.ranking) : 999;
@@ -47,11 +46,22 @@ export default function LeaderboardPage() {
     }
   }
 
-  const getRankIcon = (rankString: string | number) => {
-    const rank = parseInt(rankString as string);
+  // FIX: Gestione dei nuovi utenti (NaN o null)
+  const getRankIcon = (rankValue: any) => {
+    const rank = parseInt(rankValue);
+
+    if (!rankValue || isNaN(rank)) {
+      return (
+        <span className="text-slate-700 text-[10px] font-black italic">
+          --
+        </span>
+      );
+    }
+
     if (rank === 1) return <Crown className="text-yellow-500" size={20} />;
     if (rank === 2) return <Medal className="text-slate-300" size={20} />;
     if (rank === 3) return <Medal className="text-amber-700" size={20} />;
+    
     return (
       <span className="text-slate-500 text-[10px] font-black italic">
         #{rank}
@@ -63,15 +73,14 @@ export default function LeaderboardPage() {
     const current = parseInt(currentRankStr);
     const previous = parseInt(previousRankStr);
 
-    // Se non c'è una posizione precedente, o se non è un numero, o se la posizione è uguale
-    if (!previous || isNaN(previous) || current === previous) {
+    if (!previous || isNaN(previous) || isNaN(current) || current === previous) {
       return <Minus className="text-slate-700" size={14} strokeWidth={3} />;
     }
-    // Se la posizione attuale è un numero più piccolo (es. da 5° a 2°), è SALITO in classifica
+    
     if (current < previous) {
       return <ChevronUp className="text-emerald-500" size={16} strokeWidth={3} />;
     }
-    // Altrimenti è SCESO
+    
     return <ChevronDown className="text-rose-500" size={16} strokeWidth={3} />;
   };
 
@@ -100,15 +109,9 @@ export default function LeaderboardPage() {
         <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic">
           <div className="flex-1 pl-12 sm:pl-16">Giocatore</div>
           <div className="flex gap-3 sm:gap-6 md:gap-10 pr-2">
-            <div className="w-6 sm:w-8 text-center">
-              <span className="sm:hidden">Gir</span>
-              <span className="hidden sm:inline">Gironi</span>
-            </div>
+            <div className="w-6 sm:w-8 text-center">Gironi</div>
             <div className="w-6 sm:w-8 text-center">FF</div>
-            <div className="w-6 sm:w-8 text-center">
-              <span className="sm:hidden">Bon</span>
-              <span className="hidden sm:inline">Bonus</span>
-            </div>
+            <div className="w-6 sm:w-8 text-center">Bonus</div>
             <div className="w-10 sm:w-12 text-center text-yellow-500 border-b border-yellow-500/20">
               Tot
             </div>
@@ -117,7 +120,9 @@ export default function LeaderboardPage() {
 
         <div className="space-y-3">
           {leaderboard.map((player) => {
-            const currentRank = parseInt(player.ranking);
+            // FIX: Calcolo sicuro del rank per gestire lo stile (glow giallo)
+            const rankValue = parseInt(player.ranking);
+            const currentRank = isNaN(rankValue) ? null : rankValue;
             
             return (
               <div
@@ -130,7 +135,7 @@ export default function LeaderboardPage() {
               >
                 <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
                   
-                  {/* BLOCCO POSIZIONE E TREND */}
+                  {/* POSIZIONE E TREND */}
                   <div className="w-10 sm:w-14 flex items-center justify-between shrink-0 bg-slate-950/50 p-1.5 rounded-xl border border-slate-800/50">
                     <div className="flex-1 flex justify-center">
                       {getRankIcon(player.ranking)}
