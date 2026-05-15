@@ -3,29 +3,29 @@
 import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Trophy, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
+import { Trophy, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Controlla se l'utente arriva dal tasto "Accetta la Sfida"
-  const isRegisterMode = searchParams.get('mode') === 'register';
+  // Modifica: Di default mostriamo Iscriviti. Mostra Login solo se richiesto dall'URL.
+  const isLoginMode = searchParams.get('mode') === 'login';
+  const [isRegistering, setIsRegistering] = useState(!isLoginMode);
   
-  const [isRegistering, setIsRegistering] = useState(isRegisterMode);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // Nuovo stato per evitare il "flash" del form
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState('');
 
-  // Effetto che parte appena si apre la pagina per controllare se l'utente è già loggato
+  // Controllo sessione all'avvio
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/profile');
+        router.push('/');
       } else {
         setIsCheckingAuth(false);
       }
@@ -50,7 +50,7 @@ function AuthForm() {
       });
 
       if (signUpError) {
-        setError('Errore: Username già occupato o password troppo corta.');
+        setError('Username già occupato o password troppo corta.');
       } else if (data.user) {
         await supabase.from('profiles').insert([{
           id: data.user.id,
@@ -58,7 +58,7 @@ function AuthForm() {
           points: 0,
           is_paid: false,
         }]);
-        router.push('/profile');
+        router.push('/');
       }
     } else {
       // LOGICA ACCESSO
@@ -68,78 +68,88 @@ function AuthForm() {
       });
 
       if (signInError) setError('Credenziali errate. Riprova.');
-      else router.push('/profile');
+      else router.push('/');
     }
     setIsLoading(false);
   };
 
-  // Finché controlla la sessione, mostra un caricamento per non far vedere il form a chi è già loggato
+  // Spinner iniziale di controllo
   if (isCheckingAuth) {
     return (
       <div className="flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+        <Loader2 className="w-12 h-12 text-yellow-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative">
-      <Link href="/" className="absolute top-6 left-6 text-slate-500 hover:text-white">
-        <ArrowLeft size={24} />
+    <div className="w-full max-w-sm z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Pulsante Indietro */}
+      <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-yellow-500 transition-colors mb-8 text-xs font-black uppercase tracking-widest pl-2">
+        <ArrowLeft size={16} /> Torna alla Home
       </Link>
 
-      <div className="text-center mb-8 mt-4">
-        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
-          <Trophy size={28} className="text-yellow-500" />
+      <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl relative">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
+            <Trophy size={28} className="text-yellow-500" />
+          </div>
+          <h1 className="text-3xl font-black uppercase italic text-white leading-none mb-2">
+            {isRegistering ? 'Iscriviti' : 'Bentornato'}
+          </h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500">
+            {isRegistering ? 'Entra nel torneo' : 'Accedi per giocare'}
+          </p>
         </div>
-        <h1 className="text-3xl font-black uppercase italic text-white">
-          {isRegistering ? 'Iscriviti' : 'Bentornato'}
-        </h1>
-      </div>
 
-      <form onSubmit={handleAuth} className="space-y-4">
-        <input 
-          type="text" 
-          placeholder="USERNAME" 
-          className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase"
-          value={username} 
-          onChange={(e) => setUsername(e.target.value)} 
-          required 
-        />
-        <input 
-          type="password" 
-          placeholder="PASSWORD" 
-          className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase"
-          value={password} 
-          onChange={(e) => setPassword(e.target.value)} 
-          required 
-        />
+        <form onSubmit={handleAuth} className="space-y-4">
+          <input 
+            type="text" 
+            placeholder="USERNAME" 
+            className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase transition-colors"
+            value={username} 
+            onChange={(e) => setUsername(e.target.value)} 
+            required 
+          />
+          <input 
+            type="password" 
+            placeholder="PASSWORD" 
+            className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase transition-colors"
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+          />
 
-        {error && <p className="text-rose-500 text-[10px] font-black uppercase text-center">{error}</p>}
+          {error && <p className="text-rose-500 text-[10px] font-black uppercase text-center bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">{error}</p>}
+
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-3xl uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all flex justify-center items-center gap-2 mt-2 disabled:opacity-70"
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isRegistering ? 'Crea Account 🏆' : 'Entra nel Gioco ⚽'}
+          </button>
+        </form>
 
         <button 
-          type="submit" 
-          disabled={isLoading}
-          className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all"
+          onClick={() => setIsRegistering(!isRegistering)} 
+          className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest text-center transition-colors"
         >
-          {isLoading ? 'Sincronizzazione...' : isRegistering ? 'Crea Account 🏆' : 'Entra nel Gioco ⚽'}
+          {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
         </button>
-      </form>
-
-      <button 
-        onClick={() => setIsRegistering(!isRegistering)} 
-        className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest text-center"
-      >
-        {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
-      </button>
+      </div>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans">
-      <Suspense fallback={<div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>}>
+    <main className="min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Sfondo Sfumato Coordinato con la Home */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 opacity-70"></div>
+      
+      <Suspense fallback={<Loader2 className="w-12 h-12 text-yellow-500 animate-spin z-10" />}>
         <AuthForm />
       </Suspense>
     </main>
