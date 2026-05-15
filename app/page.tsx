@@ -44,7 +44,7 @@ export default function HomePage() {
             
             {/* Coppa del Mondo Dorata - Pulita e Protagonista */}
             <img 
-              src="https://foktuevxfscdpsshscno.supabase.co/storage/v1/object/public/public_assets/coppa_mondo_pulita.png"
+              src="/icon-512x512.png"
               alt="World Cup Trophy" 
               className="w-3/4 h-auto object-contain drop-shadow-[0_10px_20px_rgba(234,179,8,0.3)] z-10 group-hover:scale-105 transition-transform duration-300" 
             />
