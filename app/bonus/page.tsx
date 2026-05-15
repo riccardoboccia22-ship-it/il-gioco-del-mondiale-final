@@ -19,9 +19,21 @@ import {
 } from 'lucide-react';
 
 const LOCK_TIME = new Date('2026-06-11T20:00:00+02:00');
-const GROUPS = [
-  'Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F',
-  'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L',
+
+// Array dettagliato con nomi accorciati per non "spaccare" la grafica su mobile
+const TOURNAMENT_GROUPS = [
+  { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
+  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia'] },
+  { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
+  { name: 'Gruppo D', teams: ['USA', 'Australia', 'Paraguay', 'Turchia'] },
+  { name: 'Gruppo E', teams: ['Germania', "Costa Avorio", 'Ecuador', 'Curacao'] },
+  { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
+  { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'N. Zelanda'] },
+  { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia S.', 'Capo Verde'] },
+  { name: 'Gruppo I', teams: ['Francia', 'Senegal', 'Norvegia', 'Iraq'] },
+  { name: 'Gruppo J', teams: ['Argentina', 'Austria', 'Algeria', 'Giordania'] },
+  { name: 'Gruppo K', teams: ['Portogallo', 'Colombia', 'Uzbekistan', 'R.D. Congo'] },
+  { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
 ];
 
 export default function BonusPage() {
@@ -211,10 +223,10 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><ArrowUpToLine size={14} /> Girone con più gol</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
               </span>
-              <select value={formData.highest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-lg uppercase appearance-none" onChange={(e) => setFormData({ ...formData, highest_scoring_group: e.target.value })}>
+              <select value={formData.highest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none" onChange={(e) => setFormData({ ...formData, highest_scoring_group: e.target.value })}>
                 <option value="">Scegli Girone...</option>
-                {GROUPS.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                {TOURNAMENT_GROUPS.map((g) => (
+                  <option key={g.name} value={g.name}>{g.name} ({g.teams.join(', ')})</option>
                 ))}
               </select>
             </label>
@@ -227,10 +239,10 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><ArrowDownToLine size={14} /> Girone con meno gol</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
               </span>
-              <select value={formData.lowest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-lg uppercase appearance-none" onChange={(e) => setFormData({ ...formData, lowest_scoring_group: e.target.value })}>
+              <select value={formData.lowest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none" onChange={(e) => setFormData({ ...formData, lowest_scoring_group: e.target.value })}>
                 <option value="">Scegli Girone...</option>
-                {GROUPS.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                {TOURNAMENT_GROUPS.map((g) => (
+                  <option key={g.name} value={g.name}>{g.name} ({g.teams.join(', ')})</option>
                 ))}
               </select>
             </label>
