@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // <-- Aggiunto usePathname
 import Image from 'next/image';
 import { LayoutGrid, Users, Trophy, Star, ClipboardList, Target, ShieldCheck } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
+  const pathname = usePathname(); // <-- Inizializzato
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function HomePage() {
     { label: 'FASE FINALE', icon: <Trophy size={20} />, path: '/bracket' },
     { label: 'BONUS', icon: <Star size={20} />, path: '/bonus' },
     { label: 'CLASSIFICA', icon: <ClipboardList size={20} />, path: '/leaderboard' },
-    { label: 'TUTTI', icon: <Users size={20} />, path: '/tutti-i-pronostici' },
+    { label: 'GLOBALE', icon: <Users size={20} />, path: '/tutti-i-pronostici' },
   ];
 
   return (
@@ -43,7 +44,7 @@ export default function HomePage() {
             
             {/* Coppa del Mondo Dorata - Pulita e Protagonista */}
             <img 
-              src="https://foktuevxfscdpsshscno.supabase.co/storage/v1/object/public/public_assets/coppa_mondo_pulita.png" // <- Carica la tua immagine senza scritta qui
+              src="https://foktuevxfscdpsshscno.supabase.co/storage/v1/object/public/public_assets/coppa_mondo_pulita.png"
               alt="World Cup Trophy" 
               className="w-3/4 h-auto object-contain drop-shadow-[0_10px_20px_rgba(234,179,8,0.3)] z-10 group-hover:scale-105 transition-transform duration-300" 
             />
@@ -90,7 +91,7 @@ export default function HomePage() {
       <nav className="fixed bottom-0 left-0 w-full z-20 bg-slate-950/90 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
         <div className="max-w-2xl mx-auto flex items-center justify-around py-3 px-4">
           {navItems.map((item) => {
-            const isActive = router.asPath === item.path;
+            const isActive = pathname === item.path; // <-- CORRETTO QUI
             return (
               <button
                 key={item.label}
