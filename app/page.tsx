@@ -1,123 +1,116 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { Trophy, Target, Users, Share, X } from 'lucide-react';
 
-export default function LandingPage() {
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { LayoutGrid, Users, Trophy, Star, ClipboardList, Target, ShieldCheck } from 'lucide-react';
+
+export default function HomePage() {
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [showPwaPrompt, setShowPwaPrompt] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsLoggedIn(!!user);
-    };
-    checkUser();
-
-    // Rileva se l'utente sta già usando la PWA installata sulla Home
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (!isStandalone) {
-      setTimeout(() => setShowPwaPrompt(true), 1500);
-    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
   }, []);
 
-  if (isLoggedIn === null) {
-    return (
-      <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans">
-         <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-      </main>
-    );
-  }
+  const navItems = [
+    { label: 'PROFILO', icon: <Target size={20} />, path: '/profile' },
+    { label: 'FASE GIRONI', icon: <LayoutGrid size={20} />, path: '/matches' },
+    { label: 'FASE FINALE', icon: <Trophy size={20} />, path: '/bracket' },
+    { label: 'BONUS', icon: <Star size={20} />, path: '/bonus' },
+    { label: 'CLASSIFICA', icon: <ClipboardList size={20} />, path: '/leaderboard' },
+    { label: 'TUTTI', icon: <Users size={20} />, path: '/tutti-i-pronostici' },
+  ];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center px-6 pt-24 pb-24 relative overflow-x-hidden font-sans">
+    <main className="min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center justify-between relative overflow-hidden">
       
-      {/* PWA INSTALL BANNER */}
-      {showPwaPrompt && (
-        <div className="absolute top-0 left-0 w-full bg-slate-900 border-b border-slate-800 p-3 sm:p-4 flex items-center justify-between z-50 animate-in slide-in-from-top duration-500 shadow-xl">
-          <div className="flex items-center gap-3 sm:gap-4 text-slate-300">
-             <div className="bg-yellow-500/20 p-2 rounded-xl border border-yellow-500/30 shrink-0">
-               <Share size={16} className="text-yellow-500" />
-             </div>
-             <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest leading-tight">
-               📱 Per una migliore esperienza, premi <strong className="text-white">Condividi</strong> e seleziona <strong className="text-white">"Aggiungi a Schermata Home"</strong>
-             </p>
-          </div>
-          <button 
-            onClick={() => setShowPwaPrompt(false)} 
-            className="p-2 shrink-0 text-slate-500 hover:text-white bg-slate-800 rounded-lg ml-2"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      {/* Sfondo Sfumato di Design */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 opacity-70"></div>
 
-      {/* Effetto luce di sfondo */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-yellow-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-      
-      <div className="max-w-3xl w-full text-center z-10">
+      {/* --- CONTENUTO PRINCIPALE (CENTRATO) --- */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-12 w-full max-w-sm px-6 z-10 pt-16 pb-24 animate-in fade-in zoom-in-95 duration-700">
         
-        {/* NUOVO LOGO A SCHERMO INTERO NEL CERCHIO */}
-        <div className="mx-auto w-48 h-48 sm:w-64 sm:h-64 mb-8 rounded-full overflow-hidden shadow-[0_0_60px_rgba(234,179,8,0.3)] animate-in zoom-in duration-700 relative bg-slate-900">
-          <img 
-            src="/logo.png" 
-            alt="Logo Il Gioco del Mondiale" 
-            className="w-full h-full object-cover scale-[1.25] origin-center"
-          />
+        {/* LOGO ICONICO (SENZA SCRITTA CIRCOLARE) */}
+        <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+          <div className="absolute inset-0 bg-yellow-500 rounded-full blur-[30px] opacity-20 animate-pulse"></div>
+          
+          <div className="relative w-full h-full bg-slate-900 rounded-full border-4 border-slate-800 p-6 flex items-center justify-center shadow-2xl overflow-hidden group hover:border-yellow-500/50 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950 opacity-60"></div>
+            
+            {/* Coppa del Mondo Dorata - Pulita e Protagonista */}
+            <img 
+              src="https://foktuevxfscdpsshscno.supabase.co/storage/v1/object/public/public_assets/coppa_mondo_pulita.png" // <- Carica la tua immagine senza scritta qui
+              alt="World Cup Trophy" 
+              className="w-3/4 h-auto object-contain drop-shadow-[0_10px_20px_rgba(234,179,8,0.3)] z-10 group-hover:scale-105 transition-transform duration-300" 
+            />
+          </div>
         </div>
 
-        <h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter mb-4 drop-shadow-lg">
-          IL GIOCO DEL MONDIALE <span className="text-yellow-500">2026</span>
-        </h1>
-        <p className="text-slate-400 mb-10 uppercase tracking-widest text-xs font-bold italic">
-          La Convocazione Ufficiale
-        </p>
+        {/* TITOLO ELEGANTE E UNICO (Coordinato con la Navbar) */}
+        <div className="text-center">
+          <h1 className="text-3xl sm:text-4xl font-black uppercase italic tracking-tight text-white mb-2 leading-none">
+            Il Gioco del Mondiale
+          </h1>
+          <h2 className="text-4xl sm:text-5xl font-black text-yellow-500 tracking-tighter leading-none mb-3">
+            2026
+          </h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 italic opacity-80">
+            La Convocazione Ufficiale
+          </p>
+        </div>
 
-        {/* GUIDA RAPIDA */}
-        {!isLoggedIn && (
-          <div className="bg-slate-900/60 border border-slate-800 rounded-[2rem] p-6 mb-10 text-left backdrop-blur-sm shadow-xl max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <h2 className="text-[10px] font-black uppercase text-slate-500 mb-5 tracking-widest border-b border-slate-800/50 pb-2">Come Funziona?</h2>
-            <div className="space-y-5">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 flex items-center justify-center shrink-0 border border-yellow-500/20">
-                  <Users size={18} className="text-yellow-500" />
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Crea il tuo profilo</strong> in pochi secondi con il tuo nome da battaglia.</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                  <Target size={18} className="text-emerald-500" />
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Fai i tuoi pronostici</strong> su gironi, tabellone e bonus entro l'11 Giugno.</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
-                  <Trophy size={18} className="text-blue-500" />
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed"><strong className="text-white">Sfida gli amici</strong> e segui la classifica aggiornata in tempo reale!</p>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+        {/* PULSANTI D'AZIONE PRINCIPALI */}
+        <div className="w-full space-y-4 pt-4">
           <button 
-            onClick={() => router.push(isLoggedIn ? '/matches' : '/login?mode=register')}
-            className="px-10 py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(234,179,8,0.15)] flex items-center justify-center gap-2"
+            onClick={() => router.push(user ? '/matches' : '/profile')}
+            className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-3xl uppercase tracking-widest text-xs shadow-xl shadow-yellow-500/10 hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
           >
-            {isLoggedIn ? 'Vai ai Pronostici ⚽' : 'Accetta la Sfida 🏆'}
+            Vai ai Pronostici ⚽
           </button>
           
           <button 
-            onClick={() => router.push(isLoggedIn ? '/profile' : '/login')}
-            className="px-10 py-5 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-800 active:scale-95 transition-all"
+            onClick={() => router.push('/profile')}
+            className="w-full py-5 bg-slate-900 border-2 border-slate-800 text-white font-black rounded-3xl uppercase tracking-widest text-xs hover:border-slate-700 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
           >
-            {isLoggedIn ? 'Il mio Profilo' : 'Accedi'}
+            Il Mio Profilo
           </button>
         </div>
+
+        {/* Info Extra o Link Rapido */}
+        <div className="text-center pt-6 opacity-40">
+            <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest italic">Organizzato da Ricky</span>
+        </div>
       </div>
+
+      {/* --- NAVBAR INFERIORE (IDENTICA ALL'ORIGINALE) --- */}
+      <nav className="fixed bottom-0 left-0 w-full z-20 bg-slate-950/90 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
+        <div className="max-w-2xl mx-auto flex items-center justify-around py-3 px-4">
+          {navItems.map((item) => {
+            const isActive = router.asPath === item.path;
+            return (
+              <button
+                key={item.label}
+                onClick={() => router.push(item.path)}
+                className="flex flex-col items-center gap-1.5 p-2 transition-all active:scale-95 group"
+              >
+                <div className={`transition-colors ${isActive ? 'text-yellow-500' : 'text-slate-500 group-hover:text-slate-200'}`}>
+                  {item.icon}
+                </div>
+                <span className={`text-[8px] font-black uppercase tracking-widest transition-colors ${isActive ? 'text-yellow-500' : 'text-slate-600 group-hover:text-slate-300'}`}>
+                  {item.label}
+                </span>
+                {isActive && (
+                    <div className="absolute -top-[1px] w-6 h-0.5 bg-yellow-500 rounded-full blur-[1px]"></div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </main>
   );
 }
