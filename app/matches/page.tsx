@@ -42,7 +42,10 @@ export default function MatchesPage() {
   const [predictions, setPredictions] = useState<any>({});
   const [savingMatches, setSavingMatches] = useState<{ [key: number]: boolean }>({});
   const [savedMatches, setSavedMatches] = useState<{ [key: number]: boolean }>({});
-  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({ 'Gruppo A': true });
+  
+  // MODIFICA: Ora l'oggetto è inizializzato vuoto, così tutti i gruppi partono chiusi
+  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
+  
   const [userId, setUserId] = useState<string | null>(null);
 
   const saveTimeouts = useRef<{ [key: number]: NodeJS.Timeout }>({});
@@ -75,7 +78,7 @@ export default function MatchesPage() {
         setPredictions(predMap);
       }
     } catch (error) {
-      toast.error('Errore di connessicatione.');
+      toast.error('Errore di connessione.');
     } finally {
       setLoading(false);
     }

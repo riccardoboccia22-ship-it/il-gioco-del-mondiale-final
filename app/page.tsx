@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter, usePathname } from 'next/navigation'; // <-- Aggiunto usePathname
-import Image from 'next/image';
-import { LayoutGrid, Users, Trophy, Star, ClipboardList, Target, ShieldCheck } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { User, Trophy, Star, ListOrdered, Users, Gamepad2 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
-  const pathname = usePathname(); // <-- Inizializzato
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -18,12 +17,12 @@ export default function HomePage() {
   }, []);
 
   const navItems = [
-    { label: 'PROFILO', icon: <Target size={20} />, path: '/profile' },
-    { label: 'FASE GIRONI', icon: <LayoutGrid size={20} />, path: '/matches' },
-    { label: 'FASE FINALE', icon: <Trophy size={20} />, path: '/bracket' },
-    { label: 'BONUS', icon: <Star size={20} />, path: '/bonus' },
-    { label: 'CLASSIFICA', icon: <ClipboardList size={20} />, path: '/leaderboard' },
-    { label: 'GLOBALE', icon: <Users size={20} />, path: '/tutti-i-pronostici' },
+    { label: 'Profilo', icon: <User size={20} strokeWidth={2.5} />, path: '/profile' },
+    { label: 'Fase Gironi', icon: <Gamepad2 size={20} strokeWidth={2.5} />, path: '/matches' },
+    { label: 'Fase Finale', icon: <Trophy size={20} strokeWidth={2.5} />, path: '/bracket' },
+    { label: 'Bonus', icon: <Star size={20} strokeWidth={2.5} />, path: '/bonus' },
+    { label: 'Classifica', icon: <ListOrdered size={20} strokeWidth={2.5} />, path: '/leaderboard' },
+    { label: 'Globale', icon: <Users size={20} strokeWidth={2.5} />, path: '/tutti-i-pronostici' },
   ];
 
   return (
@@ -42,7 +41,7 @@ export default function HomePage() {
           <div className="relative w-full h-full bg-slate-900 rounded-full border-4 border-slate-800 p-6 flex items-center justify-center shadow-2xl overflow-hidden group hover:border-yellow-500/50 transition-all duration-300">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950 opacity-60"></div>
             
-            {/* Coppa del Mondo Dorata - Pulita e Protagonista */}
+            {/* Coppa del Mondo Dorata - Assicurati di averla in public/icon-512x512.png */}
             <img 
               src="/icon-512x512.png"
               alt="World Cup Trophy" 
@@ -51,7 +50,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* TITOLO ELEGANTE E UNICO (Coordinato con la Navbar) */}
+        {/* TITOLO ELEGANTE E UNICO */}
         <div className="text-center">
           <h1 className="text-3xl sm:text-4xl font-black uppercase italic tracking-tight text-white mb-2 leading-none">
             Il Gioco del Mondiale
@@ -87,25 +86,35 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* --- NAVBAR INFERIORE (IDENTICA ALL'ORIGINALE) --- */}
+      {/* --- NAVBAR INFERIORE (Allineata con quella globale) --- */}
       <nav className="fixed bottom-0 left-0 w-full z-20 bg-slate-950/90 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
-        <div className="max-w-2xl mx-auto flex items-center justify-around py-3 px-4">
+        <div className="max-w-md mx-auto flex items-center justify-around py-2 px-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.path; // <-- CORRETTO QUI
+            const isActive = pathname === item.path;
             return (
               <button
                 key={item.label}
                 onClick={() => router.push(item.path)}
-                className="flex flex-col items-center gap-1.5 p-2 transition-all active:scale-95 group"
+                className="relative flex flex-col items-center justify-between h-12 group transition-all"
+                style={{ width: `${100 / navItems.length}%` }}
               >
-                <div className={`transition-colors ${isActive ? 'text-yellow-500' : 'text-slate-500 group-hover:text-slate-200'}`}>
-                  {item.icon}
+                {/* SCATOLA ICONA */}
+                <div className="flex items-end justify-center h-6 w-full">
+                  <div className={`transition-all duration-300 ${isActive ? 'text-yellow-500 scale-110 -translate-y-1' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                    {item.icon}
+                  </div>
                 </div>
-                <span className={`text-[8px] font-black uppercase tracking-widest transition-colors ${isActive ? 'text-yellow-500' : 'text-slate-600 group-hover:text-slate-300'}`}>
-                  {item.label}
-                </span>
+                
+                {/* SCATOLA TESTO */}
+                <div className="flex items-center justify-center h-6 w-full px-0.5">
+                  <span className={`text-[7px] sm:text-[8px] font-black uppercase text-center leading-[1.1] tracking-wider transition-colors ${isActive ? 'text-yellow-500' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                    {item.label}
+                  </span>
+                </div>
+
+                {/* Puntino attivo in basso */}
                 {isActive && (
-                    <div className="absolute -top-[1px] w-6 h-0.5 bg-yellow-500 rounded-full blur-[1px]"></div>
+                  <div className="absolute -bottom-1.5 w-1.5 h-1.5 bg-yellow-500 rounded-full shadow-[0_0_6px_rgba(234,179,8,0.8)]"></div>
                 )}
               </button>
             );

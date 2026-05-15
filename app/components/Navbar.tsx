@@ -50,9 +50,9 @@ export default function Navbar() {
                 </span>
               </div>
 
-              {/* Indicatore attivo */}
+              {/* Indicatore attivo a puntino in basso */}
               {isActive && (
-                <div className="absolute -top-[1px] w-6 h-0.5 bg-yellow-500 rounded-full blur-[1px]"></div>
+                <div className="absolute -bottom-1.5 w-1.5 h-1.5 bg-yellow-500 rounded-full shadow-[0_0_6px_rgba(234,179,8,0.8)]"></div>
               )}
             </Link>
           );
