@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation'; // <-- Aggiunto useRouter
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
-  BarChart3, RefreshCw, Star, X, CheckCircle2, MessageCircle
+  BarChart3, RefreshCw, Star, X, CheckCircle2, MessageCircle, ArrowLeft // <-- Aggiunto ArrowLeft
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -32,17 +33,19 @@ const TEAMS_2026 = [
   'Uruguay', 'Uzbekistan',
 ].sort();
 
+// Mappa potenziata con le varianti dei nomi
 const flagMap: { [key: string]: string } = {
   algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
-  belgio: 'be', 'bosnia ed erzegovina': 'ba', brasile: 'br', canada: 'ca', 'capo verde': 'cv', 
-  colombia: 'co', 'corea del sud': 'kr', "costa d'avorio": 'ci', croazia: 'hr', 
-  curaçao: 'cw', ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', 
-  giappone: 'jp', giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq',
-  marocco: 'ma', messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', olanda: 'nl',
-  panama: 'pa', paraguay: 'py', portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz',
-  'repubblica democratica del congo': 'cd', scozia: 'gb-sct', senegal: 'sn',
-  spagna: 'es', 'stati uniti': 'us', sudafrica: 'za', svezia: 'se',
-  svizzera: 'ch', tunisia: 'tn', turchia: 'tr', uruguay: 'uy', uzbekistan: 'uz',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba',
+  brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', 
+  "costa d'avorio": 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw',
+  ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp', 
+  giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma', 
+  messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
+  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'repubblica democratica del congo': 'cd',
+  scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'stati uniti': 'us', usa: 'us',
+  sudafrica: 'za', svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', 
+  uruguay: 'uy', uzbekistan: 'uz',
 };
 
 const normalizeStage = (s: string) => {
@@ -56,21 +59,24 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
+// Formattazione potenziata
 const formatTeamName = (teamName: string) => {
   if (!teamName) return '';
   const lowerName = teamName.toLowerCase().trim();
-  if (lowerName === 'repubblica democratica del congo') return 'R. D. Congo';
-  if (lowerName === 'bosnia ed erzegovina') return 'Bosnia';
-  if (lowerName === 'bosnia erzegovina') return 'Bosnia';
+  if (lowerName === 'repubblica democratica del congo') return 'R.D. Congo';
+  if (lowerName === 'bosnia ed erzegovina' || lowerName === 'bosnia erzegovina') return 'Bosnia';
   if (lowerName === 'repubblica ceca') return 'Rep. Ceca';
   if (lowerName === 'arabia saudita') return 'Arabia S.';
   if (lowerName === 'corea del sud') return 'Corea Sud';
-  if (lowerName === 'stati uniti') return 'USA';
+  if (lowerName === 'stati uniti' || lowerName === 'usa') return 'USA';
   if (lowerName === 'nuova zelanda') return 'N. Zelanda';
+  if (lowerName === "costa d'avorio") return 'Costa Avorio';
+  if (teamName.length > 12) return teamName.substring(0, 10) + '.';
   return teamName;
 };
 
 export default function AdminPage() {
+  const router = useRouter(); // <-- Aggiunto router
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -264,7 +270,6 @@ export default function AdminPage() {
 
   const getTopPicks = (k: string) => { const counts: any = {}; allUserBonuses.forEach(b => { if (b[k]) { const v = b[k].trim().toUpperCase(); counts[v] = (counts[v] || 0) + 1; } }); return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3); };
 
-  // LA NUOVA FUNZIONE MAGICA PER WHATSAPP
   const copyWhatsAppReport = () => {
     if (profiles.length === 0) return toast.error('Nessuno in classifica!');
     const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
@@ -275,7 +280,6 @@ export default function AdminPage() {
       if (i === 0) medal = '🥇';
       if (i === 1) medal = '🥈';
       if (i === 2) medal = '🥉';
-      // Mostriamo solo la Top 10 per non intasare le chat
       if (i < 10) {
         text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
       }
@@ -295,27 +299,38 @@ export default function AdminPage() {
   if (!isAdmin) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-500 font-black">ACCESSO NEGATO</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden relative">
       
-      <header className="text-center mb-8 pt-4 relative">
-        <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter mb-2">Control Tower</h1>
+      {/* PULSANTE INDIETRO (In alto a sinistra, fisso e discreto) */}
+      <button 
+        onClick={() => router.push('/profile')} 
+        className="absolute top-6 left-4 text-slate-500 hover:text-yellow-500 transition-colors flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest z-10"
+      >
+        <ArrowLeft size={16} /> Indietro
+      </button>
+
+      {/* HEADER AGGIORNATO CON ACTION BAR SOTTO IL TITOLO */}
+      <header className="flex flex-col items-center mb-8 pt-4 gap-4 mt-8 sm:mt-4">
+        <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none">Control Tower</h1>
         
-        {/* I DUE PULSANTI IN ALTO A DESTRA */}
-        <div className="absolute right-2 top-4 flex items-center gap-1">
+        <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800 shadow-xl">
           <button 
             onClick={copyWhatsAppReport} 
-            className="p-2 text-slate-500 hover:text-emerald-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-black uppercase text-emerald-500 hover:bg-emerald-500/10 transition-colors rounded-full"
             title="Copia Bollettino per WhatsApp"
           >
-            <MessageCircle size={18} />
+            <MessageCircle size={16} /> WhatsApp
           </button>
+          
+          <div className="w-px h-6 bg-slate-800"></div>
+          
           <button 
             onClick={() => syncLeaderboard(true)} 
             disabled={syncing} 
-            className={`p-2 text-slate-500 hover:text-blue-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg ${syncing ? 'animate-spin text-blue-500' : ''}`}
+            className={`flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-black uppercase text-blue-500 hover:bg-blue-500/10 transition-colors rounded-full ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Forza Ricalcolo Classifica"
           >
-            <RefreshCw size={18} />
+            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} /> Sincronizza
           </button>
         </div>
       </header>
@@ -390,7 +405,8 @@ export default function AdminPage() {
 
                       <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
                         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-                          <img src={`https://flagcdn.com/w40/${flagMap[m.home_team.toLowerCase()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
+                          {/* Modificata la chiave di flagMap per tollerare spazi e varianti */}
+                          <img src={`https://flagcdn.com/w40/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
                           <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.home_team)}</span>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1">
@@ -399,7 +415,8 @@ export default function AdminPage() {
                           <input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border-2 border-slate-700 outline-none text-base sm:text-lg focus:border-yellow-500" />
                         </div>
                         <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-                          <img src={`https://flagcdn.com/w40/${flagMap[m.away_team.toLowerCase()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
+                          {/* Modificata la chiave di flagMap per tollerare spazi e varianti */}
+                          <img src={`https://flagcdn.com/w40/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-7 h-5 sm:w-8 sm:h-5 object-cover rounded shadow-md" alt="" />
                           <span className="text-[9px] sm:text-[10px] font-black uppercase text-center truncate w-full italic text-white">{formatTeamName(m.away_team)}</span>
                         </div>
                       </div>
