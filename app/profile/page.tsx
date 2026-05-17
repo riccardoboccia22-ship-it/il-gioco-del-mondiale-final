@@ -258,8 +258,8 @@ export default function ProfilePage() {
                 title={currentAvatar.name}
               >
                 <span className="drop-shadow-md">{currentAvatar.emoji}</span>
-                <div className="absolute bottom-0 right-0 bg-yellow-500 text-slate-950 p-1.5 rounded-full shadow-lg group-hover:scale-110 transition-transform border-2 border-slate-900">
-                  <Edit3 size={14} strokeWidth={3} />
+                <div className="absolute bottom-0 right-0 bg-sky-500 text-white p-1.5 rounded-full shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 border-2 border-slate-900">
+                  <Edit3 size={14} strokeWidth={2.5} />
                 </div>
               </button>
 
