@@ -323,12 +323,13 @@ export default function BracketPage() {
                     >
                       <option value="">Scegli</option>
                       
-                      {/* LA MAGIA DEI GIRONI */}
+                      {/* LA MAGIA DEI GIRONI - POTENZIATA PER I CELLULARI */}
                       {TOURNAMENT_GROUPS.map((group) => (
                         <optgroup 
                           key={group.name} 
-                          label={`--- ${group.name} ---`} 
-                          className="bg-slate-900 text-yellow-500 font-bold italic uppercase text-[10px]"
+                          // L'emoji e le linee forzano il sistema iOS/Android a renderlo visibilmente diverso!
+                          label={`🏆 ▬▬ ${group.name.toUpperCase()} ▬▬`} 
+                          className="bg-slate-800 text-yellow-500 font-black italic uppercase text-xs tracking-widest"
                         >
                           {group.teams.map((t) => {
                             if (alreadySelected.includes(t)) return null;
@@ -336,9 +337,10 @@ export default function BracketPage() {
                               <option
                                 key={t}
                                 value={t}
-                                className="bg-slate-950 text-white font-black not-italic"
+                                className="bg-slate-950 text-slate-200 font-semibold not-italic"
                               >
-                                {formatTeamName(t)}
+                                {/* Il bullet-point finto indenta visivamente la squadra su mobile */}
+                                • {formatTeamName(t)}
                               </option>
                             );
                           })}
