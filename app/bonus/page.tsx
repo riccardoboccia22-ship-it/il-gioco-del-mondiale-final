@@ -207,7 +207,8 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><Flame size={14} /> Partita con più gol Fase a Gironi</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
               </span>
-              <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-sm uppercase appearance-none" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
+              {/* Qui ho aggiunto la classe truncate alla select */}
+              <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none truncate" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
                 <option value="">Scegli Partita...</option>
                 {availableMatches.map((m) => (
                   <option key={m} value={m}>{m}</option>
@@ -223,7 +224,8 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><ArrowUpToLine size={14} /> Girone con più gol</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
               </span>
-              <select value={formData.highest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none" onChange={(e) => setFormData({ ...formData, highest_scoring_group: e.target.value })}>
+              {/* Qui ho aggiunto la classe truncate alla select */}
+              <select value={formData.highest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none truncate" onChange={(e) => setFormData({ ...formData, highest_scoring_group: e.target.value })}>
                 <option value="">Scegli Girone...</option>
                 {TOURNAMENT_GROUPS.map((g) => (
                   <option key={g.name} value={g.name}>{g.name} ({g.teams.join(', ')})</option>
@@ -239,7 +241,8 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><ArrowDownToLine size={14} /> Girone con meno gol</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
               </span>
-              <select value={formData.lowest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none" onChange={(e) => setFormData({ ...formData, lowest_scoring_group: e.target.value })}>
+              {/* Qui ho aggiunto la classe truncate alla select */}
+              <select value={formData.lowest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none truncate" onChange={(e) => setFormData({ ...formData, lowest_scoring_group: e.target.value })}>
                 <option value="">Scegli Girone...</option>
                 {TOURNAMENT_GROUPS.map((g) => (
                   <option key={g.name} value={g.name}>{g.name} ({g.teams.join(', ')})</option>
@@ -255,7 +258,8 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><Target size={14} /> Totale Autogol</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">3 PT</span>
               </span>
-              <input type="number" value={formData.total_own_goals} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_own_goals: e.target.value })} />
+              {/* inputMode e pattern aggiunti per far aprire il tastierino numerico corretto sui telefoni */}
+              <input type="number" inputMode="numeric" pattern="[0-9]*" value={formData.total_own_goals} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_own_goals: e.target.value })} />
             </label>
           </div>
 
@@ -266,7 +270,8 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><Goal size={14} /> Totale Rigori 90' e 120'</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">3 PT</span>
               </span>
-              <input type="number" value={formData.total_penalties} placeholder="Inserisci un numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_penalties: e.target.value })} />
+              {/* inputMode e pattern aggiunti per far aprire il tastierino numerico corretto sui telefoni */}
+              <input type="number" inputMode="numeric" pattern="[0-9]*" value={formData.total_penalties} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_penalties: e.target.value })} />
             </label>
           </div>
 
@@ -277,7 +282,8 @@ export default function BonusPage() {
                 <span className="flex items-center gap-2"><Zap size={14} /> Totale Cartellini Rossi</span>
                 <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">3 PT</span>
               </span>
-              <input type="number" value={formData.total_red_cards} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_red_cards: e.target.value })} />
+              {/* inputMode e pattern aggiunti per far aprire il tastierino numerico corretto sui telefoni */}
+              <input type="number" inputMode="numeric" pattern="[0-9]*" value={formData.total_red_cards} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_red_cards: e.target.value })} />
             </label>
           </div>
 

@@ -342,7 +342,7 @@ export default function ProfilePage() {
             <div className="space-y-3 pt-6 border-t border-slate-900">
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => router.push('/groups')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 shadow-md">
-                  <Shield size={14} /> Gironi FIFA
+                  <Shield size={14} /> Gironi
                 </button>
                 <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 shadow-md">
                   <BookOpen size={14} /> Regolamento
