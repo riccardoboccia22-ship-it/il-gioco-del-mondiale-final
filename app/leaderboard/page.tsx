@@ -245,9 +245,6 @@ export default function LeaderboardPage() {
                       <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>
                         {player.username}
                       </p>
-                      {player.is_paid && (
-                         <span className="text-[7px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Quota ✓</span>
-                      )}
                     </div>
                   </div>
                 </div>

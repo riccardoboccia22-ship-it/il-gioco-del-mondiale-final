@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Timer, X, Edit3 } from 'lucide-react'; 
+import { BookOpen, Timer, X, Edit3, Shield } from 'lucide-react';
 
 const AVATARS = [
   // --- PRO & CLASSICI ---
@@ -239,7 +239,6 @@ export default function ProfilePage() {
     );
   }
 
-  // Troviamo l'avatar corrente, se non c'è mettiamo il primo di default
   const currentAvatar = AVATARS.find(a => a.id === userProfile?.avatar_id) || AVATARS[0];
 
   return (
@@ -339,32 +338,19 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {/* AZIONI DI GIOCO */}
+            {/* AZIONI E UTILITÀ */}
             <div className="space-y-3 pt-6 border-t border-slate-900">
-              <button onClick={() => router.push('/matches')} className="w-full py-5 bg-white text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-yellow-400 transition-all flex items-center justify-center gap-2 shadow-xl">
-                Fase a Gironi ⚽
-              </button>
-              
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => router.push('/bracket')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[9px] hover:border-yellow-500/50 transition-all shadow-md">
-                  Fase Finale 🏆
+                <button onClick={() => router.push('/groups')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 shadow-md">
+                  <Shield size={14} /> Gironi FIFA
                 </button>
-                <button onClick={() => router.push('/bonus')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[9px] hover:border-yellow-500/50 transition-all shadow-md">
-                  Bonus ⭐
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => router.push('/leaderboard')} className="py-4 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-slate-950 transition-all">
-                  Classifica 🥇
-                </button>
-                <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-800/30 border border-slate-700/50 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[10px] hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2">
+                <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 shadow-md">
                   <BookOpen size={14} /> Regolamento
                 </button>
               </div>
 
               {checkIsAdmin() && (
-                <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-red-600/10 text-red-500 border border-red-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] hover:bg-red-600 hover:text-white transition-all mt-4">
+                <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-red-600/10 text-red-500 border border-red-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] hover:bg-red-600 hover:text-white transition-all mt-4 shadow-md">
                   ⚙️ Pannello Admin
                 </Link>
               )}

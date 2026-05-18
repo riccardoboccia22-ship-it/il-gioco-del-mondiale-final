@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { ChevronDown, X, Trophy, ShieldCheck, Trash2, Map } from 'lucide-react';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info } from 'lucide-react';
 
 // CONFIGURAZIONE DATA INIZIO MONDIALE
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -18,56 +18,20 @@ const STAGES = [
   { id: 'WINNER', label: 'Vincitore Mondiale', count: 1, pts: 20 },
 ];
 
-const TEAMS_2026 = [
-  'Algeria',
-  'Arabia Saudita',
-  'Argentina',
-  'Australia',
-  'Austria',
-  'Belgio',
-  'Bosnia ed Erzegovina',
-  'Brasile',
-  'Canada',
-  'Capo Verde',
-  'Colombia',
-  'Corea del Sud',
-  "Costa d'Avorio",
-  'Croazia',
-  'Curaçao',
-  'Ecuador',
-  'Egitto',
-  'Francia',
-  'Germania',
-  'Ghana',
-  'Giappone',
-  'Giordania',
-  'Haiti',
-  'Inghilterra',
-  'Iran',
-  'Iraq',
-  'Marocco',
-  'Messico',
-  'Norvegia',
-  'Nuova Zelanda',
-  'Olanda',
-  'Panama',
-  'Paraguay',
-  'Portogallo',
-  'Qatar',
-  'Repubblica Ceca',
-  'Repubblica Democratica del Congo',
-  'Scozia',
-  'Senegal',
-  'Spagna',
-  'Stati Uniti',
-  'Sudafrica',
-  'Svezia',
-  'Svizzera',
-  'Tunisia',
-  'Turchia',
-  'Uruguay',
-  'Uzbekistan',
-].sort();
+const TOURNAMENT_GROUPS = [
+  { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea del Sud', 'Repubblica Ceca'] },
+  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia ed Erzegovina'] }, 
+  { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
+  { name: 'Gruppo D', teams: ['Stati Uniti', 'Australia', 'Paraguay', 'Turchia'] }, 
+  { name: 'Gruppo E', teams: ['Germania', "Costa d'Avorio", 'Ecuador', 'Curaçao'] }, 
+  { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
+  { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'Nuova Zelanda'] },
+  { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia Saudita', 'Capo Verde'] },
+  { name: 'Gruppo I', teams: ['Francia', 'Senegal', 'Norvegia', 'Iraq'] },
+  { name: 'Gruppo J', teams: ['Argentina', 'Austria', 'Algeria', 'Giordania'] },
+  { name: 'Gruppo K', teams: ['Portogallo', 'Colombia', 'Uzbekistan', 'Repubblica Democratica del Congo'] },
+  { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
+];
 
 // Mappa bandiere sincronizzata
 const flagMap: { [key: string]: string } = {
@@ -127,6 +91,8 @@ const formatTeamName = (name: string) => {
   if (!name) return '';
   if (name.trim().toLowerCase() === 'repubblica democratica del congo')
     return 'R. D. Congo';
+  if (name.trim().toLowerCase() === 'stati uniti') return 'USA';
+  if (name.trim().toLowerCase() === 'bosnia ed erzegovina') return 'Bosnia';
   return name;
 };
 
@@ -275,6 +241,7 @@ export default function BracketPage() {
             ? '🔒 Pronostici Conclusi'
             : 'Dalla fase a eliminazione al Titolo'}
         </p>
+        
         {/* Pulsante consultazione Gironi Ufficiali */}
         <Link
           href="/groups"
@@ -291,14 +258,29 @@ export default function BracketPage() {
       >
         {STAGES.map((stage) => (
           <section key={stage.id} className="relative">
-            <div className="flex items-center gap-3 mb-6 px-2">
-              <span className="bg-yellow-500 text-slate-950 text-[9px] font-black px-2 py-1 rounded italic flex items-center gap-1">
-                <ShieldCheck size={10} strokeWidth={3} /> {stage.pts} PT
-              </span>
-              <h2 className="text-lg font-black text-white uppercase italic tracking-tight">
-                {stage.label}
-              </h2>
-              <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-800 to-transparent"></div>
+            
+            <div className="flex flex-col mb-6">
+              {/* Intestazione Fase */}
+              <div className="flex items-center gap-3 px-2">
+                <span className="bg-yellow-500 text-slate-950 text-[9px] font-black px-2 py-1 rounded italic flex items-center gap-1">
+                  <ShieldCheck size={10} strokeWidth={3} /> {stage.pts} PT
+                </span>
+                <h2 className="text-lg font-black text-white uppercase italic tracking-tight">
+                  {stage.label}
+                </h2>
+                <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-800 to-transparent"></div>
+              </div>
+
+              {/* Box Informativo (Visibile solo nei Sedicesimi) */}
+              {stage.id === 'R32' && (
+                <div className="mt-3 mx-2 bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex items-start sm:items-center gap-3 text-slate-400">
+                  <Info size={16} className="text-blue-500 shrink-0 mt-0.5 sm:mt-0" />
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+                    Si qualificano le <span className="text-white">prime 2</span> classificate di ogni girone 
+                    e le <span className="text-white">8 migliori terze</span>.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
@@ -340,18 +322,29 @@ export default function BracketPage() {
                       value={currentSelection || ''}
                     >
                       <option value="">Scegli</option>
-                      {TEAMS_2026.map((t) => {
-                        if (alreadySelected.includes(t)) return null;
-                        return (
-                          <option
-                            key={t}
-                            value={t}
-                            className="bg-slate-950 text-white"
-                          >
-                            {formatTeamName(t)}
-                          </option>
-                        );
-                      })}
+                      
+                      {/* LA MAGIA DEI GIRONI */}
+                      {TOURNAMENT_GROUPS.map((group) => (
+                        <optgroup 
+                          key={group.name} 
+                          label={`--- ${group.name} ---`} 
+                          className="bg-slate-900 text-yellow-500 font-bold italic uppercase text-[10px]"
+                        >
+                          {group.teams.map((t) => {
+                            if (alreadySelected.includes(t)) return null;
+                            return (
+                              <option
+                                key={t}
+                                value={t}
+                                className="bg-slate-950 text-white font-black not-italic"
+                              >
+                                {formatTeamName(t)}
+                              </option>
+                            );
+                          })}
+                        </optgroup>
+                      ))}
+                      
                     </select>
 
                     <div className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">

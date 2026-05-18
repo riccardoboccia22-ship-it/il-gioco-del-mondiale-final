@@ -434,12 +434,14 @@ export default function TuttiPronosticiPage() {
                       { id: 'Rossi', val: b?.total_red_cards, ok: checks.red, pts: 3, icon: <Zap size={12} /> },
                     ].map((bonus) => (
                       <div key={bonus.id} className={`flex justify-between items-center p-3 rounded-2xl border ${bonus.ok ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           {bonus.icon} <span className="text-[9px] font-black uppercase tracking-wider">{bonus.id}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase truncate max-w-[100px] text-right italic">{bonus.val || '--'}</span>
-                          {bonus.ok && <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">+{bonus.pts}</span>}
+                        <div className="flex items-center gap-2 overflow-hidden pl-2">
+                          <span className="text-[10px] font-black uppercase text-right italic break-all line-clamp-1">
+                            {bonus.val || '--'}
+                          </span>
+                          {bonus.ok && <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded shrink-0">+{bonus.pts}</span>}
                         </div>
                       </div>
                     ))}
