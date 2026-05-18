@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, Search } from 'lucide-react';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy } from 'lucide-react';
 
-// CONFIGURAZIONE DATA INIZIO MONDIALE
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const STAGES = [
@@ -47,9 +46,13 @@ const flagMap: { [key: string]: string } = {
 
 const formatTeamName = (name: string) => {
   if (!name) return '';
-  if (name.trim().toLowerCase() === 'repubblica democratica del congo') return 'R. D. Congo';
-  if (name.trim().toLowerCase() === 'stati uniti') return 'USA';
-  if (name.trim().toLowerCase() === 'bosnia ed erzegovina') return 'Bosnia';
+  const n = name.trim().toLowerCase();
+  if (n === 'repubblica democratica del congo') return 'R. D. Congo';
+  if (n === 'stati uniti') return 'USA';
+  if (n === 'bosnia ed erzegovina') return 'Bosnia';
+  if (n === 'nuova zelanda') return 'N. Zelanda';
+  if (n === 'arabia saudita') return 'Arabia S.';
+  if (n === 'repubblica ceca') return 'Rep. Ceca';
   return name;
 };
 
@@ -57,15 +60,30 @@ export default function BracketPage() {
   const [selections, setSelections] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  
-  // STATO PER IL PANNELLO DI SELEZIONE
   const [activeCell, setActiveCell] = useState<{stageId: string, index: number} | null>(null);
+
+  // Riferimento per fare lo scroll automatico
+  const selectedTeamRef = useRef<HTMLButtonElement | null>(null);
 
   const isExpired = new Date() > WORLD_CUP_START_DATE;
 
   useEffect(() => {
     loadSavedBracket();
   }, []);
+
+  // EFFETTO SCROLL CORRETTO:
+  // Aspetta 350ms (che finisca l'animazione di apertura del pannello)
+  // e poi fa uno scroll fluido fino alla squadra selezionata.
+  useEffect(() => {
+    if (activeCell) {
+      const timer = setTimeout(() => {
+        if (selectedTeamRef.current) {
+          selectedTeamRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [activeCell]);
 
   async function loadSavedBracket() {
     try {
@@ -95,7 +113,7 @@ export default function BracketPage() {
   const handleSelect = (stage: string, index: number, team: string) => {
     if (isExpired) return;
     setSelections((prev: any) => ({ ...prev, [`${stage}-${index}`]: team }));
-    setActiveCell(null); // Chiude il pannello dopo la selezione
+    setActiveCell(null);
   };
 
   const resetBracket = async () => {
@@ -135,17 +153,17 @@ export default function BracketPage() {
       .map(([_, value]) => value);
   };
 
-  if (fetching) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse italic uppercase">Disegno Tabellone...</div>;
+  if (fetching) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse italic uppercase text-sm">Disegno Tabellone...</div>;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-48 font-sans">
       <header className="text-center mb-10 pt-4 flex flex-col items-center">
-        <h1 className="text-4xl font-black text-yellow-500 uppercase italic tracking-tighter">Fase Finale</h1>
-        <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.4em] mt-2 italic">
+        <h1 className="text-4xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
           {isExpired ? '🔒 Pronostici Conclusi' : 'Dalla fase a eliminazione al Titolo'}
         </p>
-        <Link href="/groups" className="mt-5 inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
-          <Map size={14} /> Consulta i Gironi Ufficiali
+        <Link href="/groups" className="mt-6 inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
+          <Map size={16} /> Consulta i Gironi Ufficiali
         </Link>
       </header>
 
@@ -154,48 +172,56 @@ export default function BracketPage() {
           <section key={stage.id} className="relative">
             <div className="flex flex-col mb-6">
               <div className="flex items-center gap-3 px-2">
-                <span className="bg-yellow-500 text-slate-950 text-[9px] font-black px-2 py-1 rounded italic flex items-center gap-1">
-                  <ShieldCheck size={10} strokeWidth={3} /> {stage.pts} PT
+                <span className="bg-yellow-500 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded italic flex items-center gap-1 shrink-0">
+                  {stage.pts} PT
                 </span>
-                <h2 className="text-lg font-black text-white uppercase italic tracking-tight">{stage.label}</h2>
+                <h2 className="text-xl font-black text-white uppercase italic tracking-tight shrink-0">{stage.label}</h2>
                 <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-800 to-transparent"></div>
               </div>
               {stage.id === 'R32' && (
-                <div className="mt-3 mx-2 bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex items-start sm:items-center gap-3 text-slate-400 text-[9px] sm:text-[10px] font-bold uppercase">
-                  <Info size={16} className="text-blue-500 shrink-0" />
+                <div className="mt-3 mx-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex items-start sm:items-center gap-3 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-tight">
+                  <Info size={20} className="text-blue-500 shrink-0" />
                   <p>Si qualificano le <span className="text-white">prime 2</span> e le <span className="text-white">8 migliori terze</span>.</p>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {Array.from({ length: stage.count }).map((_, i) => {
                 const currentSelection = selections[`${stage.id}-${i}`];
                 return (
                   <div key={i} className="relative">
-                    {/* IL FINTO SELECT (BOTTONE) */}
                     <button
                       disabled={isExpired}
                       onClick={() => setActiveCell({stageId: stage.id, index: i})}
-                      className={`w-full bg-slate-900 border-2 rounded-xl sm:rounded-2xl py-3.5 pl-10 pr-8 sm:p-4 sm:pl-12 text-[8px] sm:text-[11px] font-black uppercase transition-all text-left truncate flex items-center gap-2
-                        ${currentSelection ? 'border-yellow-500/40 text-yellow-500 shadow-lg shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
+                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-12 pr-10 sm:p-5 sm:pl-14 text-[11px] sm:text-[13px] font-black uppercase transition-all text-left truncate flex items-center
+                        ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
                     >
-                      <div className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2">
+                      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2">
                         {currentSelection ? (
-                          <img src={getFlag(currentSelection)!} className="w-5 sm:w-6 h-auto rounded-sm shadow-sm" alt="" />
+                          <img src={getFlag(currentSelection)!} className="w-6 sm:w-8 h-auto rounded shadow-sm" alt="" />
                         ) : (
-                          <ShieldCheck className="text-slate-700 w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <ShieldCheck className="text-slate-800 w-5 h-5" />
                         )}
                       </div>
                       {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
                     </button>
 
+                    {/* LA X ESTERNA PER CANCELLARE (Mantenuta per comodità) */}
                     {currentSelection && !isExpired && (
-                      <button onClick={() => handleSelect(stage.id, i, '')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 bg-slate-800 rounded-md hover:bg-rose-500">
-                        <X className="text-white w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 sm:p-3 text-rose-500 hover:text-rose-400 active:scale-90 transition-all z-20"
+                      >
+                        <X size={22} strokeWidth={3} />
                       </button>
                     )}
-                    {!currentSelection && <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />}
+                    
+                    {!currentSelection && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-800 pointer-events-none">
+                        <ChevronDown size={16} />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -204,54 +230,73 @@ export default function BracketPage() {
         ))}
       </div>
 
-      {/* --- CUSTOM BOTTOM SHEET (IL NUOVO MENU) --- */}
+      {/* --- CUSTOM BOTTOM SHEET --- */}
       {activeCell && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-0 sm:pb-10">
-          {/* Backdrop scuro */}
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setActiveCell(null)}></div>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0 sm:pb-10">
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
           
-          {/* Il Pannello */}
-          <div className="relative w-full max-w-lg bg-slate-900 border-t-2 border-x-2 border-yellow-500/30 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+          <div className="relative w-full max-w-xl bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
             
-            {/* Header del Pannello */}
-            <div className="p-6 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between">
+            <div className="p-7 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-yellow-500 font-black uppercase italic tracking-tight">Seleziona Squadra</h3>
-                <p className="text-slate-500 text-[10px] font-bold uppercase">{STAGES.find(s => s.id === activeCell.stageId)?.label} - Pos. {activeCell.index + 1}</p>
+                <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Seleziona Squadra</h3>
+                <p className="text-slate-500 text-xs font-black uppercase mt-1 tracking-widest">
+                  {STAGES.find(s => s.id === activeCell.stageId)?.label} — POS. {activeCell.index + 1}
+                </p>
               </div>
-              <button onClick={() => setActiveCell(null)} className="p-3 bg-slate-800 rounded-full text-slate-400"><X size={20}/></button>
+              <button onClick={() => setActiveCell(null)} className="p-4 bg-slate-800 rounded-full text-white active:scale-90 transition-all shadow-lg"><X size={24} strokeWidth={3}/></button>
             </div>
 
-            {/* Lista Squadre (Scrollabile) */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-900">
-              <div className="grid grid-cols-1 gap-6">
+            <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-20">
                 {TOURNAMENT_GROUPS.map((group) => {
-                  const alreadySelected = getAlreadySelectedInStage(activeCell.stageId, activeCell.index);
-                  const availableTeams = group.teams.filter(t => !alreadySelected.includes(t));
-                  if (availableTeams.length === 0) return null;
-
+                  const alreadySelectedByOthers = getAlreadySelectedInStage(activeCell.stageId, activeCell.index);
+                  const currentCellSelection = selections[`${activeCell.stageId}-${activeCell.index}`];
+                  
                   return (
-                    <div key={group.name} className="space-y-3">
-                      <div className="flex items-center gap-2 px-2">
-                        <Trophy size={12} className="text-yellow-500" />
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{group.name}</span>
-                        <div className="flex-1 h-px bg-slate-800"></div>
+                    <div key={group.name} className="space-y-4">
+                      <div className="flex items-center gap-3 px-2">
+                        <Trophy size={16} className="text-yellow-500" />
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{group.name}</span>
+                        <div className="flex-1 h-px bg-slate-800/50"></div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {group.teams.map((t) => {
-                          const isPicked = alreadySelected.includes(t);
+                          const isPickedByOther = alreadySelectedByOthers.includes(t);
+                          const isCurrentSelection = currentCellSelection === t;
+                          
                           return (
                             <button
                               key={t}
-                              disabled={isPicked}
-                              onClick={() => handleSelect(activeCell.stageId, activeCell.index, t)}
-                              className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all text-left
-                                ${isPicked 
-                                  ? 'opacity-20 border-transparent grayscale' 
-                                  : 'bg-slate-950 border-slate-800 active:border-yellow-500 active:scale-95'}`}
+                              // Il riferimento per lo scroll automatico viene agganciato a questo bottone
+                              ref={isCurrentSelection ? selectedTeamRef : null}
+                              disabled={isPickedByOther && !isCurrentSelection}
+                              onClick={() => {
+                                // SE CLICCO LA SQUADRA GIÀ SELEZIONATA -> LA CANCELLO
+                                if (isCurrentSelection) {
+                                  handleSelect(activeCell.stageId, activeCell.index, '');
+                                } else {
+                                  handleSelect(activeCell.stageId, activeCell.index, t);
+                                }
+                              }}
+                              className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden
+                                ${isPickedByOther && !isCurrentSelection
+                                  ? 'opacity-20 border-transparent grayscale scale-95' 
+                                  : isCurrentSelection
+                                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' // Highlight d'oro se è l'attuale
+                                    : 'bg-slate-950 border-slate-800 active:border-yellow-500 active:bg-slate-900 active:scale-95 shadow-md'}`}
                             >
-                              <img src={getFlag(t)!} className="w-6 h-auto rounded shadow" alt="" />
-                              <span className="text-[10px] font-black uppercase italic">{formatTeamName(t)}</span>
+                              {/* BOLLINO ROSSO CON X SE È QUELLA GIÀ SELEZIONATA */}
+                              {isCurrentSelection && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center bg-rose-500 rounded-full w-6 h-6 shadow-md text-white">
+                                  <X size={14} strokeWidth={4} />
+                                </div>
+                              )}
+                              
+                              <img src={getFlag(t)!} className="w-10 h-auto rounded shadow-lg border border-slate-800" alt="" />
+                              <span className={`text-[14px] font-black uppercase italic tracking-tight ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
+                                {formatTeamName(t)}
+                              </span>
                             </button>
                           );
                         })}
@@ -259,18 +304,17 @@ export default function BracketPage() {
                     </div>
                   );
                 })}
-              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* FOOTER AZIONI */}
-      <div className="fixed bottom-24 left-0 right-0 p-4 sm:p-6 flex justify-center items-center gap-2 sm:gap-3 z-50 pointer-events-none">
+      <div className="fixed bottom-24 left-0 right-0 p-6 flex justify-center items-center gap-3 z-50 pointer-events-none">
         {!isExpired && (
-          <button onClick={resetBracket} disabled={loading} className="pointer-events-auto p-5 bg-slate-900 border-2 border-slate-800 rounded-2xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-xl"><Trash2 size={18} /></button>
+          <button onClick={resetBracket} disabled={loading} className="pointer-events-auto p-6 bg-slate-900 border-2 border-slate-800 rounded-2xl text-rose-500 active:bg-rose-500 active:text-white transition-all shadow-2xl"><Trash2 size={24} /></button>
         )}
-        <button onClick={saveBracket} disabled={loading || isExpired} className={`max-w-xs w-full py-5 rounded-2xl font-black uppercase text-xs italic flex items-center justify-center gap-3 transition-all tracking-widest shadow-2xl pointer-events-auto ${isExpired ? 'bg-slate-900 text-slate-700 border border-slate-800' : 'bg-yellow-500 text-slate-950 hover:scale-105 shadow-yellow-500/30'}`}>
+        <button onClick={saveBracket} disabled={loading || isExpired} className={`max-w-xs w-full py-6 rounded-2xl font-black uppercase text-sm italic flex items-center justify-center gap-3 transition-all tracking-widest shadow-2xl pointer-events-auto ${isExpired ? 'bg-slate-900 text-slate-700 border border-slate-800' : 'bg-yellow-500 text-slate-950 active:scale-95 shadow-yellow-500/40'}`}>
           {loading ? 'Salvataggio...' : isExpired ? 'Pronostici Chiusi' : 'Salva Tabellone 🏆'}
         </button>
       </div>
