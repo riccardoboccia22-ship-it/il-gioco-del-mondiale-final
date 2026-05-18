@@ -60,20 +60,13 @@ export default function BracketPage() {
   const [selections, setSelections] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [activeCell, setActiveCell] = useState<{stageId: string, index: number} | null>(null);
-
-  // Riferimento per fare lo scroll automatico
-  const selectedTeamRef = useRef<HTMLButtonElement | null>(null);
-
+  
+  const [activeCell, setActiveCell] = useState<any>(null);
+  const selectedTeamRef = useRef<any>(null);
   const isExpired = new Date() > WORLD_CUP_START_DATE;
 
-  useEffect(() => {
-    loadSavedBracket();
-  }, []);
+  useEffect(() => { loadSavedBracket(); }, []);
 
-  // EFFETTO SCROLL CORRETTO:
-  // Aspetta 350ms (che finisca l'animazione di apertura del pannello)
-  // e poi fa uno scroll fluido fino alla squadra selezionata.
   useEffect(() => {
     if (activeCell) {
       const timer = setTimeout(() => {
@@ -113,6 +106,11 @@ export default function BracketPage() {
   const handleSelect = (stage: string, index: number, team: string) => {
     if (isExpired) return;
     setSelections((prev: any) => ({ ...prev, [`${stage}-${index}`]: team }));
+    
+    if (team === '') {
+        toast.dismiss();
+        toast.success("Squadra rimossa!", { icon: '🧹', duration: 1500 });
+    }
     setActiveCell(null);
   };
 
@@ -194,7 +192,7 @@ export default function BracketPage() {
                     <button
                       disabled={isExpired}
                       onClick={() => setActiveCell({stageId: stage.id, index: i})}
-                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-12 pr-10 sm:p-5 sm:pl-14 text-[11px] sm:text-[13px] font-black uppercase transition-all text-left truncate flex items-center
+                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-12 pr-10 sm:p-5 sm:pl-14 text-[13px] sm:text-[14px] font-black uppercase transition-all text-left truncate flex items-center
                         ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
                     >
                       <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2">
@@ -207,7 +205,6 @@ export default function BracketPage() {
                       {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
                     </button>
 
-                    {/* LA X ESTERNA PER CANCELLARE (Mantenuta per comodità) */}
                     {currentSelection && !isExpired && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
@@ -230,7 +227,7 @@ export default function BracketPage() {
         ))}
       </div>
 
-      {/* --- CUSTOM BOTTOM SHEET --- */}
+      {/* --- MENU MAGICO CON SBLOCCO RAPIDO SQUADRE --- */}
       {activeCell && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0 sm:pb-10">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
@@ -265,38 +262,59 @@ export default function BracketPage() {
                           const isPickedByOther = alreadySelectedByOthers.includes(t);
                           const isCurrentSelection = currentCellSelection === t;
                           
+                          // STILE DINAMICO BASATO SULLO STATO DELLA SQUADRA
+                          let buttonStyle = "bg-slate-950 border-slate-800 active:border-yellow-500 active:bg-slate-900 shadow-md";
+                          if (isCurrentSelection) {
+                            buttonStyle = "bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]";
+                          } else if (isPickedByOther) {
+                            buttonStyle = "opacity-40 border-dashed border-slate-700 grayscale hover:opacity-100 hover:grayscale-0 transition-all";
+                          }
+
                           return (
                             <button
                               key={t}
-                              // Il riferimento per lo scroll automatico viene agganciato a questo bottone
                               ref={isCurrentSelection ? selectedTeamRef : null}
-                              disabled={isPickedByOther && !isCurrentSelection}
+                              // NESSUN BOTTONE E' PIU DISABILITATO!
                               onClick={() => {
-                                // SE CLICCO LA SQUADRA GIÀ SELEZIONATA -> LA CANCELLO
                                 if (isCurrentSelection) {
+                                  // Se è la squadra di questa cella, la cancella
                                   handleSelect(activeCell.stageId, activeCell.index, '');
+                                } else if (isPickedByOther) {
+                                  // SE LA SQUADRA E' IN UN'ALTRA CELLA, LA ELIMINA DA LI PER LIBERARLA
+                                  const previousEntry = Object.entries(selections).find(([k, v]) => v === t && k.startsWith(`${activeCell.stageId}-`));
+                                  if (previousEntry) {
+                                    const [prevKey] = previousEntry;
+                                    setSelections((prev: any) => ({ ...prev, [prevKey]: '' }));
+                                    toast.dismiss();
+                                    toast.success(`${formatTeamName(t)} liberata!`, { icon: '🔓', duration: 1500 });
+                                  }
                                 } else {
+                                  // Se è libera, la seleziona per questa cella
                                   handleSelect(activeCell.stageId, activeCell.index, t);
                                 }
                               }}
-                              className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden
-                                ${isPickedByOther && !isCurrentSelection
-                                  ? 'opacity-20 border-transparent grayscale scale-95' 
-                                  : isCurrentSelection
-                                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' // Highlight d'oro se è l'attuale
-                                    : 'bg-slate-950 border-slate-800 active:border-yellow-500 active:bg-slate-900 active:scale-95 shadow-md'}`}
+                              className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-95 ${buttonStyle}`}
                             >
-                              {/* BOLLINO ROSSO CON X SE È QUELLA GIÀ SELEZIONATA */}
+                              <div className="flex items-center gap-4">
+                                <img src={getFlag(t)!} className="w-9 h-auto rounded shadow-lg border border-slate-800" alt="" />
+                                <span className={`text-[13px] font-black uppercase italic tracking-tight ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
+                                  {formatTeamName(t)}
+                                </span>
+                              </div>
+
+                              {/* ICONA X SE E' LA SELEZIONE ATTUALE */}
                               {isCurrentSelection && (
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center bg-rose-500 rounded-full w-6 h-6 shadow-md text-white">
+                                <div className="flex items-center justify-center bg-rose-500 rounded-full w-6 h-6 shadow-md text-white shrink-0">
                                   <X size={14} strokeWidth={4} />
                                 </div>
                               )}
                               
-                              <img src={getFlag(t)!} className="w-10 h-auto rounded shadow-lg border border-slate-800" alt="" />
-                              <span className={`text-[14px] font-black uppercase italic tracking-tight ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
-                                {formatTeamName(t)}
-                              </span>
+                              {/* ICONA CESTINO SE E' PRESA IN UN ALTRA CELLA */}
+                              {isPickedByOther && (
+                                <div className="flex items-center justify-center bg-slate-700 rounded-full w-6 h-6 shadow-md text-slate-300 shrink-0" title="Rimuovi da altra cella per liberarla">
+                                  <Trash2 size={12} strokeWidth={2} />
+                                </div>
+                              )}
                             </button>
                           );
                         })}
