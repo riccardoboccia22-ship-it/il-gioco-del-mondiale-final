@@ -1,25 +1,20 @@
 import './globals.css';
-import type { Metadata, Viewport } from 'next'; // <-- Aggiunto Viewport
+import type { Metadata } from 'next'; 
 import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
 import { Toaster } from 'react-hot-toast'; 
 
 const inter = Inter({ subsets: ['latin'] });
 
-// 1. Configurazione Viewport separata (Obbligatorio nelle nuove versioni di Next.js)
-export const viewport: Viewport = {
-  themeColor: '#eab308',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // Disabilita lo zoom al tap su iOS
-};
-
-// 2. Configurazione Metadati + PWA + Open Graph
+// Configurazione Metadati + PWA + Open Graph compatibile con Next.js 13
 export const metadata: Metadata = {
   title: 'Il Gioco del Mondiale 2026!', 
   description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
   manifest: '/manifest.json',
+  
+  // Nelle versioni precedenti di Next.js vanno qui dentro:
+  themeColor: '#eab308',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   
   // URL base del tuo dominio
   metadataBase: new URL('https://www.iltuopronostico.it'),
@@ -31,12 +26,12 @@ export const metadata: Metadata = {
     title: 'Mundialito',
   },
 
-  // Forza Safari a usare l'icona dorata
+  // Forza Safari a usare l'icona
   icons: {
     apple: '/icon-512x512.png',
   },
 
-  // OPEN GRAPH: La configurazione corretta con URL assoluto per WhatsApp, Facebook, Telegram
+  // OPEN GRAPH: Anteprima per WhatsApp, Facebook, Telegram
   openGraph: {
     title: 'Il Gioco del Mondiale 2026 🏆',
     description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
@@ -44,7 +39,6 @@ export const metadata: Metadata = {
     siteName: 'Mundialito 2026',
     images: [
       {
-        // URL assoluto obbligatorio per Meta/WhatsApp
         url: 'https://www.iltuopronostico.it/logo.png', 
         width: 800,
         height: 800,
