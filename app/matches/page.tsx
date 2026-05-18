@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Shield, ChevronDown, ChevronUp, Clock, Eraser, Loader2, CheckCircle2 } from 'lucide-react';
+import { Shield, ChevronDown, ChevronUp, Clock, Eraser, Loader2, CheckCircle2, ListFilter } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
@@ -36,17 +36,17 @@ const tournamentGroups = [
   { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
 ];
 
+type FilterType = 'ALL' | 'TODO' | 'DONE';
+
 export default function MatchesPage() {
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [predictions, setPredictions] = useState<any>({});
   const [savingMatches, setSavingMatches] = useState<{ [key: number]: boolean }>({});
   const [savedMatches, setSavedMatches] = useState<{ [key: number]: boolean }>({});
-  
-  // MODIFICA: Ora l'oggetto è inizializzato vuoto, così tutti i gruppi partono chiusi
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
-  
   const [userId, setUserId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
 
   const saveTimeouts = useRef<{ [key: number]: NodeJS.Timeout }>({});
   const router = useRouter();
@@ -90,7 +90,6 @@ export default function MatchesPage() {
 
   const getFlagCode = (team: string) => flagMap[team?.toLowerCase().trim()];
 
-  // FUNZIONE DI FORMATTAZIONE POTENZIATA PER NOMI LUNGHI
   const formatTeamName = (teamName: string) => {
     if (!teamName) return '';
     const name = teamName.toLowerCase().trim();
@@ -145,27 +144,58 @@ export default function MatchesPage() {
   const resetGroup = async (e: React.MouseEvent, groupMatchesArray: any[]) => {
     e.stopPropagation();
     if (isExpired) return;
-    if (window.confirm('Azzera i pronostici del girone?')) {
+    if (window.confirm('Azzera i pronostici visibili in questo girone?')) {
       try {
         const matchIds = groupMatchesArray.map((m) => m.id);
         await supabase.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
         const newPredictions = { ...predictions };
         matchIds.forEach((id) => { delete newPredictions[id]; });
         setPredictions(newPredictions);
-        toast.success('Girone svuotato!');
+        toast.success('Pronostici azzerati!');
       } catch (err) { toast.error("Errore reset"); }
     }
   };
 
-  const groupMatches = () => {
+  // --- LA MAGIA DEL FILTRO AGGIORNATO ---
+  const filteredGroups = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
     tournamentGroups.forEach(g => { grouped[g.name] = []; });
+    
     matches.forEach(m => {
       const group = tournamentGroups.find(g => g.teams.some(t => t.toLowerCase() === m.home_team.toLowerCase() || t.toLowerCase() === m.away_team.toLowerCase()));
       if (group) grouped[group.name].push(m);
     });
-    return grouped;
-  };
+
+    const result: { [key: string]: any[] } = {};
+
+    Object.entries(grouped).forEach(([groupName, groupMatchesArray]) => {
+      if (groupMatchesArray.length === 0) return;
+
+      // Filtriamo LE SINGOLE PARTITE in base allo stato "completata/da giocare"
+      const filteredMatches = groupMatchesArray.filter(m => {
+        const pred = predictions[m.id];
+        const isMatchComplete = pred && pred.home !== '' && pred.home !== undefined && pred.away !== '' && pred.away !== undefined;
+
+        if (activeFilter === 'ALL') return true;
+        if (activeFilter === 'TODO') return !isMatchComplete; // Mostra solo quelle vuote
+        if (activeFilter === 'DONE') return isMatchComplete;  // Mostra solo quelle compilate
+        return true;
+      });
+
+      // Se dopo il filtro c'è almeno una partita, mostriamo il girone
+      if (filteredMatches.length > 0) {
+        result[groupName] = filteredMatches;
+      }
+    });
+
+    // Se si cambia filtro (es. Da Giocare) e rimane un solo girone visibile, aprilo in automatico
+    const resultKeys = Object.keys(result);
+    if (activeFilter === 'TODO' && resultKeys.length === 1) {
+        setOpenGroups(prev => ({ ...prev, [resultKeys[0]]: true }));
+    }
+
+    return result;
+  }, [matches, predictions, activeFilter]);
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
@@ -174,12 +204,10 @@ export default function MatchesPage() {
     </div>
   );
 
-  const groupedMatches = groupMatches();
-
   return (
     <main className="min-h-screen bg-slate-950 text-white p-3 pb-32 font-sans overflow-x-hidden">
       <div className="max-w-2xl mx-auto">
-        <header className="mb-8 pt-4 text-center">
+        <header className="mb-6 pt-4 text-center">
           <h1 className="text-4xl font-black text-yellow-500 mb-3 uppercase italic tracking-tighter">I Gironi</h1>
           <div className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl shadow-lg">
             {isExpired ? <Shield size={14} className="text-rose-500" /> : <Clock size={14} className="text-emerald-500" />}
@@ -189,22 +217,62 @@ export default function MatchesPage() {
           </div>
         </header>
 
+        {/* BARRA DEI FILTRI */}
+        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mb-6 mx-auto">
+          {[
+            { id: 'ALL', label: 'Tutti' },
+            { id: 'TODO', label: 'Da Giocare' },
+            { id: 'DONE', label: 'Completati' }
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id as FilterType)}
+              className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                activeFilter === f.id
+                  ? 'bg-yellow-500 text-slate-950 shadow-lg'
+                  : 'text-slate-500 hover:text-white'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {Object.keys(filteredGroups).length === 0 && (
+            <div className="text-center py-10 opacity-50">
+                <ListFilter className="mx-auto mb-4" size={32} />
+                <p className="text-xs font-black uppercase tracking-widest">Nessun match in questa categoria</p>
+            </div>
+        )}
+
         <div className="space-y-5">
-          {Object.entries(groupedMatches).map(([groupName, groupMatchesArray]) => {
-            if (groupMatchesArray.length === 0) return null;
+          {Object.entries(filteredGroups).map(([groupName, groupMatchesArray]) => {
             const isOpen = openGroups[groupName];
             const groupFlags = tournamentGroups.find(g => g.name === groupName)?.teams.map(getFlagCode).filter(Boolean) || [];
 
+            // Adesso isCompleted riflette semplicemente se ci troviamo nel tab Completati 
+            // (oppure nel tab Tutti se davvero abbiamo compilato tutte le partite di quel girone).
+            const totalMatches = groupMatchesArray.length;
+            let filledMatches = 0;
+            groupMatchesArray.forEach(m => {
+              const pred = predictions[m.id];
+              if (pred && pred.home !== '' && pred.home !== undefined && pred.away !== '' && pred.away !== undefined) filledMatches++;
+            });
+            const isCompleted = filledMatches === totalMatches && activeFilter !== 'TODO';
+
             return (
-              <div key={groupName} className={`bg-slate-900 border-2 rounded-[2rem] overflow-hidden transition-all duration-300 shadow-xl ${isOpen ? 'border-yellow-500/30' : 'border-slate-800'}`}>
+              <div key={groupName} className={`bg-slate-900 border-2 rounded-[2rem] overflow-hidden transition-all duration-300 shadow-xl ${isOpen ? 'border-yellow-500/30' : isCompleted ? 'border-emerald-500/20' : 'border-slate-800'}`}>
                 
                 <button onClick={() => toggleGroup(groupName)} className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shrink-0 border ${isOpen ? 'bg-yellow-500 text-slate-950 border-yellow-400' : 'bg-slate-950 border-slate-700 text-slate-400'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shrink-0 border ${isOpen ? 'bg-yellow-500 text-slate-950 border-yellow-400' : isCompleted ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30' : 'bg-slate-950 border-slate-700 text-slate-400'}`}>
                       {groupName.split(' ')[1]}
                     </div>
                     <div className="text-left">
-                      <h2 className="font-black text-base uppercase italic text-white leading-none mb-1.5">{groupName}</h2>
+                      <h2 className="font-black text-base uppercase italic text-white leading-none mb-1.5 flex items-center gap-2">
+                          {groupName}
+                          {isCompleted && !isOpen && <CheckCircle2 size={12} className="text-emerald-500" />}
+                      </h2>
                       <div className="flex gap-1.5">
                         {groupFlags.map((code, i) => <img key={i} src={`https://flagcdn.com/w40/${code}.png`} className="w-5 h-3.5 object-cover rounded shadow border border-slate-800" alt="" />)}
                       </div>
@@ -240,7 +308,6 @@ export default function MatchesPage() {
                           </div>
 
                           <div className="flex items-center justify-between w-full">
-                            {/* Squadra Casa (30%) */}
                             <div className="w-[32%] flex flex-col items-center gap-1.5">
                               {hFlag ? <img src={`https://flagcdn.com/w40/${hFlag}.png`} className="w-8 h-5.5 object-cover rounded shadow-sm border border-slate-800" alt="" /> : <Shield size={14} className="text-slate-800" />}
                               <span className="font-black text-[9px] uppercase text-slate-200 text-center leading-tight whitespace-normal break-words w-full italic">
@@ -248,7 +315,6 @@ export default function MatchesPage() {
                               </span>
                             </div>
 
-                            {/* Punteggio (36%) */}
                             <div className={`flex items-center gap-1.5 p-1.5 rounded-xl border transition-colors ${isSaved ? 'bg-emerald-950/20 border-emerald-900/50' : 'bg-slate-950 border-slate-800'}`}>
                               <input
                                 type="tel"
@@ -270,7 +336,6 @@ export default function MatchesPage() {
                               />
                             </div>
 
-                            {/* Squadra Trasferta (30%) */}
                             <div className="w-[32%] flex flex-col items-center gap-1.5">
                               {aFlag ? <img src={`https://flagcdn.com/w40/${aFlag}.png`} className="w-8 h-5.5 object-cover rounded shadow-sm border border-slate-800" alt="" /> : <Shield size={14} className="text-slate-800" />}
                               <span className="font-black text-[9px] uppercase text-slate-200 text-center leading-tight whitespace-normal break-words w-full italic">

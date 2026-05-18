@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
-import { useRouter } from 'next/navigation'; // <-- Aggiunto useRouter
+import { useRouter } from 'next/navigation';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
-  BarChart3, RefreshCw, Star, X, CheckCircle2, MessageCircle, ArrowLeft // <-- Aggiunto ArrowLeft
+  BarChart3, RefreshCw, Star, X, CheckCircle2, MessageCircle, ArrowLeft
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -33,7 +33,21 @@ const TEAMS_2026 = [
   'Uruguay', 'Uzbekistan',
 ].sort();
 
-// Mappa potenziata con le varianti dei nomi
+const TOURNAMENT_GROUPS = [
+  { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
+  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia'] },
+  { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
+  { name: 'Gruppo D', teams: ['USA', 'Australia', 'Paraguay', 'Turchia'] },
+  { name: 'Gruppo E', teams: ['Germania', "Costa Avorio", 'Ecuador', 'Curacao'] },
+  { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
+  { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'N. Zelanda'] },
+  { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia S.', 'Capo Verde'] },
+  { name: 'Gruppo I', teams: ['Francia', 'Senegal', 'Norvegia', 'Iraq'] },
+  { name: 'Gruppo J', teams: ['Argentina', 'Austria', 'Algeria', 'Giordania'] },
+  { name: 'Gruppo K', teams: ['Portogallo', 'Colombia', 'Uzbekistan', 'R.D. Congo'] },
+  { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
+];
+
 const flagMap: { [key: string]: string } = {
   algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
   belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba',
@@ -59,7 +73,6 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
-// Formattazione potenziata
 const formatTeamName = (teamName: string) => {
   if (!teamName) return '';
   const lowerName = teamName.toLowerCase().trim();
@@ -75,8 +88,23 @@ const formatTeamName = (teamName: string) => {
   return teamName;
 };
 
+// Aggiunta funzione di formattazione del match per la select a discesa
+const formatMatchName = (matchString: string) => {
+  if (!matchString) return '';
+  let formatted = matchString;
+  formatted = formatted.replace(/Repubblica Democratica del Congo/gi, 'R.D. Congo');
+  formatted = formatted.replace(/Repubblica Ceca/gi, 'Rep. Ceca');
+  formatted = formatted.replace(/Bosnia ed Erzegovina|Bosnia Erzegovina/gi, 'Bosnia');
+  formatted = formatted.replace(/Stati Uniti|USA/gi, 'USA');
+  formatted = formatted.replace(/Arabia Saudita/gi, 'Arabia S.');
+  formatted = formatted.replace(/Nuova Zelanda/gi, 'N. Zelanda');
+  formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
+  formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
+  return formatted;
+};
+
 export default function AdminPage() {
-  const router = useRouter(); // <-- Aggiunto router
+  const router = useRouter(); 
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -87,6 +115,9 @@ export default function AdminPage() {
   const [allUserBonuses, setAllUserBonuses] = useState<any[]>([]);
   const [bonusData, setBonusData] = useState({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Aggiunto stato per le partite raggruppate
+  const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     async function init() {
@@ -105,7 +136,28 @@ export default function AdminPage() {
       supabase.from('official_bracket').select('*').order('id', { ascending: true }),
       supabase.from('user_bonus_answers').select('*'),
     ]);
-    setMatches(mRes.data || []); setProfiles(pRes.data || []); setOfficialBracket(obRes.data || []); setAllUserBonuses(ubRes.data || []);
+    
+    const fetchedMatches = mRes.data || [];
+    setMatches(fetchedMatches); 
+    setProfiles(pRes.data || []); 
+    setOfficialBracket(obRes.data || []); 
+    setAllUserBonuses(ubRes.data || []);
+    
+    // Logica di raggruppamento per le select
+    const tempGroups: Record<string, string[]> = {};
+    fetchedMatches.forEach((m) => {
+        if (!m.home_team || !m.away_team || m.home_team.includes('TBD')) return;
+        const fullMatchString = `${m.home_team} - ${m.away_team}`;
+        const formattedHomeTeam = formatMatchName(m.home_team);
+        const groupObj = TOURNAMENT_GROUPS.find(g => 
+            g.teams.some(t => t.toLowerCase() === formattedHomeTeam.toLowerCase())
+        );
+        const groupName = groupObj ? groupObj.name : 'Altri Match';
+        if (!tempGroups[groupName]) tempGroups[groupName] = [];
+        tempGroups[groupName].push(fullMatchString);
+    });
+    setGroupedMatches(tempGroups);
+
     if (bRes.data) {
       setBonusData({
         red: bRes.data.total_red_cards?.toString() || '', top: bRes.data.top_scorer || '', high: bRes.data.high_scoring_match || '',
@@ -289,7 +341,7 @@ export default function AdminPage() {
       text += `\n...e altri ${sorted.length - 10} giocatori!\n`;
     }
 
-    text += `\n👉 Guarda la classifica completa: www.tuodominio.it/leaderboard`;
+    text += `\n👉 Guarda la classifica completa: www.iltuopronostico.it`;
 
     navigator.clipboard.writeText(text);
     toast.success('Bollettino copiato! Incollalo su WhatsApp 📱', { icon: '💬' });
@@ -484,7 +536,28 @@ export default function AdminPage() {
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Capocannoniere (10pt)</span><input value={bonusData.top} onChange={e => setBonusData({ ...bonusData, top: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
                   <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Miglior Portiere (10pt)</span><input value={bonusData.best_goalkeeper} onChange={e => setBonusData({ ...bonusData, best_goalkeeper: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" /></div>
                   
-                  <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Match con più gol (5pt)</span><select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA PARTITA...</option>{matches.filter(m => !m.home_team.includes('TBD')).map(m => (<option key={m.id} value={`${m.home_team} - ${m.away_team}`}>{m.home_team} - {m.away_team}</option>))}</select></div>
+                  {/* SELECT RAGGRUPPATA PER GIRONI */}
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black uppercase text-slate-500 ml-1">Match con più gol (5pt)</span>
+                    <select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none truncate">
+                      <option value="">SELEZIONA PARTITA...</option>
+                      {TOURNAMENT_GROUPS.map((group) => {
+                        const matchesInGroup = groupedMatches[group.name];
+                        if (!matchesInGroup || matchesInGroup.length === 0) return null;
+                        
+                        return (
+                          <optgroup key={group.name} label={`--- ${group.name} ---`} className="bg-slate-950 text-blue-500 font-bold italic uppercase text-[10px]">
+                            {matchesInGroup.map((m) => (
+                              <option key={m} value={m} className="text-white font-black not-italic">
+                                {formatMatchName(m)}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone + Gol (5pt)</span><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                     <div className="space-y-1"><span className="text-[9px] font-black uppercase text-slate-500 ml-1">Girone - Gol (5pt)</span><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs appearance-none"><option value="">SELEZIONA...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>

@@ -113,7 +113,7 @@ export default function TuttiPronosticiPage() {
   const [data, setData] = useState<any>({
     profiles: [],
     matches: [],
-    predictionsMap: {}, // <- LA MAGIA INIZIA QUI: Un dizionario iperveloce
+    predictionsMap: {}, 
     bracketMap: {},     
     bonusMap: {},       
     officialBonus: null,
@@ -139,7 +139,6 @@ export default function TuttiPronosticiPage() {
           supabase.from('user_bonus_answers').select('*'),
         ]);
 
-        // CREAZIONE DELLE HASH MAPS (Operazione eseguita UNA SOLA VOLTA)
         const predMap: any = {};
         pr.data?.forEach(pred => {
           if (!predMap[pred.match_id]) predMap[pred.match_id] = {};
@@ -291,7 +290,6 @@ export default function TuttiPronosticiPage() {
                 {isExpanded && (
                   <div className="bg-slate-950/80 p-4 space-y-2 border-t border-slate-800/50 max-h-96 overflow-y-auto custom-scrollbar">
                     {data.profiles.map((user: any) => {
-                      // Lookup istantaneo dalla Mappa
                       const pred = data.predictionsMap[match.id]?.[user.id];
                       const info = getMatchResultInfo(pred, match);
                       const userAvatar = AVATARS.find(a => a.id === user.avatar_id) || AVATARS[0];
@@ -307,12 +305,16 @@ export default function TuttiPronosticiPage() {
                             </span>
                           </div>
                           
-                          <div className="flex items-center gap-4">
+                          {/* EFFETTO WOW INSERITO QUI */}
+                          <div className="flex items-center gap-3">
+                            {isFinished && info.pts === 10 && (
+                              <span className="animate-bounce" title="Risultato Esatto!">🎯</span>
+                            )}
                             <span className={`font-black text-lg italic tracking-tighter ${info.color}`}>
                               {pred ? `${pred.home_score} - ${pred.away_score}` : '--'}
                             </span>
                             {isFinished && (
-                              <span className={`w-8 text-right font-black italic text-xs bg-slate-950 px-2 py-1 rounded-lg ${info.color}`}>
+                              <span className={`min-w-[2rem] text-center font-black italic text-xs bg-slate-950 px-2 py-1 rounded-lg ${info.color} ${info.pts === 10 ? 'shadow-[0_0_10px_rgba(52,211,153,0.3)]' : ''}`}>
                                 {info.pts > 0 ? `+${info.pts}` : '0'}
                               </span>
                             )}

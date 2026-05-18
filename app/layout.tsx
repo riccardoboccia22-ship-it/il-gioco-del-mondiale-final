@@ -1,20 +1,25 @@
 import './globals.css';
-import type { Metadata } from 'next'; 
+import type { Metadata, Viewport } from 'next'; // <-- Aggiunto Viewport
 import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
 import { Toaster } from 'react-hot-toast'; 
 
 const inter = Inter({ subsets: ['latin'] });
 
-// Configurazione unica: Metadati + PWA + Open Graph
+// 1. Configurazione Viewport separata (Obbligatorio nelle nuove versioni di Next.js)
+export const viewport: Viewport = {
+  themeColor: '#eab308',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Disabilita lo zoom al tap su iOS
+};
+
+// 2. Configurazione Metadati + PWA + Open Graph
 export const metadata: Metadata = {
   title: 'Il Gioco del Mondiale 2026!', 
   description: 'La Convocazione Ufficiale. Entra, fai i tuoi pronostici e sfida gli amici!',
   manifest: '/manifest.json',
-  
-  // Impostazioni Viewport e Colori compatibili con la tua versione di Next.js
-  themeColor: '#eab308',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   
   // URL base del tuo dominio
   metadataBase: new URL('https://www.iltuopronostico.it'),

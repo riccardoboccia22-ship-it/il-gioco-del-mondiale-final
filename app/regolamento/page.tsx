@@ -6,16 +6,29 @@ import {
   Star, 
   AlertCircle, 
   Clock, 
-  Scale
+  Scale,
+  ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function RegolamentoPage() {
+  const router = useRouter();
+
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans">
+    <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans relative">
+      
+      {/* PULSANTE INDIETRO */}
+      <button 
+        onClick={() => router.back()} 
+        className="absolute top-6 left-4 text-slate-500 hover:text-yellow-500 transition-colors flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest z-10"
+      >
+        <ArrowLeft size={16} /> Indietro
+      </button>
+
       <header className="text-center mb-10 pt-6">
         <div className="flex justify-center mb-4">
-          <div className="bg-yellow-500/10 p-4 rounded-full border border-yellow-500/20">
+          <div className="bg-yellow-500/10 p-4 rounded-full border border-yellow-500/20 mt-6 sm:mt-0">
             <BookOpen size={40} className="text-yellow-500" />
           </div>
         </div>
