@@ -1,9 +1,10 @@
 'use client';
+
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Shield, ChevronDown, ChevronUp, Clock, Eraser, Loader2, CheckCircle2, ListFilter } from 'lucide-react';
+import { Shield, ChevronDown, ChevronUp, Clock, Eraser, Loader2, CheckCircle2, ListFilter, BarChart3 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
@@ -47,7 +48,7 @@ export default function MatchesPage() {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
-
+  
   const saveTimeouts = useRef<{ [key: number]: NodeJS.Timeout }>({});
   const router = useRouter();
   const isExpired = new Date() > WORLD_CUP_START_DATE;
@@ -156,7 +157,6 @@ export default function MatchesPage() {
     }
   };
 
-  // --- LA MAGIA DEL FILTRO AGGIORNATO ---
   const filteredGroups = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
     tournamentGroups.forEach(g => { grouped[g.name] = []; });
@@ -171,24 +171,21 @@ export default function MatchesPage() {
     Object.entries(grouped).forEach(([groupName, groupMatchesArray]) => {
       if (groupMatchesArray.length === 0) return;
 
-      // Filtriamo LE SINGOLE PARTITE in base allo stato "completata/da giocare"
       const filteredMatches = groupMatchesArray.filter(m => {
         const pred = predictions[m.id];
         const isMatchComplete = pred && pred.home !== '' && pred.home !== undefined && pred.away !== '' && pred.away !== undefined;
 
         if (activeFilter === 'ALL') return true;
-        if (activeFilter === 'TODO') return !isMatchComplete; // Mostra solo quelle vuote
-        if (activeFilter === 'DONE') return isMatchComplete;  // Mostra solo quelle compilate
+        if (activeFilter === 'TODO') return !isMatchComplete;
+        if (activeFilter === 'DONE') return isMatchComplete;
         return true;
       });
 
-      // Se dopo il filtro c'è almeno una partita, mostriamo il girone
       if (filteredMatches.length > 0) {
         result[groupName] = filteredMatches;
       }
     });
 
-    // Se si cambia filtro (es. Da Giocare) e rimane un solo girone visibile, aprilo in automatico
     const resultKeys = Object.keys(result);
     if (activeFilter === 'TODO' && resultKeys.length === 1) {
         setOpenGroups(prev => ({ ...prev, [resultKeys[0]]: true }));
@@ -207,13 +204,24 @@ export default function MatchesPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white p-3 pb-32 font-sans overflow-x-hidden">
       <div className="max-w-2xl mx-auto">
-        <header className="mb-6 pt-4 text-center">
+        
+        <header className="mb-6 pt-4 text-center flex flex-col items-center">
           <h1 className="text-4xl font-black text-yellow-500 mb-3 uppercase italic tracking-tighter">I Gironi</h1>
-          <div className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl shadow-lg">
-            {isExpired ? <Shield size={14} className="text-rose-500" /> : <Clock size={14} className="text-emerald-500" />}
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {isExpired ? 'Fase Chiusa' : 'Autosalvataggio Attivo'}
-            </p>
+          
+          <div className="flex items-center gap-3 mb-2">
+            <div className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl shadow-lg">
+              {isExpired ? <Shield size={14} className="text-rose-500" /> : <Clock size={14} className="text-emerald-500" />}
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {isExpired ? 'Fase Chiusa' : 'Autosalvataggio'}
+              </p>
+            </div>
+            
+            <button 
+              onClick={() => router.push('/simulatore')}
+              className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg"
+            >
+              <BarChart3 size={14} /> Simulatore
+            </button>
           </div>
         </header>
 
@@ -250,8 +258,6 @@ export default function MatchesPage() {
             const isOpen = openGroups[groupName];
             const groupFlags = tournamentGroups.find(g => g.name === groupName)?.teams.map(getFlagCode).filter(Boolean) || [];
 
-            // Adesso isCompleted riflette semplicemente se ci troviamo nel tab Completati 
-            // (oppure nel tab Tutti se davvero abbiamo compilato tutte le partite di quel girone).
             const totalMatches = groupMatchesArray.length;
             let filledMatches = 0;
             groupMatchesArray.forEach(m => {

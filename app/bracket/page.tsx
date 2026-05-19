@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy } from 'lucide-react';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
@@ -34,7 +34,7 @@ const TOURNAMENT_GROUPS = [
 
 const flagMap: { [key: string]: string } = {
   algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
-  belgio: 'be', 'bosnia ed erzegovina': 'ba', brasile: 'br', canada: 'ca', 'capo verde': 'cv',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', brasile: 'br', canada: 'ca', 'capo verde': 'cv',
   colombia: 'co', 'corea del sud': 'kr', "costa d'avorio": 'ci', croazia: 'hr', curaçao: 'cw',
   ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp',
   giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma',
@@ -63,9 +63,12 @@ export default function BracketPage() {
   
   const [activeCell, setActiveCell] = useState<any>(null);
   const selectedTeamRef = useRef<any>(null);
+
   const isExpired = new Date() > WORLD_CUP_START_DATE;
 
-  useEffect(() => { loadSavedBracket(); }, []);
+  useEffect(() => {
+    loadSavedBracket();
+  }, []);
 
   useEffect(() => {
     if (activeCell) {
@@ -160,9 +163,16 @@ export default function BracketPage() {
         <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
           {isExpired ? '🔒 Pronostici Conclusi' : 'Dalla fase a eliminazione al Titolo'}
         </p>
-        <Link href="/groups" className="mt-6 inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
-          <Map size={16} /> Consulta i Gironi Ufficiali
-        </Link>
+        
+        {/* BOTTONI NAVIGAZIONE */}
+        <div className="flex gap-2 mt-6">
+          <Link href="/groups" className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-4 py-3 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-800 active:scale-95 shadow-lg">
+            <Map size={14} /> Gironi
+          </Link>
+          <Link href="/simulatore" className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-3 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
+            <BarChart3 size={14} /> Simulatore
+          </Link>
+        </div>
       </header>
 
       <div className={`max-w-4xl mx-auto space-y-12 ${isExpired ? 'opacity-70 pointer-events-none' : ''}`}>
@@ -179,7 +189,7 @@ export default function BracketPage() {
               {stage.id === 'R32' && (
                 <div className="mt-3 mx-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex items-start sm:items-center gap-3 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-tight">
                   <Info size={20} className="text-blue-500 shrink-0" />
-                  <p>Si qualificano le <span className="text-white">prime 2</span> e le <span className="text-white">8 migliori terze</span>.</p>
+                  <p>L'ordine non conta: seleziona le 32 squadre che supereranno la fase a gironi.</p>
                 </div>
               )}
             </div>
@@ -187,21 +197,31 @@ export default function BracketPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {Array.from({ length: stage.count }).map((_, i) => {
                 const currentSelection = selections[`${stage.id}-${i}`];
+                const cellNumber = i + 1; // Numero della cella
+                
                 return (
                   <div key={i} className="relative">
                     <button
                       disabled={isExpired}
                       onClick={() => setActiveCell({stageId: stage.id, index: i})}
-                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-12 pr-10 sm:p-5 sm:pl-14 text-[13px] sm:text-[14px] font-black uppercase transition-all text-left truncate flex items-center
+                      // Aumentato il padding-left a pl-16 per far spazio al numero e all'icona
+                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-16 pr-10 sm:p-5 sm:pl-20 text-[13px] sm:text-[14px] font-black uppercase transition-all text-left truncate flex items-center
                         ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
                     >
-                      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2">
+                      {/* IL NUMERO DELLA CELLA SULLA SINISTRA */}
+                      <span className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-[10px] sm:text-[11px] font-black w-4 text-right ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
+                        {cellNumber}
+                      </span>
+
+                      {/* BANDIERA O SCUDO SPOSTATI PIÙ A DESTRA */}
+                      <div className="absolute left-9 sm:left-11 top-1/2 -translate-y-1/2">
                         {currentSelection ? (
                           <img src={getFlag(currentSelection)!} className="w-6 sm:w-8 h-auto rounded shadow-sm" alt="" />
                         ) : (
                           <ShieldCheck className="text-slate-800 w-5 h-5" />
                         )}
                       </div>
+                      
                       {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
                     </button>
 
@@ -262,7 +282,6 @@ export default function BracketPage() {
                           const isPickedByOther = alreadySelectedByOthers.includes(t);
                           const isCurrentSelection = currentCellSelection === t;
                           
-                          // STILE DINAMICO BASATO SULLO STATO DELLA SQUADRA
                           let buttonStyle = "bg-slate-950 border-slate-800 active:border-yellow-500 active:bg-slate-900 shadow-md";
                           if (isCurrentSelection) {
                             buttonStyle = "bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]";
@@ -274,13 +293,10 @@ export default function BracketPage() {
                             <button
                               key={t}
                               ref={isCurrentSelection ? selectedTeamRef : null}
-                              // NESSUN BOTTONE E' PIU DISABILITATO!
                               onClick={() => {
                                 if (isCurrentSelection) {
-                                  // Se è la squadra di questa cella, la cancella
                                   handleSelect(activeCell.stageId, activeCell.index, '');
                                 } else if (isPickedByOther) {
-                                  // SE LA SQUADRA E' IN UN'ALTRA CELLA, LA ELIMINA DA LI PER LIBERARLA
                                   const previousEntry = Object.entries(selections).find(([k, v]) => v === t && k.startsWith(`${activeCell.stageId}-`));
                                   if (previousEntry) {
                                     const [prevKey] = previousEntry;
@@ -289,7 +305,6 @@ export default function BracketPage() {
                                     toast.success(`${formatTeamName(t)} liberata!`, { icon: '🔓', duration: 1500 });
                                   }
                                 } else {
-                                  // Se è libera, la seleziona per questa cella
                                   handleSelect(activeCell.stageId, activeCell.index, t);
                                 }
                               }}
@@ -302,14 +317,12 @@ export default function BracketPage() {
                                 </span>
                               </div>
 
-                              {/* ICONA X SE E' LA SELEZIONE ATTUALE */}
                               {isCurrentSelection && (
                                 <div className="flex items-center justify-center bg-rose-500 rounded-full w-6 h-6 shadow-md text-white shrink-0">
                                   <X size={14} strokeWidth={4} />
                                 </div>
                               )}
                               
-                              {/* ICONA CESTINO SE E' PRESA IN UN ALTRA CELLA */}
                               {isPickedByOther && (
                                 <div className="flex items-center justify-center bg-slate-700 rounded-full w-6 h-6 shadow-md text-slate-300 shrink-0" title="Rimuovi da altra cella per liberarla">
                                   <Trash2 size={12} strokeWidth={2} />
