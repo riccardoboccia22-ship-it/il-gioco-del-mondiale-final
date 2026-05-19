@@ -2,25 +2,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
-import Link from 'next/link';
 import {
-  Award,
-  Flame,
-  Zap,
-  Info,
-  Goal,
-  ArrowDownToLine,
-  ArrowUpToLine,
-  Trophy,
-  Target,
-  Map,
-  Trash2,
-  ShieldCheck,
+  Award, Flame, Zap, Info, Trophy, Trash2, 
+  ShieldCheck, ChevronDown, X, Target, Goal, ArrowUpToLine, ArrowDownToLine
 } from 'lucide-react';
 
 const LOCK_TIME = new Date('2026-06-11T20:00:00+02:00');
 
-// Array dettagliato con nomi accorciati per non "spaccare" la grafica su mobile
 const TOURNAMENT_GROUPS = [
   { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
   { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia'] },
@@ -36,36 +24,35 @@ const TOURNAMENT_GROUPS = [
   { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
 ];
 
-// Funzione per accorciare i nomi lunghi nel menu a tendina delle partite
-const formatMatchName = (matchString: string) => {
-  if (!matchString) return '';
-  let formatted = matchString;
-  formatted = formatted.replace(/Repubblica Democratica del Congo/gi, 'R.D. Congo');
-  formatted = formatted.replace(/Repubblica Ceca/gi, 'Rep. Ceca');
-  formatted = formatted.replace(/Bosnia ed Erzegovina|Bosnia Erzegovina/gi, 'Bosnia');
-  formatted = formatted.replace(/Stati Uniti|USA/gi, 'USA');
-  formatted = formatted.replace(/Arabia Saudita/gi, 'Arabia S.');
-  formatted = formatted.replace(/Nuova Zelanda/gi, 'N. Zelanda');
-  formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
-  formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
-  return formatted;
+const flagMap: { [key: string]: string } = {
+  algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia': 'ba', 'brasile': 'br', canada: 'ca', 'capo verde': 'cv',
+  colombia: 'co', 'corea sud': 'kr', "costa avorio": 'ci', croazia: 'hr', 'curacao': 'cw',
+  ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp',
+  giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma',
+  messico: 'mx', norvegia: 'no', 'n. zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
+  portogallo: 'pt', qatar: 'qa', 'rep. ceca': 'cz', 'r.d. congo': 'cd',
+  scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'usa': 'us',
+  sudafrica: 'za', svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', 
+  uruguay: 'uy', uzbekistan: 'uz',
+};
+
+const getFlag = (team: string) => {
+    const code = flagMap[team?.toLowerCase().trim()];
+    return code ? `https://flagcdn.com/w40/${code}.png` : null;
 };
 
 export default function BonusPage() {
-  const [formData, setFormData] = useState({
-    total_red_cards: '',
-    top_scorer: '',
-    high_scoring_match: '',
-    total_penalties: '',
-    total_own_goals: '',
-    highest_scoring_group: '',
-    lowest_scoring_group: '',
-    mvp_world_cup: '',
-    best_goalkeeper: '',
+  const [formData, setFormData] = useState<any>({
+    total_red_cards: '', top_scorer: '', high_scoring_match: '', total_penalties: '',
+    total_own_goals: '', highest_scoring_group: '', lowest_scoring_group: '',
+    mvp_world_cup: '', best_goalkeeper: '',
   });
+  
   const [availableMatches, setAvailableMatches] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [activeBonusField, setActiveBonusField] = useState<string | null>(null);
 
   const isExpired = new Date() > LOCK_TIME;
 
@@ -74,75 +61,40 @@ export default function BonusPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-
         const [bonusRes, matchesRes] = await Promise.all([
-          supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
-          supabase.from('matches').select('home_team, away_team').order('id', { ascending: true }),
+            supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
+            supabase.from('matches').select('home_team, away_team').order('id', { ascending: true }),
         ]);
 
         if (matchesRes.data) {
-          const validMatches = matchesRes.data
-            .filter((m) => m.home_team && m.away_team && !m.home_team.includes('TBD'))
-            .map((m) => `${m.home_team} - ${m.away_team}`);
-          setAvailableMatches(validMatches);
+            const validMatches = matchesRes.data.filter((m) => m.home_team && m.away_team && !m.home_team.includes('TBD')).map((m) => `${m.home_team} - ${m.away_team}`);
+            setAvailableMatches(validMatches);
         }
 
         if (bonusRes.data) {
           setFormData({
-            total_red_cards: bonusRes.data.total_red_cards != null ? bonusRes.data.total_red_cards.toString() : '',
+            total_red_cards: bonusRes.data.total_red_cards ?? '',
             top_scorer: bonusRes.data.top_scorer || '',
             high_scoring_match: bonusRes.data.high_scoring_match || '',
-            total_penalties: bonusRes.data.total_penalties != null ? bonusRes.data.total_penalties.toString() : '',
-            total_own_goals: bonusRes.data.total_own_goals != null ? bonusRes.data.total_own_goals.toString() : '',
+            total_penalties: bonusRes.data.total_penalties ?? '',
+            total_own_goals: bonusRes.data.total_own_goals ?? '',
             highest_scoring_group: bonusRes.data.highest_scoring_group || '',
             lowest_scoring_group: bonusRes.data.lowest_scoring_group || '',
             mvp_world_cup: bonusRes.data.mvp_world_cup || '',
             best_goalkeeper: bonusRes.data.best_goalkeeper || '',
           });
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setFetching(false);
-      }
+      } catch (err) { console.error(err); } finally { setFetching(false); }
     }
     loadData();
   }, []);
-
-  const resetBonus = async () => {
-    if (isExpired) return;
-    if (window.confirm('Sei sicuro di voler svuotare e cancellare tutti i bonus?')) {
-      setLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Utente non trovato');
-        const { error } = await supabase.from('user_bonus_answers').delete().eq('user_id', user.id);
-        if (error) throw error;
-
-        setFormData({
-          total_red_cards: '', top_scorer: '', high_scoring_match: '', total_penalties: '',
-          total_own_goals: '', highest_scoring_group: '', lowest_scoring_group: '',
-          mvp_world_cup: '', best_goalkeeper: '',
-        });
-        toast.success('Bonus azzerati e salvati!', { icon: '🧹' });
-      } catch (error: any) {
-        toast.error("Errore durante l'azzeramento");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
 
   const saveBonus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isExpired) return toast.error('Tempo scaduto!');
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error('Effettua il login');
-      setLoading(false);
-      return;
-    }
+    if (!user) { toast.error('Effettua il login'); setLoading(false); return; }
 
     const payload = {
       user_id: user.id,
@@ -158,159 +110,102 @@ export default function BonusPage() {
     };
 
     const { error } = await supabase.from('user_bonus_answers').upsert(payload, { onConflict: 'user_id' });
-
     if (error) toast.error('Errore: ' + error.message);
     else toast.success('Pronostici bonus salvati! 🍀');
     setLoading(false);
   };
 
+  const handleGroupSelect = (groupName: string) => {
+    if (activeBonusField) {
+      const isCurrentlySelected = formData[activeBonusField] === groupName;
+      setFormData((prev: any) => ({ ...prev, [activeBonusField]: isCurrentlySelected ? '' : groupName }));
+      setActiveBonusField(null);
+    }
+  };
+
   if (fetching) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse uppercase italic">Analizzando le quote...</div>;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6 pb-48 font-sans text-center">
-      <header className="mb-10 pt-4 flex flex-col items-center">
+    <main className="min-h-screen bg-slate-950 text-white p-6 pb-48 font-sans">
+      <header className="mb-10 pt-4 text-center flex flex-col items-center">
         <h1 className="text-4xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
-        <div className="mt-4 inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl mb-4 shadow-lg shadow-yellow-500/5">
-          <Info size={14} className="text-yellow-500" />
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">9 Domande = MAX 54 Punti</p>
-        </div>
-        <Link href="/groups" className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
-          <Map size={14} /> Consulta i Gironi Ufficiali
-        </Link>
       </header>
 
       <form onSubmit={saveBonus} className="max-w-md mx-auto space-y-6 text-left">
         <div className={`space-y-4 ${isExpired ? 'opacity-50 pointer-events-none' : ''}`}>
           
-          {/* 1. MVP Mondiale */}
+          {/* Domande Input Testo */}
+          {[ {id: 'mvp_world_cup', label: 'MVP Mondiale', icon: Trophy}, {id: 'top_scorer', label: 'Capocannoniere', icon: Award}, {id: 'best_goalkeeper', label: 'Miglior Portiere', icon: ShieldCheck}].map(field => (
+             <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
+               <label><span className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={14} /> {field.label}</span>
+               <input type="text" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 font-black text-lg uppercase" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
+             </div>
+          ))}
+
+          {/* Selezione Gironi */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><Trophy size={14} /> MVP Mondiale</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">10 PT</span>
-              </span>
-              <input type="text" value={formData.mvp_world_cup} placeholder="Inserisci Nome" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-lg uppercase placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, mvp_world_cup: e.target.value })} />
-            </label>
+             <label className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowUpToLine size={14} /> Girone con più gol</label>
+             <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg uppercase text-white flex justify-between items-center">
+                {formData.highest_scoring_group || 'Seleziona'} <ChevronDown size={16} />
+             </button>
           </div>
 
-          {/* 2. Capocannoniere */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><Award size={14} /> Capocannoniere</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">10 PT</span>
-              </span>
-              <input type="text" value={formData.top_scorer} placeholder="Inserisci Nome" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-lg uppercase placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, top_scorer: e.target.value })} />
-            </label>
+             <label className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowDownToLine size={14} /> Girone con meno gol</label>
+             <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg uppercase text-white flex justify-between items-center">
+                {formData.lowest_scoring_group || 'Seleziona'} <ChevronDown size={16} />
+             </button>
           </div>
 
-          {/* 3. MIGLIOR PORTIERE */}
+          {/* Match più gol */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><ShieldCheck size={14} /> Miglior Portiere</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">10 PT</span>
-              </span>
-              <input type="text" value={formData.best_goalkeeper} placeholder="Inserisci Nome" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-lg uppercase placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, best_goalkeeper: e.target.value })} />
-            </label>
+             <label className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><Flame size={14} /> Partita con più gol</label>
+             <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none font-black text-sm uppercase" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
+                <option value="">Seleziona Partita...</option>
+                {availableMatches.map((m) => <option key={m} value={m}>{m}</option>)}
+             </select>
           </div>
 
-          {/* 4. Match con più gol */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><Flame size={14} /> Partita con più gol Fase a Gironi</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
-              </span>
-              {/* Applicata funzione formatMatchName alle singole opzioni */}
-              <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none truncate" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
-                <option value="">Scegli Partita...</option>
-                {availableMatches.map((m) => (
-                  <option key={m} value={m}>{formatMatchName(m)}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {/* 5. Girone più gol */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><ArrowUpToLine size={14} /> Girone con più gol</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
-              </span>
-              <select value={formData.highest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none truncate" onChange={(e) => setFormData({ ...formData, highest_scoring_group: e.target.value })}>
-                <option value="">Scegli Girone...</option>
-                {TOURNAMENT_GROUPS.map((g) => (
-                  <option key={g.name} value={g.name}>{g.name} ({g.teams.join(', ')})</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {/* 6. Girone meno gol */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><ArrowDownToLine size={14} /> Girone con meno gol</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">5 PT</span>
-              </span>
-              <select value={formData.lowest_scoring_group} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xs sm:text-sm uppercase appearance-none truncate" onChange={(e) => setFormData({ ...formData, lowest_scoring_group: e.target.value })}>
-                <option value="">Scegli Girone...</option>
-                {TOURNAMENT_GROUPS.map((g) => (
-                  <option key={g.name} value={g.name}>{g.name} ({g.teams.join(', ')})</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {/* 7. Totale Autogol */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><Target size={14} /> Totale Autogol</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">3 PT</span>
-              </span>
-              <input type="number" inputMode="numeric" pattern="[0-9]*" value={formData.total_own_goals} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_own_goals: e.target.value })} />
-            </label>
-          </div>
-
-          {/* 8. Totale Rigori */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><Goal size={14} /> Totale Rigori 90' e 120'</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">3 PT</span>
-              </span>
-              <input type="number" inputMode="numeric" pattern="[0-9]*" value={formData.total_penalties} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_penalties: e.target.value })} />
-            </label>
-          </div>
-
-          {/* 9. Totale Espulsioni */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-            <label>
-              <span className="flex items-center justify-between text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider">
-                <span className="flex items-center gap-2"><Zap size={14} /> Totale Cartellini Rossi</span>
-                <span className="bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded-md">3 PT</span>
-              </span>
-              <input type="number" inputMode="numeric" pattern="[0-9]*" value={formData.total_red_cards} placeholder="Inserisci numero" className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 transition-all font-black text-xl text-yellow-500 placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, total_red_cards: e.target.value })} />
-            </label>
-          </div>
-
+          {/* Numerici */}
+          {[ {id: 'total_own_goals', label: 'Totale Autogol', icon: Target}, {id: 'total_penalties', label: 'Totale Rigori', icon: Goal}, {id: 'total_red_cards', label: 'Totale Rossi', icon: Zap}].map(field => (
+            <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
+              <label><span className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={14} /> {field.label}</span>
+              <input type="number" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 font-black text-xl text-yellow-500" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
+            </div>
+          ))}
         </div>
 
-        {!isExpired && (
-          <div className="fixed bottom-24 left-0 right-0 p-4 sm:p-6 flex justify-center items-center gap-2 sm:gap-3 z-50 pointer-events-none">
-            <button type="button" onClick={resetBonus} disabled={loading} className="pointer-events-auto flex items-center justify-center p-4 sm:p-5 bg-slate-900 border-2 border-slate-800 rounded-xl sm:rounded-2xl text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all active:scale-95 shadow-xl">
-              <Trash2 size={18} />
-            </button>
-            <button disabled={loading} type="submit" className="pointer-events-auto max-w-[240px] sm:max-w-xs w-full bg-yellow-500 text-slate-950 font-black py-4 sm:py-5 rounded-xl sm:rounded-2xl uppercase text-[10px] sm:text-xs tracking-[0.1em] sm:tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-2 sm:gap-3 italic active:scale-95">
-              {loading ? 'Salvataggio...' : 'Conferma Bonus'}
-              {!loading && <Zap size={16} fill="currentColor" />}
-            </button>
-          </div>
-        )}
+        <button type="submit" className="w-full bg-yellow-500 text-slate-950 font-black py-5 rounded-2xl uppercase text-xs tracking-widest shadow-2xl">Salva Bonus</button>
       </form>
+
+      {/* MODAL BOTTOM SHEET */}
+      {activeBonusField && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveBonusField(null)}></div>
+          <div className="relative w-full max-w-xl bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-7 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-yellow-500 text-lg font-black uppercase italic">Scegli Girone</h3>
+              <button onClick={() => setActiveBonusField(null)} className="p-3 bg-slate-800 rounded-full text-white"><X size={20}/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              {TOURNAMENT_GROUPS.map((group) => {
+                 const isSelected = formData[activeBonusField] === group.name;
+                 return (
+                    <button key={group.name} onClick={() => handleGroupSelect(group.name)} className={`w-full p-4 rounded-2xl border-2 flex flex-col gap-3 ${isSelected ? 'bg-yellow-500/10 border-yellow-500' : 'bg-slate-950 border-slate-800'}`}>
+                        <div className="flex justify-between w-full items-center">
+                            <span className={`font-black uppercase text-sm ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{group.name}</span>
+                            {isSelected && <div className="bg-rose-500 rounded-full w-6 h-6 flex items-center justify-center text-white"><X size={14}/></div>}
+                        </div>
+                        <div className="flex gap-2">
+                            {group.teams.map(team => <img key={team} src={getFlag(team)!} className="w-8 h-5 rounded object-cover shadow-sm border border-slate-800" alt={team} />)}
+                        </div>
+                    </button>
+                 );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
