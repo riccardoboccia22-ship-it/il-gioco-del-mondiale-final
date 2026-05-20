@@ -5,10 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Timer, X, Edit3, Shield } from 'lucide-react';
+import { BookOpen, Timer, X, Edit3, Shield, Map } from 'lucide-react';
 
 const AVATARS = [
-  // --- PRO & CLASSICI ---
   { id: 'trainer', name: 'Il Mister', emoji: '🧢', color: 'from-blue-600 to-blue-400' },
   { id: 'wizard', name: 'Il Mago', emoji: '🪄', color: 'from-purple-600 to-purple-400' },
   { id: 'bomber', name: 'Il Bomber', emoji: '⚽', color: 'from-rose-600 to-rose-400' },
@@ -16,8 +15,6 @@ const AVATARS = [
   { id: 'ninja', name: 'Ninja', emoji: '🥷', color: 'from-zinc-800 to-zinc-600' },
   { id: 'clown', name: 'Clown', emoji: '🤡', color: 'from-red-500 to-sky-500' },
   { id: 'pirate', name: 'Pirati', emoji: '🏴‍☠️', color: 'from-zinc-900 to-zinc-700' },
-
-  // --- ANIMALI ---
   { id: 'shark', name: 'Squalo', emoji: '🦈', color: 'from-sky-700 to-blue-900' },
   { id: 'bull', name: 'Toro', emoji: '🐂', color: 'from-red-700 to-orange-600' },
   { id: 'wolf', name: 'Lupo', emoji: '🐺', color: 'from-slate-700 to-slate-500' },
@@ -38,13 +35,9 @@ const AVATARS = [
   { id: 'fly', name: 'Mosca', emoji: '🪰', color: 'from-zinc-800 to-zinc-600' },
   { id: 'mosquito', name: 'Zanzara', emoji: '🦟', color: 'from-stone-600 to-stone-400' },
   { id: 'grasshopper', name: 'Cavalletta', emoji: '🦗', color: 'from-lime-600 to-green-500' },
-
-  // --- FOOD & DRINKS ---
   { id: 'beer', name: 'Birra', emoji: '🍺', color: 'from-yellow-400 to-amber-500' },
   { id: 'mate', name: 'Mate', emoji: '🧉', color: 'from-green-700 to-emerald-500' },
   { id: 'cocktail', name: 'Cocktail', emoji: '🍹', color: 'from-rose-400 to-orange-400' },
-
-  // --- NATURA & MONDO ---
   { id: 'tree', name: 'Albero', emoji: '🌳', color: 'from-green-800 to-lime-600' },
   { id: 'palm', name: 'Palma', emoji: '🌴', color: 'from-yellow-600 to-emerald-500' },
   { id: 'ice', name: 'Ghiaccio', emoji: '🧊', color: 'from-cyan-300 to-blue-100' },
@@ -53,8 +46,6 @@ const AVATARS = [
   { id: 'snowman', name: 'Snowman', emoji: '⛄', color: 'from-slate-100 to-slate-50' },
   { id: 'world', name: 'Mondo', emoji: '🌍', color: 'from-blue-500 to-green-400' },
   { id: 'mountain', name: 'Montagna', emoji: '⛰️', color: 'from-slate-500 to-stone-400' },
-
-  // --- MOTORI & VELOCITÀ ---
   { id: 'f1', name: 'Formula 1', emoji: '🏎️', color: 'from-red-600 to-red-400' },
   { id: 'moto', name: 'Moto', emoji: '🏍️', color: 'from-orange-500 to-amber-400' },
   { id: 'scooter', name: 'Scooter', emoji: '🛵', color: 'from-sky-500 to-blue-300' },
@@ -62,8 +53,6 @@ const AVATARS = [
   { id: 'roller', name: 'Roller', emoji: '🎢', color: 'from-indigo-600 to-purple-500' },
   { id: 'missile', name: 'Missile', emoji: '🚀', color: 'from-slate-200 to-orange-400' },
   { id: 'paragliding', name: 'Parapendio', emoji: '🪂', color: 'from-rose-500 to-orange-400' },
-
-  // --- OGGETTI & GAMING ---
   { id: 'diamond', name: 'Diamante', emoji: '💎', color: 'from-cyan-400 to-blue-500' },
   { id: 'boxing', name: 'Boxe', emoji: '🥊', color: 'from-red-600 to-red-400' },
   { id: 'bang', name: 'Bang', emoji: '💥', color: 'from-orange-500 to-yellow-400' },
@@ -101,17 +90,13 @@ export default function ProfilePage() {
   const router = useRouter();
   const ADMIN_EMAIL = 'ricky@mondiale.it';
 
-  useEffect(() => {
-    checkUser();
-  }, []);
+  useEffect(() => { checkUser(); }, []);
 
   useEffect(() => {
     const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
-
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = WORLD_CUP_START_DATE - now;
-
       if (distance < 0) {
         clearInterval(timer);
         setIsExpired(true);
@@ -124,75 +109,44 @@ export default function ProfilePage() {
         });
       }
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
   async function checkUser() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (user) {
-        let { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
+        let { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         if (!profile) {
             const fallbackUsername = user.email ? user.email.split('@')[0] : 'Guerriero';
             await supabase.from('profiles').insert([{ id: user.id, username: fallbackUsername, points: 0, avatar_id: 'trainer' }]);
             profile = { username: fallbackUsername, points: 0, points_groups: 0, points_bracket: 0, points_bonus: 0, is_paid: false, avatar_id: 'trainer' };
         }
-
         setUserProfile({ ...user, username: profile.username, avatar_id: profile.avatar_id || 'trainer' });
         setStats({
-          total: profile.points || 0,
-          groups: profile.points_groups || 0,
-          bracket: profile.points_bracket || 0,
-          bonus: profile.points_bonus || 0,
-          rank: profile.ranking || '--',
-          isPaid: profile.is_paid || false,
+          total: profile.points || 0, groups: profile.points_groups || 0, bracket: profile.points_bracket || 0,
+          bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
       }
-    } catch (error) {
-      console.error("Errore check utente:", error);
-    } finally {
-      setIsPageLoading(false);
-    }
+    } catch (error) { console.error("Errore check utente:", error); } finally { setIsPageLoading(false); }
   }
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
-    
     const safeUsernameForEmail = username.trim().toLowerCase().replace(/\s+/g, '');
     const fakeEmail = `${safeUsernameForEmail}@mondiale.it`;
 
     if (isRegistering) {
-      const { data, error } = await supabase.auth.signUp({
-        email: fakeEmail,
-        password: password,
-      });
-
-      if (error) {
-        toast.error('Errore: Username occupato o password corta');
-      } else if (data.user) {
-        await supabase.from('profiles').upsert([{
-          id: data.user.id,
-          username: username.trim(),
-          points: 0,
-          is_paid: false,
-          avatar_id: 'trainer'
-        }]);
+      const { data, error } = await supabase.auth.signUp({ email: fakeEmail, password: password });
+      if (error) { toast.error('Errore: Username occupato o password corta'); } 
+      else if (data.user) {
+        await supabase.from('profiles').upsert([{ id: data.user.id, username: username.trim(), points: 0, is_paid: false, avatar_id: 'trainer' }]);
         toast.success('Registrazione completata!');
         window.location.reload();
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: fakeEmail,
-        password: password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: password });
       if (error) toast.error('Credenziali errate');
       else window.location.reload();
     }
@@ -206,19 +160,12 @@ export default function ProfilePage() {
 
   const updateAvatar = async (newAvatarId: string) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ avatar_id: newAvatarId })
-        .eq('id', userProfile.id);
-        
+      const { error } = await supabase.from('profiles').update({ avatar_id: newAvatarId }).eq('id', userProfile.id);
       if (error) throw error;
-      
       setUserProfile({ ...userProfile, avatar_id: newAvatarId });
       setShowAvatarModal(false);
-      toast.success('Avatar aggiornato con successo! 🎨');
-    } catch (error) {
-      toast.error('Impossibile aggiornare l\'avatar');
-    }
+      toast.success('Avatar aggiornato!');
+    } catch (error) { toast.error("Impossibile aggiornare l'avatar"); }
   };
 
   const checkIsAdmin = () => {
@@ -231,185 +178,172 @@ export default function ProfilePage() {
     toast.success("Info pagamento copiate!");
   };
 
-  if (isPageLoading) {
-    return (
-      <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans">
-         <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-      </main>
-    );
-  }
+  if (isPageLoading) return <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans"><div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div></main>;
 
   const currentAvatar = AVATARS.find(a => a.id === userProfile?.avatar_id) || AVATARS[0];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6 pb-32 flex items-start justify-center font-sans relative">
-      <div className="max-w-md w-full mt-4">
+    <main className="min-h-[100dvh] bg-slate-950 text-white px-4 pt-4 pb-20 flex flex-col items-center justify-start sm:justify-center font-sans overflow-y-auto sm:overflow-hidden">
+      {/* ALLARGATO IL CONTENITORE MAX SU DESKTOP (md:max-w-md) */}
+      <div className="w-full max-w-[22rem] sm:max-w-md">
         {userProfile ? (
-          <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="space-y-3 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
-            {/* CARD PROFILO SUPERIORE */}
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] text-center relative shadow-2xl">
-              
-              {/* COMPONENTE AVATAR CLICCABILE CON GRADIENTE */}
-              <button 
-                onClick={() => setShowAvatarModal(true)}
-                className={`relative w-24 h-24 bg-gradient-to-br ${currentAvatar.color} rounded-full mx-auto mb-4 flex items-center justify-center text-5xl border-4 border-slate-800 hover:border-yellow-500 transition-all shadow-xl group`}
-                title={currentAvatar.name}
-              >
-                <span className="drop-shadow-md">{currentAvatar.emoji}</span>
-                <div className="absolute bottom-0 right-0 bg-sky-500 text-white p-1.5 rounded-full shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 border-2 border-slate-900">
-                  <Edit3 size={14} strokeWidth={2.5} />
+            {/* 1. CARD PROFILO SUPERIORE */}
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
+              <div className="flex items-center gap-3 sm:gap-4 text-left">
+                <button 
+                  onClick={() => setShowAvatarModal(true)}
+                  // AVATAR SCALA DA w-14 a w-16 su schermi più grandi
+                  className={`relative w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br ${currentAvatar.color} rounded-full flex items-center justify-center text-2xl sm:text-3xl border-2 border-slate-800 shadow-md group hover:border-yellow-500 transition-all`}
+                >
+                  <span>{currentAvatar.emoji}</span>
+                  <div className="absolute -bottom-1 -right-1 bg-sky-500 text-white p-1 sm:p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-all">
+                    <Edit3 size={10} strokeWidth={3} className="sm:w-3 sm:h-3" />
+                  </div>
+                </button>
+                <div>
+                  {/* TESTO SCALA DA text-xl a text-2xl */}
+                  <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter leading-none">{userProfile.username}</h1>
+                  <div className="mt-1.5">
+                    {stats.isPaid ? (
+                      <span className="text-emerald-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1"><Shield size={10}/> Quota Ok</span>
+                    ) : (
+                      <button onClick={copyPaymentInfo} className="text-rose-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 animate-pulse hover:text-white transition-colors"><X size={10}/> Quota Mancante</button>
+                    )}
+                  </div>
                 </div>
+              </div>
+              <button onClick={handleLogout} className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-slate-800 hover:text-rose-500 transition-colors">
+                Esci
               </button>
-
-              <h1 className="text-2xl font-black uppercase italic tracking-tighter">{userProfile.username}</h1>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">{currentAvatar.name}</p>
-              
-              <div className="mt-4 flex justify-center">
-                {stats.isPaid ? (
-                  <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-black px-4 py-1.5 rounded-full border border-emerald-500/30 uppercase tracking-widest flex items-center gap-2">
-                    Quota Versata ✓
-                  </span>
-                ) : (
-                  <button onClick={copyPaymentInfo} className="bg-rose-500/10 text-rose-500 text-[9px] font-black px-4 py-1.5 rounded-full border border-rose-500/20 uppercase tracking-widest animate-pulse hover:bg-rose-500 hover:text-white transition-all">
-                    Quota Mancante ✘
-                  </button>
-                )}
-              </div>
             </div>
 
-            {/* COUNTDOWN BOX */}
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl relative overflow-hidden">
-              <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
-              <div className="text-center mb-4 flex items-center justify-center gap-2">
-                <Timer size={16} className={isExpired ? "text-rose-500" : "text-yellow-500"} />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  {isExpired ? 'Pronostici Chiusi' : 'Chiusura Pronostici'}
-                </p>
-              </div>
-              
-              {isExpired ? (
-                <div className="text-center py-2">
-                  <p className="text-xl font-black text-rose-500 uppercase italic">Il Mondiale è Iniziato!</p>
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Non è più possibile modificare le scelte</p>
-                </div>
-              ) : (
-                <div className="flex justify-center gap-2 sm:gap-3">
-                  {[
-                    { label: 'Giorni', value: timeLeft.days },
-                    { label: 'Ore', value: timeLeft.hours },
-                    { label: 'Min', value: timeLeft.minutes },
-                    { label: 'Sec', value: timeLeft.seconds },
-                  ].map((t) => (
-                    <div key={t.label} className="bg-slate-950 border border-slate-800 w-16 h-16 rounded-2xl flex flex-col items-center justify-center shadow-inner">
-                      <span className="text-2xl font-black text-white leading-none mb-1">
-                        {t.value.toString().padStart(2, '0')}
-                      </span>
-                      <span className="text-[8px] font-black uppercase text-yellow-500 tracking-widest">{t.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* BOX PUNTEGGIO E RANKING */}
-            <div className="bg-yellow-500 p-6 rounded-[2.5rem] flex items-center justify-between shadow-xl shadow-yellow-500/10">
+            {/* 2. BOX PUNTEGGIO E RANKING */}
+            <div className="bg-yellow-500 p-4 sm:p-6 rounded-3xl flex items-center justify-between shadow-md">
               <div>
-                <p className="text-[10px] font-black text-slate-950 uppercase tracking-widest opacity-70 italic">Punti Totali</p>
-                <p className="text-6xl font-black text-slate-950 tracking-tighter leading-none">{stats.total}</p>
+                <p className="text-[9px] sm:text-[11px] font-black text-slate-950 uppercase tracking-widest opacity-80 italic">Punti Totali</p>
+                {/* PUNTI SCALANO DA text-5xl a text-6xl */}
+                <p className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tighter leading-none mt-1">{stats.total}</p>
               </div>
-              <div className="text-right bg-slate-950/10 p-4 rounded-3xl">
-                <p className="text-[9px] font-black text-slate-950/60 uppercase tracking-widest">Ranking</p>
-                <p className="text-3xl font-black text-slate-950 leading-none">#{stats.rank}</p>
+              <div className="text-right bg-slate-950/10 p-3 sm:p-4 rounded-2xl">
+                <p className="text-[8px] sm:text-[10px] font-black text-slate-950/70 uppercase tracking-widest">Ranking</p>
+                <p className="text-2xl sm:text-3xl font-black text-slate-950 leading-none">#{stats.rank}</p>
               </div>
             </div>
 
-            {/* GRIGLIA DETTAGLI */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* 3. GRIGLIA DETTAGLI */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {[
                 { label: 'Gironi', val: stats.groups },
-                { label: 'Fase Finale', val: stats.bracket },
+                { label: 'Tabellone', val: stats.bracket },
                 { label: 'Bonus', val: stats.bonus }
               ].map((s) => (
-                <div key={s.label} className="bg-slate-900/50 border border-slate-800 p-4 rounded-3xl text-center shadow-lg">
-                  <p className="text-[8px] font-black text-slate-500 uppercase italic mb-1">{s.label}</p>
-                  <p className="text-xl font-black text-white">{s.val}</p>
+                <div key={s.label} className="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-4 rounded-2xl text-center shadow-sm">
+                  <p className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase italic leading-none mb-1.5">{s.label}</p>
+                  <p className="text-lg sm:text-2xl font-black text-white leading-none">{s.val}</p>
                 </div>
               ))}
             </div>
 
-            {/* AZIONI E UTILITÀ */}
-            <div className="space-y-3 pt-6 border-t border-slate-900">
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => router.push('/groups')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 shadow-md">
-                  <Shield size={14} /> Gironi
-                </button>
-                <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-900 border border-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 shadow-md">
-                  <BookOpen size={14} /> Regolamento
-                </button>
-              </div>
-
-              {checkIsAdmin() && (
-                <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-red-600/10 text-red-500 border border-red-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] hover:bg-red-600 hover:text-white transition-all mt-4 shadow-md">
-                  ⚙️ Pannello Admin
-                </Link>
-              )}
+            {/* 4. COUNTDOWN BOX */}
+            <div className="bg-slate-900 border border-slate-800 p-3.5 sm:p-5 rounded-3xl shadow-md relative overflow-hidden">
+              <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
               
-              <button onClick={handleLogout} className="w-full py-4 text-slate-600 font-black rounded-2xl uppercase tracking-[0.2em] text-[8px] hover:text-rose-500 transition-all mt-2">
-                Esci dal Gioco
+              {isExpired ? (
+                <div className="text-center py-2 flex flex-col items-center">
+                  <span className="bg-rose-500/20 text-rose-500 text-[10px] font-black px-3 py-1 rounded-full uppercase italic flex items-center gap-1 mb-1"><Timer size={12}/> Pronostici Chiusi</span>
+                  <p className="text-xs sm:text-sm font-black text-white uppercase italic">Il Mondiale è Iniziato!</p>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center px-1">
+                  <div className="flex flex-col items-start justify-center pr-2 sm:pr-4 border-r border-slate-800">
+                     <Timer size={14} className="text-yellow-500 mb-1 sm:w-5 sm:h-5" />
+                     <p className="text-[8px] sm:text-[10px] font-black uppercase text-slate-500 leading-tight">Chiusura<br/>Pronostici</p>
+                  </div>
+                  <div className="flex gap-1.5 sm:gap-2 flex-1 justify-end">
+                    {[
+                      { label: 'GG', value: timeLeft.days },
+                      { label: 'HH', value: timeLeft.hours },
+                      { label: 'MM', value: timeLeft.minutes },
+                      { label: 'SS', value: timeLeft.seconds },
+                    ].map((t) => (
+                      <div key={t.label} className="bg-slate-950 border border-slate-800 w-[3rem] sm:w-[3.5rem] py-2 sm:py-2.5 rounded-xl flex flex-col items-center justify-center">
+                        <span className="text-lg sm:text-xl font-black text-white leading-none">{t.value.toString().padStart(2, '0')}</span>
+                        <span className="text-[7px] sm:text-[8px] font-black uppercase text-yellow-500 mt-1">{t.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 5. AZIONI RAPIDE */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <button onClick={() => router.push('/groups')} className="py-3.5 sm:py-4 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[9px] sm:text-[10px] hover:bg-blue-600/20 transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                <Map size={14} /> Gironi Ufficiali
+              </button>
+              <button onClick={() => router.push('/regolamento')} className="py-3.5 sm:py-4 bg-slate-900 border border-slate-800 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[9px] sm:text-[10px] hover:border-slate-700 hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                <BookOpen size={14} /> Regolamento
               </button>
             </div>
+
+            {checkIsAdmin() && (
+              <Link href="/admin" className="w-full flex items-center justify-center py-3 sm:py-4 bg-rose-600/10 text-rose-500 border border-rose-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] sm:text-[10px] hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                ⚙️ Pannello Admin
+              </Link>
+            )}
+            
           </div>
         ) : (
           /* FORM LOGIN */
-          <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="bg-slate-900 border border-slate-800 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl mt-10 w-full">
             <div className="text-center mb-8">
-              <h1 className="text-4xl font-black text-yellow-500 uppercase italic">
+              <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic">
                 {isRegistering ? 'Iscriviti' : 'Entra'}
               </h1>
-              <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] mt-2 italic">World Cup 2026 Access</p>
+              <p className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">World Cup 2026 Access</p>
             </div>
             <form onSubmit={handleAuth} className="space-y-4">
-              <input type="text" placeholder="USERNAME" className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={username} onChange={(e) => setUsername(e.target.value)} required />
-              <input type="password" placeholder="PASSWORD" className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="submit" disabled={authLoading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs mt-4 active:scale-95 shadow-xl shadow-yellow-500/10 transition-all">
+              <input type="text" placeholder="USERNAME" className="w-full p-4 sm:p-5 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              <input type="password" placeholder="PASSWORD" className="w-full p-4 sm:p-5 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <button type="submit" disabled={authLoading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs mt-4 active:scale-95 shadow-xl transition-all">
                 {authLoading ? 'Accesso in corso...' : isRegistering ? 'Crea Account' : 'Inizia a Giocare'}
               </button>
             </form>
-            <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 transition-colors uppercase tracking-widest italic text-center">
+            <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-6 sm:mt-8 text-[9px] sm:text-[10px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest italic text-center transition-colors">
               {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
             </button>
           </div>
         )}
       </div>
 
-      {/* OVERLAY MODALE PER SCELTA AVATAR */}
+      {/* OVERLAY MODALE AVATAR */}
       {showAvatarModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md pb-24 sm:pb-4">
+          <div className="bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-xl">Scegli il tuo Avatar</h3>
+              <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-lg">Scegli Avatar</h3>
               <button onClick={() => setShowAvatarModal(false)} className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors">
                 <X size={18} />
               </button>
             </div>
             
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
               {AVATARS.map((avatar) => (
                 <button
                   key={avatar.id}
                   onClick={() => updateAvatar(avatar.id)}
-                  className={`flex flex-col items-center p-3 rounded-2xl border-2 transition-all active:scale-90 ${
+                  className={`flex flex-col items-center p-2 rounded-xl border-2 transition-all active:scale-90 ${
                     userProfile?.avatar_id === avatar.id 
-                      ? 'bg-yellow-500/20 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' 
+                      ? 'bg-yellow-500/20 border-yellow-500' 
                       : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:bg-slate-800'
                   }`}
-                  title={avatar.name}
                 >
-                  <div className={`w-12 h-12 rounded-full mb-2 flex items-center justify-center text-2xl shadow-inner bg-gradient-to-br ${avatar.color}`}>
-                    <span className="drop-shadow-md">{avatar.emoji}</span>
+                  <div className={`w-10 h-10 rounded-full mb-1 flex items-center justify-center text-xl bg-gradient-to-br ${avatar.color}`}>
+                    <span>{avatar.emoji}</span>
                   </div>
-                  <span className={`text-[9px] font-black uppercase tracking-tighter text-center leading-tight ${userProfile?.avatar_id === avatar.id ? 'text-yellow-500' : 'text-slate-400'}`}>
+                  <span className={`text-[7px] font-black uppercase tracking-tighter text-center leading-tight ${userProfile?.avatar_id === avatar.id ? 'text-yellow-500' : 'text-slate-500'}`}>
                     {avatar.name}
                   </span>
                 </button>

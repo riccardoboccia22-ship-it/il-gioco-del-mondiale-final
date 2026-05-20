@@ -189,7 +189,10 @@ export default function BracketPage() {
               {stage.id === 'R32' && (
                 <div className="mt-3 mx-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex items-start sm:items-center gap-3 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-tight">
                   <Info size={20} className="text-blue-500 shrink-0" />
-                  <p>L'ordine non conta: seleziona le 32 squadre che supereranno la fase a gironi.</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p>L'ordine non conta: seleziona le 32 squadre che supereranno la fase a gironi.</p>
+                    <p>Si qualificano le prime 2 di ogni girone e le 8 migliori terze.</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -204,16 +207,16 @@ export default function BracketPage() {
                     <button
                       disabled={isExpired}
                       onClick={() => setActiveCell({stageId: stage.id, index: i})}
-                      // Aumentato il padding-left a pl-16 per far spazio al numero e all'icona
-                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-16 pr-10 sm:p-5 sm:pl-20 text-[13px] sm:text-[14px] font-black uppercase transition-all text-left truncate flex items-center
+                      // Padding robusto per proteggere il testo
+                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-16 pr-14 sm:p-5 sm:pl-20 sm:pr-16 text-[13px] sm:text-[14px] font-black uppercase transition-all text-left truncate flex items-center
                         ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
                     >
-                      {/* IL NUMERO DELLA CELLA SULLA SINISTRA */}
+                      {/* NUMERO DELLA CELLA */}
                       <span className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-[10px] sm:text-[11px] font-black w-4 text-right ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
                         {cellNumber}
                       </span>
 
-                      {/* BANDIERA O SCUDO SPOSTATI PIÙ A DESTRA */}
+                      {/* BANDIERA */}
                       <div className="absolute left-9 sm:left-11 top-1/2 -translate-y-1/2">
                         {currentSelection ? (
                           <img src={getFlag(currentSelection)!} className="w-6 sm:w-8 h-auto rounded shadow-sm" alt="" />
@@ -222,9 +225,13 @@ export default function BracketPage() {
                         )}
                       </div>
                       
-                      {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
+                      {/* TESTO TAGLIATO SE TROPPO LUNGO */}
+                      <span className="truncate w-full">
+                        {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
+                      </span>
                     </button>
 
+                    {/* BOTTONE X ESTERNO (sempre al sicuro dal testo) */}
                     {currentSelection && !isExpired && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
