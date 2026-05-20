@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Timer, X, Edit3, Shield, Map } from 'lucide-react';
+import { BookOpen, Timer, X, Edit3, Shield, Map, CheckCircle2 } from 'lucide-react';
 
 const AVATARS = [
   { id: 'trainer', name: 'Il Mister', emoji: '🧢', color: 'from-blue-600 to-blue-400' },
@@ -75,6 +75,9 @@ export default function ProfilePage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
 
+  // NUOVO STATO PER IL COMPLETAMENTO
+  const [completionPct, setCompletionPct] = useState(0);
+
   const [stats, setStats] = useState({
     total: 0,
     groups: 0,
@@ -116,6 +119,7 @@ export default function ProfilePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Fetch del Profilo
         let { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         if (!profile) {
             const fallbackUsername = user.email ? user.email.split('@')[0] : 'Guerriero';
@@ -127,6 +131,32 @@ export default function ProfilePage() {
           total: profile.points || 0, groups: profile.points_groups || 0, bracket: profile.points_bracket || 0,
           bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
+
+        // CALCOLO PERCENTUALE COMPLETAMENTO
+        // Head: true serve a contare i risultati senza scaricare tutti i dati (super veloce!)
+        const [predsRes, bracketsRes, bonusRes] = await Promise.all([
+          supabase.from('predictions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('brackets').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle()
+        ]);
+
+        const predsCount = predsRes.count || 0;     // Max 72
+        const bracketsCount = bracketsRes.count || 0; // Max 63
+        
+        let bonusCount = 0;
+        if (bonusRes.data) {
+          const b = bonusRes.data;
+          const fields = ['total_red_cards', 'top_scorer', 'high_scoring_match', 'total_penalties', 'total_own_goals', 'highest_scoring_group', 'lowest_scoring_group', 'mvp_world_cup', 'best_goalkeeper'];
+          fields.forEach(f => {
+            if (b[f] !== null && b[f] !== '') bonusCount++;
+          });
+        }
+
+        const totalCompleted = predsCount + bracketsCount + bonusCount;
+        const totalRequired = 72 + 63 + 9; // 144
+        const percentage = Math.min(100, Math.round((totalCompleted / totalRequired) * 100));
+        
+        setCompletionPct(percentage);
       }
     } catch (error) { console.error("Errore check utente:", error); } finally { setIsPageLoading(false); }
   }
@@ -184,24 +214,24 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-[100dvh] bg-slate-950 text-white px-4 pt-6 pb-20 flex flex-col items-center justify-start sm:justify-center font-sans overflow-y-auto sm:overflow-hidden">
-      <div className="w-full max-w-[24rem] sm:max-w-md">
+      <div className="w-full max-w-[26rem] sm:max-w-md">
         {userProfile ? (
-          <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500 w-full">
+          <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
             {/* 1. CARD PROFILO SUPERIORE */}
-            <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
-              <div className="flex items-center gap-4 sm:gap-5 text-left">
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
+              <div className="flex items-center gap-5 text-left">
                 <button 
                   onClick={() => setShowAvatarModal(true)}
-                  className={`relative w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${currentAvatar.color} rounded-full flex items-center justify-center text-3xl sm:text-4xl border-2 border-slate-800 shadow-md group hover:border-yellow-500 transition-all`}
+                  className={`relative w-20 h-20 bg-gradient-to-br ${currentAvatar.color} rounded-full flex items-center justify-center text-4xl border-2 border-slate-800 shadow-md group hover:border-yellow-500 transition-all`}
                 >
                   <span>{currentAvatar.emoji}</span>
                   <div className="absolute -bottom-1 -right-1 bg-sky-500 text-white p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-all">
-                    <Edit3 size={12} strokeWidth={3} className="sm:w-4 sm:h-4" />
+                    <Edit3 size={12} strokeWidth={3} />
                   </div>
                 </button>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-black uppercase italic tracking-tighter leading-none">{userProfile.username}</h1>
+                  <h1 className="text-3xl font-black uppercase italic tracking-tighter leading-none">{userProfile.username}</h1>
                   <div className="mt-2">
                     {stats.isPaid ? (
                       <span className="text-emerald-400 text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1"><Shield size={12}/> Quota Ok</span>
@@ -211,20 +241,42 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-              <button onClick={handleLogout} className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-800 hover:text-rose-500 transition-colors">
+              <button onClick={handleLogout} className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-4 py-3 rounded-xl border border-slate-800 hover:text-rose-500 transition-colors">
                 Esci
               </button>
             </div>
 
+            {/* BARRA DI PROGRESSIONE (NUOVA) */}
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-md w-full">
+                <div className="flex justify-between items-end mb-2.5">
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                       {completionPct === 100 ? <CheckCircle2 size={14} className="text-emerald-400"/> : <Map size={14} className="text-yellow-500" />}
+                       Completamento Pronostici
+                    </span>
+                    <span className={`text-sm sm:text-base font-black leading-none ${completionPct === 100 ? 'text-emerald-400' : 'text-yellow-500'}`}>{completionPct}%</span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-3 sm:h-3.5 overflow-hidden border border-slate-800">
+                    <div 
+                        className={`h-full rounded-full transition-all duration-1000 ease-out ${completionPct === 100 ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.3)]'}`}
+                        style={{ width: `${completionPct}%` }}
+                    ></div>
+                </div>
+                {completionPct === 100 ? (
+                    <p className="text-emerald-400 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">✓ Tutto pronto per il Mondiale!</p>
+                ) : (
+                    <p className="text-slate-500 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">Completa tutto prima della scadenza!</p>
+                )}
+            </div>
+
             {/* 2. BOX PUNTEGGIO E RANKING */}
-            <div className="bg-yellow-500 p-5 sm:p-6 rounded-3xl flex items-center justify-between shadow-md">
+            <div className="bg-yellow-500 p-6 rounded-3xl flex items-center justify-between shadow-md">
               <div>
-                <p className="text-[10px] sm:text-xs font-black text-slate-950 uppercase tracking-widest opacity-80 italic">Punti Totali</p>
-                <p className="text-6xl sm:text-7xl font-black text-slate-950 tracking-tighter leading-none mt-1">{stats.total}</p>
+                <p className="text-[11px] font-black text-slate-950 uppercase tracking-widest opacity-80 italic">Punti Totali</p>
+                <p className="text-7xl font-black text-slate-950 tracking-tighter leading-none mt-1">{stats.total}</p>
               </div>
-              <div className="text-right bg-slate-950/10 p-4 rounded-2xl">
-                <p className="text-[9px] sm:text-[11px] font-black text-slate-950/70 uppercase tracking-widest">Ranking</p>
-                <p className="text-3xl sm:text-4xl font-black text-slate-950 leading-none">#{stats.rank}</p>
+              <div className="text-right bg-slate-950/10 p-5 rounded-2xl">
+                <p className="text-[10px] font-black text-slate-950/70 uppercase tracking-widest">Ranking</p>
+                <p className="text-4xl font-black text-slate-950 leading-none">#{stats.rank}</p>
               </div>
             </div>
 
@@ -247,14 +299,14 @@ export default function ProfilePage() {
               <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
               
               {isExpired ? (
-                <div className="text-center py-3 flex flex-col items-center">
+                <div className="text-center py-2 flex flex-col items-center">
                   <span className="bg-rose-500/20 text-rose-500 text-xs font-black px-4 py-1.5 rounded-full uppercase italic flex items-center gap-1.5 mb-2"><Timer size={14}/> Pronostici Chiusi</span>
                   <p className="text-sm sm:text-base font-black text-white uppercase italic">Il Mondiale è Iniziato!</p>
                 </div>
               ) : (
                 <div className="flex justify-between items-center px-1">
-                  <div className="flex flex-col items-start justify-center pr-3 border-r border-slate-800">
-                     <Timer size={18} className="text-yellow-500 mb-1.5" />
+                  <div className="flex flex-col items-start justify-center pr-3 sm:pr-4 border-r border-slate-800">
+                     <Timer size={20} className="text-yellow-500 mb-1.5" />
                      <p className="text-[10px] sm:text-xs font-black uppercase text-slate-500 leading-tight">Chiusura<br/>Pronostici</p>
                   </div>
                   <div className="flex gap-2 flex-1 justify-end">
@@ -264,9 +316,9 @@ export default function ProfilePage() {
                       { label: 'MM', value: timeLeft.minutes },
                       { label: 'SS', value: timeLeft.seconds },
                     ].map((t) => (
-                      <div key={t.label} className="bg-slate-950 border border-slate-800 w-[3.5rem] sm:w-[4rem] py-2.5 sm:py-3 rounded-xl flex flex-col items-center justify-center">
-                        <span className="text-xl sm:text-2xl font-black text-white leading-none">{t.value.toString().padStart(2, '0')}</span>
-                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-yellow-500 mt-1">{t.label}</span>
+                      <div key={t.label} className="bg-slate-950 border border-slate-800 w-[3.8rem] sm:w-[4.2rem] py-2.5 rounded-xl flex flex-col items-center justify-center">
+                        <span className="text-2xl font-black text-white leading-none">{t.value.toString().padStart(2, '0')}</span>
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-yellow-500 mt-1.5">{t.label}</span>
                       </div>
                     ))}
                   </div>
@@ -276,10 +328,10 @@ export default function ProfilePage() {
 
             {/* 5. AZIONI RAPIDE */}
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => router.push('/groups')} className="py-4 sm:py-5 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:bg-blue-600/20 transition-all flex items-center justify-center gap-2 shadow-sm">
+              <button onClick={() => router.push('/groups')} className="py-4 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:bg-blue-600/20 transition-all flex items-center justify-center gap-2 shadow-sm">
                 <Map size={16} /> Gironi Ufficiali
               </button>
-              <button onClick={() => router.push('/regolamento')} className="py-4 sm:py-5 bg-slate-900 border border-slate-800 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:border-slate-700 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-sm">
+              <button onClick={() => router.push('/regolamento')} className="py-4 bg-slate-900 border border-slate-800 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:border-slate-700 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-sm">
                 <BookOpen size={16} /> Regolamento
               </button>
             </div>

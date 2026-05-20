@@ -194,7 +194,7 @@ export default function BracketPage() {
                   <Info size={20} className="text-blue-500 shrink-0" />
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p>L'ordine non conta: seleziona le 32 squadre che supereranno la fase a gironi.</p>
-                    <p>Si qualificano le <span className="text-white">prime 2</span> e le <span className="text-white">8 migliori terze</span>.</p>
+                    <p>Si qualificano le <span className="text-white">prime 2 di ogni girone</span> e le <span className="text-white">8 migliori terze</span>.</p>
                   </div>
                 </div>
               )}
