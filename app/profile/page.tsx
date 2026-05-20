@@ -183,94 +183,90 @@ export default function ProfilePage() {
   const currentAvatar = AVATARS.find(a => a.id === userProfile?.avatar_id) || AVATARS[0];
 
   return (
-    <main className="min-h-[100dvh] bg-slate-950 text-white px-4 pt-4 pb-20 flex flex-col items-center justify-start sm:justify-center font-sans overflow-y-auto sm:overflow-hidden">
-      {/* ALLARGATO IL CONTENITORE MAX SU DESKTOP (md:max-w-md) */}
-      <div className="w-full max-w-[22rem] sm:max-w-md">
+    <main className="min-h-[100dvh] bg-slate-950 text-white px-4 pt-6 pb-20 flex flex-col items-center justify-start sm:justify-center font-sans overflow-y-auto sm:overflow-hidden">
+      <div className="w-full max-w-[24rem] sm:max-w-md">
         {userProfile ? (
-          <div className="space-y-3 sm:space-y-5 animate-in fade-in duration-500 w-full">
+          <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500 w-full">
             
             {/* 1. CARD PROFILO SUPERIORE */}
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
-              <div className="flex items-center gap-3 sm:gap-4 text-left">
+            <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
+              <div className="flex items-center gap-4 sm:gap-5 text-left">
                 <button 
                   onClick={() => setShowAvatarModal(true)}
-                  // AVATAR SCALA DA w-14 a w-16 su schermi più grandi
-                  className={`relative w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br ${currentAvatar.color} rounded-full flex items-center justify-center text-2xl sm:text-3xl border-2 border-slate-800 shadow-md group hover:border-yellow-500 transition-all`}
+                  className={`relative w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${currentAvatar.color} rounded-full flex items-center justify-center text-3xl sm:text-4xl border-2 border-slate-800 shadow-md group hover:border-yellow-500 transition-all`}
                 >
                   <span>{currentAvatar.emoji}</span>
-                  <div className="absolute -bottom-1 -right-1 bg-sky-500 text-white p-1 sm:p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-all">
-                    <Edit3 size={10} strokeWidth={3} className="sm:w-3 sm:h-3" />
+                  <div className="absolute -bottom-1 -right-1 bg-sky-500 text-white p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-all">
+                    <Edit3 size={12} strokeWidth={3} className="sm:w-4 sm:h-4" />
                   </div>
                 </button>
                 <div>
-                  {/* TESTO SCALA DA text-xl a text-2xl */}
-                  <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter leading-none">{userProfile.username}</h1>
-                  <div className="mt-1.5">
+                  <h1 className="text-2xl sm:text-3xl font-black uppercase italic tracking-tighter leading-none">{userProfile.username}</h1>
+                  <div className="mt-2">
                     {stats.isPaid ? (
-                      <span className="text-emerald-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1"><Shield size={10}/> Quota Ok</span>
+                      <span className="text-emerald-400 text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1"><Shield size={12}/> Quota Ok</span>
                     ) : (
-                      <button onClick={copyPaymentInfo} className="text-rose-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 animate-pulse hover:text-white transition-colors"><X size={10}/> Quota Mancante</button>
+                      <button onClick={copyPaymentInfo} className="text-rose-500 text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse hover:text-white transition-colors"><X size={12} strokeWidth={3}/> Quota Mancante</button>
                     )}
                   </div>
                 </div>
               </div>
-              <button onClick={handleLogout} className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-slate-800 hover:text-rose-500 transition-colors">
+              <button onClick={handleLogout} className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-800 hover:text-rose-500 transition-colors">
                 Esci
               </button>
             </div>
 
             {/* 2. BOX PUNTEGGIO E RANKING */}
-            <div className="bg-yellow-500 p-4 sm:p-6 rounded-3xl flex items-center justify-between shadow-md">
+            <div className="bg-yellow-500 p-5 sm:p-6 rounded-3xl flex items-center justify-between shadow-md">
               <div>
-                <p className="text-[9px] sm:text-[11px] font-black text-slate-950 uppercase tracking-widest opacity-80 italic">Punti Totali</p>
-                {/* PUNTI SCALANO DA text-5xl a text-6xl */}
-                <p className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tighter leading-none mt-1">{stats.total}</p>
+                <p className="text-[10px] sm:text-xs font-black text-slate-950 uppercase tracking-widest opacity-80 italic">Punti Totali</p>
+                <p className="text-6xl sm:text-7xl font-black text-slate-950 tracking-tighter leading-none mt-1">{stats.total}</p>
               </div>
-              <div className="text-right bg-slate-950/10 p-3 sm:p-4 rounded-2xl">
-                <p className="text-[8px] sm:text-[10px] font-black text-slate-950/70 uppercase tracking-widest">Ranking</p>
-                <p className="text-2xl sm:text-3xl font-black text-slate-950 leading-none">#{stats.rank}</p>
+              <div className="text-right bg-slate-950/10 p-4 rounded-2xl">
+                <p className="text-[9px] sm:text-[11px] font-black text-slate-950/70 uppercase tracking-widest">Ranking</p>
+                <p className="text-3xl sm:text-4xl font-black text-slate-950 leading-none">#{stats.rank}</p>
               </div>
             </div>
 
             {/* 3. GRIGLIA DETTAGLI */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Gironi', val: stats.groups },
                 { label: 'Tabellone', val: stats.bracket },
                 { label: 'Bonus', val: stats.bonus }
               ].map((s) => (
-                <div key={s.label} className="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-4 rounded-2xl text-center shadow-sm">
-                  <p className="text-[8px] sm:text-[10px] font-black text-slate-500 uppercase italic leading-none mb-1.5">{s.label}</p>
-                  <p className="text-lg sm:text-2xl font-black text-white leading-none">{s.val}</p>
+                <div key={s.label} className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl text-center shadow-sm">
+                  <p className="text-[10px] sm:text-xs font-black text-slate-500 uppercase italic leading-none mb-2">{s.label}</p>
+                  <p className="text-2xl sm:text-3xl font-black text-white leading-none">{s.val}</p>
                 </div>
               ))}
             </div>
 
             {/* 4. COUNTDOWN BOX */}
-            <div className="bg-slate-900 border border-slate-800 p-3.5 sm:p-5 rounded-3xl shadow-md relative overflow-hidden">
+            <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden">
               <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
               
               {isExpired ? (
-                <div className="text-center py-2 flex flex-col items-center">
-                  <span className="bg-rose-500/20 text-rose-500 text-[10px] font-black px-3 py-1 rounded-full uppercase italic flex items-center gap-1 mb-1"><Timer size={12}/> Pronostici Chiusi</span>
-                  <p className="text-xs sm:text-sm font-black text-white uppercase italic">Il Mondiale è Iniziato!</p>
+                <div className="text-center py-3 flex flex-col items-center">
+                  <span className="bg-rose-500/20 text-rose-500 text-xs font-black px-4 py-1.5 rounded-full uppercase italic flex items-center gap-1.5 mb-2"><Timer size={14}/> Pronostici Chiusi</span>
+                  <p className="text-sm sm:text-base font-black text-white uppercase italic">Il Mondiale è Iniziato!</p>
                 </div>
               ) : (
                 <div className="flex justify-between items-center px-1">
-                  <div className="flex flex-col items-start justify-center pr-2 sm:pr-4 border-r border-slate-800">
-                     <Timer size={14} className="text-yellow-500 mb-1 sm:w-5 sm:h-5" />
-                     <p className="text-[8px] sm:text-[10px] font-black uppercase text-slate-500 leading-tight">Chiusura<br/>Pronostici</p>
+                  <div className="flex flex-col items-start justify-center pr-3 border-r border-slate-800">
+                     <Timer size={18} className="text-yellow-500 mb-1.5" />
+                     <p className="text-[10px] sm:text-xs font-black uppercase text-slate-500 leading-tight">Chiusura<br/>Pronostici</p>
                   </div>
-                  <div className="flex gap-1.5 sm:gap-2 flex-1 justify-end">
+                  <div className="flex gap-2 flex-1 justify-end">
                     {[
                       { label: 'GG', value: timeLeft.days },
                       { label: 'HH', value: timeLeft.hours },
                       { label: 'MM', value: timeLeft.minutes },
                       { label: 'SS', value: timeLeft.seconds },
                     ].map((t) => (
-                      <div key={t.label} className="bg-slate-950 border border-slate-800 w-[3rem] sm:w-[3.5rem] py-2 sm:py-2.5 rounded-xl flex flex-col items-center justify-center">
-                        <span className="text-lg sm:text-xl font-black text-white leading-none">{t.value.toString().padStart(2, '0')}</span>
-                        <span className="text-[7px] sm:text-[8px] font-black uppercase text-yellow-500 mt-1">{t.label}</span>
+                      <div key={t.label} className="bg-slate-950 border border-slate-800 w-[3.5rem] sm:w-[4rem] py-2.5 sm:py-3 rounded-xl flex flex-col items-center justify-center">
+                        <span className="text-xl sm:text-2xl font-black text-white leading-none">{t.value.toString().padStart(2, '0')}</span>
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase text-yellow-500 mt-1">{t.label}</span>
                       </div>
                     ))}
                   </div>
@@ -279,24 +275,24 @@ export default function ProfilePage() {
             </div>
 
             {/* 5. AZIONI RAPIDE */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <button onClick={() => router.push('/groups')} className="py-3.5 sm:py-4 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[9px] sm:text-[10px] hover:bg-blue-600/20 transition-all flex items-center justify-center gap-1.5 shadow-sm">
-                <Map size={14} /> Gironi Ufficiali
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => router.push('/groups')} className="py-4 sm:py-5 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:bg-blue-600/20 transition-all flex items-center justify-center gap-2 shadow-sm">
+                <Map size={16} /> Gironi Ufficiali
               </button>
-              <button onClick={() => router.push('/regolamento')} className="py-3.5 sm:py-4 bg-slate-900 border border-slate-800 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[9px] sm:text-[10px] hover:border-slate-700 hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm">
-                <BookOpen size={14} /> Regolamento
+              <button onClick={() => router.push('/regolamento')} className="py-4 sm:py-5 bg-slate-900 border border-slate-800 text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:border-slate-700 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-sm">
+                <BookOpen size={16} /> Regolamento
               </button>
             </div>
 
             {checkIsAdmin() && (
-              <Link href="/admin" className="w-full flex items-center justify-center py-3 sm:py-4 bg-rose-600/10 text-rose-500 border border-rose-600/20 font-black rounded-2xl uppercase tracking-widest text-[9px] sm:text-[10px] hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+              <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-rose-600/10 text-rose-500 border border-rose-600/20 font-black rounded-2xl uppercase tracking-widest text-[11px] hover:bg-rose-600 hover:text-white transition-all shadow-sm">
                 ⚙️ Pannello Admin
               </Link>
             )}
             
           </div>
         ) : (
-          /* FORM LOGIN */
+          /* FORM LOGIN INVARIATO */
           <div className="bg-slate-900 border border-slate-800 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl mt-10 w-full">
             <div className="text-center mb-8">
               <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic">
@@ -305,13 +301,13 @@ export default function ProfilePage() {
               <p className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">World Cup 2026 Access</p>
             </div>
             <form onSubmit={handleAuth} className="space-y-4">
-              <input type="text" placeholder="USERNAME" className="w-full p-4 sm:p-5 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={username} onChange={(e) => setUsername(e.target.value)} required />
-              <input type="password" placeholder="PASSWORD" className="w-full p-4 sm:p-5 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="submit" disabled={authLoading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-xs mt-4 active:scale-95 shadow-xl transition-all">
+              <input type="text" placeholder="USERNAME" className="w-full p-4 sm:p-5 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-sm uppercase" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              <input type="password" placeholder="PASSWORD" className="w-full p-4 sm:p-5 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-sm uppercase" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <button type="submit" disabled={authLoading} className="w-full py-5 bg-yellow-500 text-slate-950 font-black rounded-2xl uppercase tracking-widest text-sm mt-4 active:scale-95 shadow-xl transition-all">
                 {authLoading ? 'Accesso in corso...' : isRegistering ? 'Crea Account' : 'Inizia a Giocare'}
               </button>
             </form>
-            <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-6 sm:mt-8 text-[9px] sm:text-[10px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest italic text-center transition-colors">
+            <button onClick={() => setIsRegistering(!isRegistering)} className="w-full mt-6 sm:mt-8 text-[10px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest italic text-center transition-colors">
               {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
             </button>
           </div>
@@ -340,10 +336,10 @@ export default function ProfilePage() {
                       : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:bg-slate-800'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-full mb-1 flex items-center justify-center text-xl bg-gradient-to-br ${avatar.color}`}>
+                  <div className={`w-12 h-12 rounded-full mb-1.5 flex items-center justify-center text-2xl bg-gradient-to-br ${avatar.color}`}>
                     <span>{avatar.emoji}</span>
                   </div>
-                  <span className={`text-[7px] font-black uppercase tracking-tighter text-center leading-tight ${userProfile?.avatar_id === avatar.id ? 'text-yellow-500' : 'text-slate-500'}`}>
+                  <span className={`text-[8px] font-black uppercase tracking-tighter text-center leading-tight ${userProfile?.avatar_id === avatar.id ? 'text-yellow-500' : 'text-slate-500'}`}>
                     {avatar.name}
                   </span>
                 </button>

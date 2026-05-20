@@ -44,15 +44,18 @@ const flagMap: { [key: string]: string } = {
   svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', uruguay: 'uy', uzbekistan: 'uz',
 };
 
+// Accorciamo ulteriormente i nomi lunghi per incastrarli meglio
 const formatTeamName = (name: string) => {
   if (!name) return '';
   const n = name.trim().toLowerCase();
-  if (n === 'repubblica democratica del congo') return 'R. D. Congo';
+  if (n === 'repubblica democratica del congo') return 'R.D. Congo';
   if (n === 'stati uniti') return 'USA';
-  if (n === 'bosnia ed erzegovina') return 'Bosnia';
+  if (n === 'bosnia ed erzegovina' || n === 'bosnia erzegovina') return 'Bosnia';
   if (n === 'nuova zelanda') return 'N. Zelanda';
   if (n === 'arabia saudita') return 'Arabia S.';
   if (n === 'repubblica ceca') return 'Rep. Ceca';
+  if (n === "costa d'avorio") return 'C. Avorio';
+  if (n === 'corea del sud') return 'Corea Sud';
   return name;
 };
 
@@ -191,59 +194,60 @@ export default function BracketPage() {
                   <Info size={20} className="text-blue-500 shrink-0" />
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p>L'ordine non conta: seleziona le 32 squadre che supereranno la fase a gironi.</p>
-                    <p>Si qualificano le prime 2 di ogni girone e le 8 migliori terze.</p>
+                    <p>Si qualificano le <span className="text-white">prime 2</span> e le <span className="text-white">8 migliori terze</span>.</p>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* Aggiunto auto-rows-fr per mantenere altezze uguali tra celle affiancate */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr">
               {Array.from({ length: stage.count }).map((_, i) => {
                 const currentSelection = selections[`${stage.id}-${i}`];
-                const cellNumber = i + 1; // Numero della cella
+                const cellNumber = i + 1;
                 
                 return (
-                  <div key={i} className="relative">
+                  <div key={i} className="relative h-full">
                     <button
                       disabled={isExpired}
                       onClick={() => setActiveCell({stageId: stage.id, index: i})}
-                      // Padding robusto per proteggere il testo
-                      className={`w-full bg-slate-900 border-2 rounded-2xl py-4 pl-16 pr-14 sm:p-5 sm:pl-20 sm:pr-16 text-[13px] sm:text-[14px] font-black uppercase transition-all text-left truncate flex items-center
+                      // Trovato il mix perfetto: flex, gap-1.5, padding interno calcolato
+                      className={`w-full h-full bg-slate-900 border-2 rounded-2xl py-3 pl-2 pr-10 sm:p-4 sm:pr-14 flex items-center gap-1.5 sm:gap-3 transition-all text-left
                         ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
                     >
                       {/* NUMERO DELLA CELLA */}
-                      <span className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-[10px] sm:text-[11px] font-black w-4 text-right ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
+                      <span className={`text-[9px] sm:text-[11px] font-black w-3 sm:w-4 text-center shrink-0 ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
                         {cellNumber}
                       </span>
 
                       {/* BANDIERA */}
-                      <div className="absolute left-9 sm:left-11 top-1/2 -translate-y-1/2">
+                      <div className="shrink-0 flex items-center justify-center">
                         {currentSelection ? (
-                          <img src={getFlag(currentSelection)!} className="w-6 sm:w-8 h-auto rounded shadow-sm" alt="" />
+                          <img src={getFlag(currentSelection)!} className="w-5 sm:w-8 h-auto rounded-sm shadow-sm" alt="" />
                         ) : (
-                          <ShieldCheck className="text-slate-800 w-5 h-5" />
+                          <ShieldCheck className="text-slate-800 w-4 h-4 sm:w-6 sm:h-6" />
                         )}
                       </div>
                       
-                      {/* TESTO TAGLIATO SE TROPPO LUNGO */}
-                      <span className="truncate w-full">
+                      {/* NOME (Break words permette 2 righe, niente più overlap!) */}
+                      <span className="text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight flex-1 break-words">
                         {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
                       </span>
                     </button>
 
-                    {/* BOTTONE X ESTERNO (sempre al sicuro dal testo) */}
+                    {/* BOTTONE X ESTERNO (Ora occupa l'intera altezza a destra, facile da cliccare) */}
                     {currentSelection && !isExpired && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
-                        className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 sm:p-3 text-rose-500 hover:text-rose-400 active:scale-90 transition-all z-20"
+                        className="absolute right-0 top-0 bottom-0 px-3 sm:px-4 text-rose-500 hover:text-rose-400 active:scale-90 transition-all z-20 flex items-center justify-center"
                       >
-                        <X size={22} strokeWidth={3} />
+                        <X size={18} strokeWidth={3} className="sm:w-5 sm:h-5" />
                       </button>
                     )}
                     
                     {!currentSelection && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-800 pointer-events-none">
-                        <ChevronDown size={16} />
+                        <ChevronDown size={14} className="sm:w-5 sm:h-5" />
                       </div>
                     )}
                   </div>
