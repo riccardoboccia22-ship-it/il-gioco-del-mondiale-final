@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation'; // <-- Aggiunto useRouter
 import { toast } from 'react-hot-toast';
 import { 
   Trophy, 
@@ -83,6 +84,7 @@ const AVATARS = [
 ];
 
 export default function LeaderboardPage() {
+  const router = useRouter(); // <-- Inizializzato router
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,11 +105,22 @@ export default function LeaderboardPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [router]);
 
   async function fetchLeaderboard(showLoader = true) {
     try {
       if (showLoader) setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/'); return; }
+
+      // --- BLOCCO DI CORTESIA ---
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+      if (!profile || !profile.full_name) {
+        router.push('/setup-profilo');
+        return;
+      }
+      // --------------------------
 
       const { data, error } = await supabase
         .from('profiles')

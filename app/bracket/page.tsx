@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation'; // <-- Import router
 import Link from 'next/link';
 import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -60,6 +61,7 @@ const formatTeamName = (name: string) => {
 };
 
 export default function BracketPage() {
+  const router = useRouter(); // <-- Initialize router
   const [selections, setSelections] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -88,7 +90,16 @@ export default function BracketPage() {
     try {
       setFetching(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { router.push('/'); return; } // <-- Controlla se è loggato
+
+      // --- BLOCCO DI CORTESIA ---
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+      if (!profile || !profile.full_name) {
+        router.push('/setup-profilo');
+        return;
+      }
+      // --------------------------
+
       const { data, error } = await supabase.from('brackets').select('stage, team_name').eq('user_id', user.id);
       if (error) throw error;
       if (data) {

@@ -25,7 +25,13 @@ function AuthForm() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/');
+        // BLOCCO DI CORTESIA: Controlla se ha già il nome
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single();
+        if (profile && !profile.full_name) {
+          router.push('/setup-profilo');
+        } else {
+          router.push('/');
+        }
       } else {
         setIsCheckingAuth(false);
       }
@@ -57,8 +63,10 @@ function AuthForm() {
           username: username.trim(),
           points: 0,
           is_paid: false,
+          avatar_id: 'trainer' // Assegniamo un avatar di default
         }]);
-        router.push('/');
+        // Nuova registrazione = Manca il full_name. Dritto al setup!
+        router.push('/setup-profilo');
       }
     } else {
       // LOGICA ACCESSO
@@ -67,8 +75,20 @@ function AuthForm() {
         password: password,
       });
 
-      if (signInError) setError('Credenziali errate. Riprova.');
-      else router.push('/');
+      if (signInError) {
+        setError('Credenziali errate. Riprova.');
+      } else {
+        // Dopo il login, verifichiamo se ha inserito il nome reale in passato
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+          if (profile && !profile.full_name) {
+            router.push('/setup-profilo');
+          } else {
+            router.push('/');
+          }
+        }
+      }
     }
     setIsLoading(false);
   };

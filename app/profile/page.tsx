@@ -126,6 +126,14 @@ export default function ProfilePage() {
             await supabase.from('profiles').insert([{ id: user.id, username: fallbackUsername, points: 0, avatar_id: 'trainer' }]);
             profile = { username: fallbackUsername, points: 0, points_groups: 0, points_bracket: 0, points_bonus: 0, is_paid: false, avatar_id: 'trainer' };
         }
+
+        // --- BLOCCO DI CORTESIA ---
+        // Controlliamo se esiste il full_name. Altrimenti via verso la pagina di Setup!
+        if (!profile.full_name) {
+          router.push('/setup-profilo');
+          return;
+        }
+
         setUserProfile({ ...user, username: profile.username, avatar_id: profile.avatar_id || 'trainer' });
         setStats({
           total: profile.points || 0, groups: profile.points_groups || 0, bracket: profile.points_bracket || 0,
@@ -133,7 +141,6 @@ export default function ProfilePage() {
         });
 
         // CALCOLO PERCENTUALE COMPLETAMENTO
-        // Head: true serve a contare i risultati senza scaricare tutti i dati (super veloce!)
         const [predsRes, bracketsRes, bonusRes] = await Promise.all([
           supabase.from('predictions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('brackets').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -171,13 +178,16 @@ export default function ProfilePage() {
       const { data, error } = await supabase.auth.signUp({ email: fakeEmail, password: password });
       if (error) { toast.error('Errore: Username occupato o password corta'); } 
       else if (data.user) {
+        // Creiamo il profilo (notare che full_name qui non viene popolato)
         await supabase.from('profiles').upsert([{ id: data.user.id, username: username.trim(), points: 0, is_paid: false, avatar_id: 'trainer' }]);
         toast.success('Registrazione completata!');
+        // Il reload rifarà scattare checkUser, che intercetterà la mancanza di full_name e invierà l'utente a /setup-profilo
         window.location.reload();
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: password });
       if (error) toast.error('Credenziali errate');
+      // Stessa cosa per il login: al reload, se manca il full_name scatta la trappola!
       else window.location.reload();
     }
     setAuthLoading(false);

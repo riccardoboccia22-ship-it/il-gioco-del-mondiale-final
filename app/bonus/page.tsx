@@ -1,7 +1,9 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 import {
   Award, Flame, Zap, Info, Trophy, Trash2, 
   ShieldCheck, ChevronDown, X, Target, Goal, ArrowUpToLine, ArrowDownToLine
@@ -44,6 +46,7 @@ const getFlag = (team: string) => {
 };
 
 export default function BonusPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState<any>({
     total_red_cards: '', top_scorer: '', high_scoring_match: '', total_penalties: '',
     total_own_goals: '', highest_scoring_group: '', lowest_scoring_group: '',
@@ -61,7 +64,16 @@ export default function BonusPage() {
     async function loadData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) { router.push('/'); return; }
+
+        // --- BLOCCO DI CORTESIA ---
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+        if (!profile || !profile.full_name) {
+          router.push('/setup-profilo');
+          return;
+        }
+        // --------------------------
+
         const [bonusRes, matchesRes] = await Promise.all([
             supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
             supabase.from('matches').select('home_team, away_team').order('id', { ascending: true }),
@@ -88,7 +100,7 @@ export default function BonusPage() {
       } catch (err) { console.error(err); } finally { setFetching(false); }
     }
     loadData();
-  }, []);
+  }, [router]);
 
   const saveBonus = async (e: React.FormEvent) => {
     e.preventDefault();

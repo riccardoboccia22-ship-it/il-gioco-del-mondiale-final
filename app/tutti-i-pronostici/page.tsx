@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation'; // <-- Importato useRouter
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame,
   Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck,
@@ -109,6 +110,7 @@ const formatTeamName = (name: string) => {
 };
 
 export default function TuttiPronosticiPage() {
+  const router = useRouter(); // <-- Inizializzato router
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS'>('GIRONI');
   const [data, setData] = useState<any>({
     profiles: [],
@@ -129,6 +131,18 @@ export default function TuttiPronosticiPage() {
     async function fetchData() {
       try {
         setLoading(true);
+
+        // --- AUTH & BLOCCO DI CORTESIA ---
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/'); return; }
+
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+        if (!profile || !profile.full_name) {
+          router.push('/setup-profilo');
+          return;
+        }
+        // ---------------------------------
+
         const [p, m, pr, br, off, offBo, usrBo] = await Promise.all([
           supabase.from('profiles').select('*').order('username'),
           supabase.from('matches').select('*').order('id'),
@@ -170,7 +184,7 @@ export default function TuttiPronosticiPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [router]);
 
   const getFlagUrl = (team: string) => {
     const code = flagMap[team?.toLowerCase().trim()];

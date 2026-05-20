@@ -61,13 +61,22 @@ export default function MatchesPage() {
   useEffect(() => {
     fetchData();
     return () => { Object.values(saveTimeouts.current).forEach(clearTimeout); };
-  }, []);
+  }, [router]);
 
   async function fetchData() {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/'); return; }
+
+      // --- BLOCCO DI CORTESIA ---
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+      if (!profile || !profile.full_name) {
+        router.push('/setup-profilo');
+        return;
+      }
+      // --------------------------
+
       setUserId(user.id);
 
       const [matchesRes, predsRes] = await Promise.all([
