@@ -6,6 +6,7 @@ import {
   Award, Flame, Zap, Info, Trophy, Trash2, 
   ShieldCheck, ChevronDown, X, Target, Goal, ArrowUpToLine, ArrowDownToLine
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 const LOCK_TIME = new Date('2026-06-11T20:00:00+02:00');
 
@@ -110,8 +111,18 @@ export default function BonusPage() {
     };
 
     const { error } = await supabase.from('user_bonus_answers').upsert(payload, { onConflict: 'user_id' });
-    if (error) toast.error('Errore: ' + error.message);
-    else toast.success('Pronostici bonus salvati! 🍀');
+    if (error) {
+      toast.error('Errore: ' + error.message);
+    } else {
+      toast.success('Pronostici bonus salvati! 🍀');
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#eab308', '#3b82f6', '#ef4444', '#22c55e', '#ffffff'],
+        disableForReducedMotion: true
+      });
+    }
     setLoading(false);
   };
 
@@ -128,7 +139,7 @@ export default function BonusPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6 pb-48 font-sans">
       <header className="mb-10 pt-4 text-center flex flex-col items-center">
-        <h1 className="text-4xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
+        <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
       </header>
 
       <form onSubmit={saveBonus} className="max-w-md mx-auto space-y-6 text-left">
@@ -137,30 +148,30 @@ export default function BonusPage() {
           {/* Domande Input Testo */}
           {[ {id: 'mvp_world_cup', label: 'MVP Mondiale', icon: Trophy}, {id: 'top_scorer', label: 'Capocannoniere', icon: Award}, {id: 'best_goalkeeper', label: 'Miglior Portiere', icon: ShieldCheck}].map(field => (
              <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-               <label><span className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={14} /> {field.label}</span>
-               <input type="text" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 font-black text-lg uppercase" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
+               <label><span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
+               <input type="text" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 font-black text-lg sm:text-xl uppercase transition-all" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
              </div>
           ))}
 
           {/* Selezione Gironi */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowUpToLine size={14} /> Girone con più gol</label>
-             <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg uppercase text-white flex justify-between items-center">
-                {formData.highest_scoring_group || 'Seleziona'} <ChevronDown size={16} />
+             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol</label>
+             <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg sm:text-xl uppercase text-white flex justify-between items-center transition-all hover:border-yellow-500">
+                {formData.highest_scoring_group || 'Seleziona'} <ChevronDown size={20} />
              </button>
           </div>
 
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowDownToLine size={14} /> Girone con meno gol</label>
-             <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg uppercase text-white flex justify-between items-center">
-                {formData.lowest_scoring_group || 'Seleziona'} <ChevronDown size={16} />
+             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol</label>
+             <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg sm:text-xl uppercase text-white flex justify-between items-center transition-all hover:border-yellow-500">
+                {formData.lowest_scoring_group || 'Seleziona'} <ChevronDown size={20} />
              </button>
           </div>
 
           {/* Match più gol */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><Flame size={14} /> Partita con più gol</label>
-             <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none font-black text-sm uppercase" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
+             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol</label>
+             <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none font-black text-sm sm:text-base uppercase transition-all hover:border-yellow-500 focus:border-yellow-500" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
                 <option value="">Seleziona Partita...</option>
                 {availableMatches.map((m) => <option key={m} value={m}>{m}</option>)}
              </select>
@@ -169,35 +180,37 @@ export default function BonusPage() {
           {/* Numerici */}
           {[ {id: 'total_own_goals', label: 'Totale Autogol', icon: Target}, {id: 'total_penalties', label: 'Totale Rigori', icon: Goal}, {id: 'total_red_cards', label: 'Totale Rossi', icon: Zap}].map(field => (
             <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-              <label><span className="text-[10px] font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={14} /> {field.label}</span>
-              <input type="number" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 font-black text-xl text-yellow-500" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
+              <label><span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
+              <input type="number" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 font-black text-2xl text-yellow-500 transition-all focus:border-yellow-500 outline-none" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
             </div>
           ))}
         </div>
 
-        <button type="submit" className="w-full bg-yellow-500 text-slate-950 font-black py-5 rounded-2xl uppercase text-xs tracking-widest shadow-2xl">Salva Bonus</button>
+        <button type="submit" disabled={loading || isExpired} className="w-full bg-yellow-500 text-slate-950 font-black py-5 rounded-2xl uppercase tracking-widest shadow-2xl active:scale-95 transition-all text-sm">
+            {loading ? 'Salvataggio...' : 'Salva Bonus'}
+        </button>
       </form>
 
-      {/* MODAL BOTTOM SHEET */}
+      {/* MODAL BOTTOM SHEET GIRONI */}
       {activeBonusField && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveBonusField(null)}></div>
           <div className="relative w-full max-w-xl bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="p-7 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-yellow-500 text-lg font-black uppercase italic">Scegli Girone</h3>
-              <button onClick={() => setActiveBonusField(null)} className="p-3 bg-slate-800 rounded-full text-white"><X size={20}/></button>
+              <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Scegli Girone</h3>
+              <button onClick={() => setActiveBonusField(null)} className="p-3 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={20}/></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scrollbar">
               {TOURNAMENT_GROUPS.map((group) => {
                  const isSelected = formData[activeBonusField] === group.name;
                  return (
-                    <button key={group.name} onClick={() => handleGroupSelect(group.name)} className={`w-full p-4 rounded-2xl border-2 flex flex-col gap-3 ${isSelected ? 'bg-yellow-500/10 border-yellow-500' : 'bg-slate-950 border-slate-800'}`}>
+                    <button key={group.name} onClick={() => handleGroupSelect(group.name)} className={`w-full p-4 rounded-2xl border-2 flex flex-col gap-3 transition-all active:scale-95 ${isSelected ? 'bg-yellow-500/10 border-yellow-500' : 'bg-slate-950 border-slate-800'}`}>
                         <div className="flex justify-between w-full items-center">
-                            <span className={`font-black uppercase text-sm ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{group.name}</span>
+                            <span className={`font-black uppercase text-base ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{group.name}</span>
                             {isSelected && <div className="bg-rose-500 rounded-full w-6 h-6 flex items-center justify-center text-white"><X size={14}/></div>}
                         </div>
                         <div className="flex gap-2">
-                            {group.teams.map(team => <img key={team} src={getFlag(team)!} className="w-8 h-5 rounded object-cover shadow-sm border border-slate-800" alt={team} />)}
+                            {group.teams.map(team => <img key={team} src={getFlag(team)!} className="w-10 h-7 rounded object-cover shadow-sm border border-slate-800" alt={team} />)}
                         </div>
                     </button>
                  );

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
@@ -44,7 +45,6 @@ const flagMap: { [key: string]: string } = {
   svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', uruguay: 'uy', uzbekistan: 'uz',
 };
 
-// Accorciamo ulteriormente i nomi lunghi per incastrarli meglio
 const formatTeamName = (name: string) => {
   if (!name) return '';
   const n = name.trim().toLowerCase();
@@ -147,7 +147,17 @@ export default function BracketPage() {
       await supabase.from('brackets').delete().eq('user_id', user.id);
       const { error } = await supabase.from('brackets').insert(rows);
       if (error) throw error;
+      
       toast.success('Tabellone salvato! 🏆');
+      
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#eab308', '#3b82f6', '#ef4444', '#22c55e', '#ffffff'],
+        disableForReducedMotion: true
+      });
+
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
@@ -162,18 +172,17 @@ export default function BracketPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-48 font-sans">
       <header className="text-center mb-10 pt-4 flex flex-col items-center">
-        <h1 className="text-4xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
-        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
+        <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
+        <p className="text-slate-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.4em] mt-3 italic">
           {isExpired ? '🔒 Pronostici Conclusi' : 'Dalla fase a eliminazione al Titolo'}
         </p>
         
-        {/* BOTTONI NAVIGAZIONE */}
         <div className="flex gap-2 mt-6">
-          <Link href="/groups" className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-4 py-3 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-800 active:scale-95 shadow-lg">
-            <Map size={14} /> Gironi
+          <Link href="/groups" className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-5 py-3.5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all hover:bg-slate-800 active:scale-95 shadow-lg">
+            <Map size={16} /> Gironi
           </Link>
-          <Link href="/simulatore" className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-3 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
-            <BarChart3 size={14} /> Simulatore
+          <Link href="/simulatore" className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 px-5 py-3.5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all hover:bg-blue-600/30 active:scale-95 shadow-lg">
+            <BarChart3 size={16} /> Simulatore
           </Link>
         </div>
       </header>
@@ -183,10 +192,10 @@ export default function BracketPage() {
           <section key={stage.id} className="relative">
             <div className="flex flex-col mb-6">
               <div className="flex items-center gap-3 px-2">
-                <span className="bg-yellow-500 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded italic flex items-center gap-1 shrink-0">
+                <span className="bg-yellow-500 text-slate-950 text-[10px] sm:text-xs font-black px-2.5 py-1 rounded italic flex items-center gap-1 shrink-0">
                   {stage.pts} PT
                 </span>
-                <h2 className="text-xl font-black text-white uppercase italic tracking-tight shrink-0">{stage.label}</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight shrink-0">{stage.label}</h2>
                 <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-800 to-transparent"></div>
               </div>
               {stage.id === 'R32' && (
@@ -194,13 +203,12 @@ export default function BracketPage() {
                   <Info size={20} className="text-blue-500 shrink-0" />
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p>L'ordine non conta: seleziona le 32 squadre che supereranno la fase a gironi.</p>
-                    <p>Si qualificano le <span className="text-white">prime 2 di ogni girone</span> e le <span className="text-white">8 migliori terze</span>.</p>
+                    <p>Si qualificano le <span className="text-white">prime 2</span> e le <span className="text-white">8 migliori terze</span>.</p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Aggiunto auto-rows-fr per mantenere altezze uguali tra celle affiancate */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr">
               {Array.from({ length: stage.count }).map((_, i) => {
                 const currentSelection = selections[`${stage.id}-${i}`];
@@ -211,16 +219,13 @@ export default function BracketPage() {
                     <button
                       disabled={isExpired}
                       onClick={() => setActiveCell({stageId: stage.id, index: i})}
-                      // Trovato il mix perfetto: flex, gap-1.5, padding interno calcolato
                       className={`w-full h-full bg-slate-900 border-2 rounded-2xl py-3 pl-2 pr-10 sm:p-4 sm:pr-14 flex items-center gap-1.5 sm:gap-3 transition-all text-left
                         ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
                     >
-                      {/* NUMERO DELLA CELLA */}
                       <span className={`text-[9px] sm:text-[11px] font-black w-3 sm:w-4 text-center shrink-0 ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
                         {cellNumber}
                       </span>
 
-                      {/* BANDIERA */}
                       <div className="shrink-0 flex items-center justify-center">
                         {currentSelection ? (
                           <img src={getFlag(currentSelection)!} className="w-5 sm:w-8 h-auto rounded-sm shadow-sm" alt="" />
@@ -229,13 +234,11 @@ export default function BracketPage() {
                         )}
                       </div>
                       
-                      {/* NOME (Break words permette 2 righe, niente più overlap!) */}
                       <span className="text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight flex-1 break-words">
                         {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
                       </span>
                     </button>
 
-                    {/* BOTTONE X ESTERNO (Ora occupa l'intera altezza a destra, facile da cliccare) */}
                     {currentSelection && !isExpired && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
@@ -258,7 +261,6 @@ export default function BracketPage() {
         ))}
       </div>
 
-      {/* --- MENU MAGICO CON SBLOCCO RAPIDO SQUADRE --- */}
       {activeCell && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0 sm:pb-10">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
@@ -351,7 +353,6 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* FOOTER AZIONI */}
       <div className="fixed bottom-24 left-0 right-0 p-6 flex justify-center items-center gap-3 z-50 pointer-events-none">
         {!isExpired && (
           <button onClick={resetBracket} disabled={loading} className="pointer-events-auto p-6 bg-slate-900 border-2 border-slate-800 rounded-2xl text-rose-500 active:bg-rose-500 active:text-white transition-all shadow-2xl"><Trash2 size={24} /></button>
