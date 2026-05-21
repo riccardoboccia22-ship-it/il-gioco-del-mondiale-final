@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import confetti from 'canvas-confetti';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
-  BarChart3, RefreshCw, Star, X, CheckCircle2, MessageCircle, ArrowLeft
+  BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
+  User, ListOrdered, Gamepad2
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
+const WORLD_CUP_START_DATE = new Date('2025-06-11T21:00:00+02:00');
 
 const STAGES = [
   { id: 'R32', label: 'Sedicesimi (+2pt)', pts: 2 },
@@ -180,6 +181,30 @@ export default function AdminPage() {
       ]);
       if (!profs) return;
 
+      const finishedMatchesCount = allMatches?.length || 0;
+      const maxGroupPoints = finishedMatchesCount * 10;
+      
+      let maxBracketPoints = 0;
+      offBracket?.forEach(ob => {
+         const uS = normalizeStage(ob.stage);
+         maxBracketPoints += STAGES.find(s => s.id === uS)?.pts || 0;
+      });
+
+      let maxBonusPoints = 0;
+      if (offBonuses) {
+         if (offBonuses.top_scorer) maxBonusPoints += 10;
+         if (offBonuses.mvp_world_cup) maxBonusPoints += 10;
+         if (offBonuses.best_goalkeeper) maxBonusPoints += 10;
+         if (offBonuses.high_scoring_match) maxBonusPoints += 5;
+         if (offBonuses.highest_scoring_group) maxBonusPoints += 5;
+         if (offBonuses.lowest_scoring_group) maxBonusPoints += 5;
+         if (offBonuses.total_red_cards != null) maxBonusPoints += 3;
+         if (offBonuses.total_penalties != null) maxBonusPoints += 3;
+         if (offBonuses.total_own_goals != null) maxBonusPoints += 3;
+      }
+      
+      const totalMaxPoints = maxGroupPoints + maxBracketPoints + maxBonusPoints;
+
       const updates = profs.map(profile => {
         let pG = 0, pB = 0, pBon = 0, pEx = 0;
         let sW = 0, sF = 0, sSF = 0, sQF = 0, sR16 = 0, sR32 = 0;
@@ -214,15 +239,19 @@ export default function AdminPage() {
           Object.entries(bMap).forEach(([k, pts]: any) => { if (offBonuses[k] != null && String(offBonuses[k]).trim().toLowerCase() === String(ub[k]).trim().toLowerCase()) pBon += pts; });
         }
         
+        const userTotalPoints = pG + pB + pBon;
+        const efficiency = totalMaxPoints > 0 ? Math.round((userTotalPoints / totalMaxPoints) * 100) : 0;
+
         return { 
           ...profile, 
-          points: pG + pB + pBon, 
+          points: userTotalPoints, 
           points_groups: pG, 
           points_bracket: pB, 
           points_bonus: pBon, 
           exact_matches: pEx, 
           pts_winner: sW, pts_f: sF, pts_sf: sSF, pts_qf: sQF, pts_r16: sR16, pts_r32: sR32,
-          previous_ranking: profile.ranking
+          previous_ranking: profile.ranking,
+          performance_pct: efficiency
         };
       });
 
@@ -340,6 +369,17 @@ export default function AdminPage() {
     navigator.clipboard.writeText(text);
     toast.success('Report copiato per WhatsApp! 📱', { icon: '💬' });
   };
+
+  // Logica esatta Navbar Ufficiale per integrarla nell'Admin
+  const isExpired = new Date() > WORLD_CUP_START_DATE;
+  const navItems = [
+    { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
+    { name: 'Fase Gironi', path: '/matches', icon: <Gamepad2 size={20} strokeWidth={2.5} /> },
+    { name: 'Fase Finale', path: '/bracket', icon: <Trophy size={20} strokeWidth={2.5} /> },
+    { name: 'Bonus', path: '/bonus', icon: <Star size={20} strokeWidth={2.5} /> },
+    { name: 'Classifica', path: '/leaderboard', icon: <ListOrdered size={20} strokeWidth={2.5} /> },
+    ...(isExpired ? [{ name: 'Globale', path: '/tutti-i-pronostici', icon: <Users size={20} strokeWidth={2.5} /> }] : []),
+  ];
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-500 font-black">ACCESSO NEGATO</div>;
@@ -464,7 +504,6 @@ export default function AdminPage() {
           
           {openSection.statistiche && (
             <div className="p-5 bg-slate-950/50 space-y-6">
-              <button onClick={copyWhatsAppReport} className="w-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/30 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-cyan-600/30">Copia Report per WhatsApp</button>
               
               <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800">
                 <p className="text-[9px] font-black text-slate-500 uppercase mb-4 border-b border-slate-800/50 pb-1 italic">Vincitore del Mondiale</p>
@@ -490,6 +529,32 @@ export default function AdminPage() {
           )}
         </section>
       </div>
+
+      {/* --- NAVBAR UFFICIALE INTEGRATA NELL'ADMIN --- */}
+      <nav className="fixed bottom-0 left-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <div className="max-w-md mx-auto flex items-center justify-around py-2 px-1">
+          {navItems.map((item) => (
+            <button 
+              key={item.path} 
+              onClick={() => router.push(item.path)}
+              className="relative flex flex-col items-center justify-between h-12 group transition-all"
+              style={{ width: `${100 / navItems.length}%` }}
+            >
+              <div className="flex items-end justify-center h-6 w-full">
+                <div className="text-slate-500 group-hover:text-slate-300 transition-all duration-300">
+                  {item.icon}
+                </div>
+              </div>
+              <div className="flex items-center justify-center h-6 w-full px-0.5">
+                <span className="text-[7px] sm:text-[8px] font-black uppercase text-center leading-[1.1] tracking-wider text-slate-600 group-hover:text-slate-400 transition-colors">
+                  {item.name}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </nav>
+
     </div>
   );
 }
