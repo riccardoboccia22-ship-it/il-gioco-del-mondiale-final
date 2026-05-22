@@ -158,7 +158,7 @@ export default function BonusPage() {
         <div className={`space-y-4 ${isExpired ? 'opacity-50 pointer-events-none' : ''}`}>
           
           {/* Domande Input Testo */}
-          {[ {id: 'mvp_world_cup', label: 'MVP Mondiale', icon: Trophy}, {id: 'top_scorer', label: 'Capocannoniere', icon: Award}, {id: 'best_goalkeeper', label: 'Miglior Portiere', icon: ShieldCheck}].map(field => (
+          {[ {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 punti', icon: Trophy}, {id: 'top_scorer', label: 'Capocannoniere - 10 punti', icon: Award}, {id: 'best_goalkeeper', label: 'Miglior Portiere - 10 punti', icon: ShieldCheck}].map(field => (
              <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
                <label><span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
                <input type="text" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 font-black text-lg sm:text-xl uppercase transition-all" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
@@ -167,14 +167,14 @@ export default function BonusPage() {
 
           {/* Selezione Gironi */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol</label>
+             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 punti</label>
              <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg sm:text-xl uppercase text-white flex justify-between items-center transition-all hover:border-yellow-500">
                 {formData.highest_scoring_group || 'Seleziona'} <ChevronDown size={20} />
              </button>
           </div>
 
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol</label>
+             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 punti</label>
              <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg sm:text-xl uppercase text-white flex justify-between items-center transition-all hover:border-yellow-500">
                 {formData.lowest_scoring_group || 'Seleziona'} <ChevronDown size={20} />
              </button>
@@ -182,7 +182,7 @@ export default function BonusPage() {
 
           {/* Match più gol */}
           <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol</label>
+             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol - 5 punti</label>
              <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none font-black text-sm sm:text-base uppercase transition-all hover:border-yellow-500 focus:border-yellow-500" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
                 <option value="">Seleziona Partita...</option>
                 {availableMatches.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -190,7 +190,7 @@ export default function BonusPage() {
           </div>
 
           {/* Numerici */}
-          {[ {id: 'total_own_goals', label: 'Totale Autogol', icon: Target}, {id: 'total_penalties', label: 'Totale Rigori', icon: Goal}, {id: 'total_red_cards', label: 'Totale Rossi', icon: Zap}].map(field => (
+          {[ {id: 'total_own_goals', label: 'Totale Autogol - 3 punti', icon: Target}, {id: 'total_penalties', label: 'Totale Rigori - 3 punti', icon: Goal}, {id: 'total_red_cards', label: 'Totale Rossi - 3 punti', icon: Zap}].map(field => (
             <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
               <label><span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
               <input type="number" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 font-black text-2xl text-yellow-500 transition-all focus:border-yellow-500 outline-none" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
