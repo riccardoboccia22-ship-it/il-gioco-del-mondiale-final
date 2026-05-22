@@ -115,6 +115,7 @@ export default function AdminPage() {
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [allUserBonuses, setAllUserBonuses] = useState<any[]>([]);
   const [allBrackets, setAllBrackets] = useState<any[]>([]);
+  const [predictions, setPredictions] = useState<any[]>([]);
   const [bonusData, setBonusData] = useState({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
@@ -129,13 +130,14 @@ export default function AdminPage() {
   }, []);
 
   async function fetchData() {
-    const [mRes, bRes, pRes, obRes, ubRes, brRes] = await Promise.all([
+    const [mRes, bRes, pRes, obRes, ubRes, brRes, predRes] = await Promise.all([
       supabase.from('matches').select('*').order('id', { ascending: true }),
       supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
       supabase.from('profiles').select('*').order('username', { ascending: true }),
       supabase.from('official_bracket').select('*').order('id', { ascending: true }),
       supabase.from('user_bonus_answers').select('*'),
-      supabase.from('brackets').select('*')
+      supabase.from('brackets').select('*'),
+      supabase.from('predictions').select('*')
     ]);
     
     const fetchedMatches = mRes.data || [];
@@ -144,6 +146,7 @@ export default function AdminPage() {
     setOfficialBracket(obRes.data || []); 
     setAllUserBonuses(ubRes.data || []);
     setAllBrackets(brRes.data || []);
+    setPredictions(predRes.data || []);
     
     const tempGroups: Record<string, string[]> = {};
     fetchedMatches.forEach((m) => {
@@ -336,8 +339,6 @@ export default function AdminPage() {
     return (v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('it-IT', { maximumFractionDigits: 1 }); 
   };
 
-  const getTopPicks = (k: string) => { const counts: any = {}; allUserBonuses.forEach(b => { if (b[k]) { const v = b[k].trim().toUpperCase(); counts[v] = (counts[v] || 0) + 1; } }); return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3); };
-
   const getWinnerStats = () => {
     const winners = allBrackets.filter(b => b.stage === 'WINNER');
     const total = winners.length;
@@ -347,30 +348,130 @@ export default function AdminPage() {
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
-  const copyWhatsAppReport = () => {
-    const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
-    const winners = getWinnerStats();
-    const mvps = getTopPicks('mvp_world_cup');
-    const topScorers = getTopPicks('top_scorer');
-
-    let text = `🏆 *CLASSIFICA E STATISTICHE MONDIALE 2026* 🏆\n\n`;
-    sorted.slice(0, 10).forEach((p, i) => {
-        let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '⚽';
-        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
-    });
-    
-    text += `\n📊 *IL SENTIMENTO DEL GRUPPO*\n\n`;
-    text += `👑 *Vincitore più gettonato:* ${winners[0]?.name || 'Nessuno'} (${winners[0]?.pct || 0}%)\n`;
-    text += `✨ *MVP:* ${mvps[0]?.[0] || 'Nessuno'} (${mvps[0]?.[1] || 0} voti)\n`;
-    text += `⚽ *Capocannoniere:* ${topScorers[0]?.[0] || 'Nessuno'} (${topScorers[0]?.[1] || 0} voti)\n`;
-    text += `\n...aggiungi qui una tua nota su sorprese o delusioni!\n`;
-    text += `\n👉 Guarda la classifica completa: www.iltuopronostico.it`;
-
-    navigator.clipboard.writeText(text);
-    toast.success('Report copiato per WhatsApp! 📱', { icon: '💬' });
+  const getTopExactMatches = () => {
+    return [...profiles]
+      .filter(p => p.exact_matches > 0)
+      .sort((a, b) => (b.exact_matches || 0) - (a.exact_matches || 0));
   };
 
-  // Logica esatta Navbar Ufficiale per integrarla nell'Admin
+  const getUserExactMatches = (userId: string) => {
+    const uPreds = predictions.filter(p => p.user_id === userId);
+    const exacts: any[] = [];
+    uPreds.forEach(pred => {
+      const m = matches.find(m => m.id === pred.match_id && m.is_finished);
+      if (m) {
+        const ph = Number(pred.home_score), pa = Number(pred.away_score);
+        const mh = Number(m.home_score_final), ma = Number(m.away_score_final);
+        if (ph === mh && pa === ma) {
+          exacts.push(m);
+        }
+      }
+    });
+    return exacts;
+  };
+
+  const getBonusDetails = (k: string) => {
+    const choices: Record<string, { originalName: string; count: number; users: string[] }> = {};
+    allUserBonuses.forEach(b => {
+      if (b[k]) {
+        const raw = b[k].trim();
+        const key = raw.toLowerCase();
+        const p = profiles.find(prof => prof.id === b.user_id);
+        const username = p ? p.username : 'Anonimo';
+        if (!choices[key]) {
+          choices[key] = { originalName: raw, count: 0, users: [] };
+        }
+        choices[key].count += 1;
+        if (!choices[key].users.includes(username)) {
+          choices[key].users.push(username);
+        }
+      }
+    });
+    return Object.values(choices).sort((a, b) => b.count - a.count);
+  };
+
+  const copyClassificaReport = () => {
+    const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
+    let text = `🏆 *CLASSIFICA MONDIALE 2026* 🏆\n\n`;
+    sorted.slice(0, 10).forEach((p, i) => {
+        let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '⚽';
+        const exactStr = p.exact_matches > 0 ? ` [🎯 ${p.exact_matches} esatt${p.exact_matches === 1 ? 'o' : 'i'}]` : '';
+        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt${exactStr}\n`;
+    });
+    text += `\n👉 Guarda la classifica completa:\nwww.iltuopronostico.it`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Classifica copiata per WhatsApp! 📱', { icon: '💬' });
+  };
+
+  const copyBonusReport = () => {
+    const winners = getWinnerStats();
+    let text = `📊 *STATISTICHE & SENTIMENTO DEL GRUPPO* 📊\n\n`;
+    text += `👑 *Vincitore più gettonato:* ${winners[0]?.name || 'Nessuno'} (${winners[0]?.pct || 0}%)\n`;
+    
+    const fields = [
+      { l: '✨ MVP', k: 'mvp_world_cup' },
+      { l: '⚽ Capocannoniere', k: 'top_scorer' },
+      { l: '🧤 Miglior Portiere', k: 'best_goalkeeper' },
+      { l: '🔥 Match più Gol', k: 'high_scoring_match' },
+      { l: '📈 Girone più Gol', k: 'highest_scoring_group' },
+      { l: '📉 Girone meno Gol', k: 'lowest_scoring_group' }
+    ];
+    
+    fields.forEach(f => {
+      const details = getBonusDetails(f.k);
+      if (details.length > 0) {
+        text += `${f.l}: ${formatMatchName(details[0].originalName)} (${details[0].count} voti)\n`;
+      }
+    });
+
+    text += `\n👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Statistiche copiate per WhatsApp! 📱', { icon: '💬' });
+  };
+
+  const copyCecchiniReport = () => {
+    let text = `🎯 *REPORT CECCHINI (RISULTATI ESATTI)* 🎯\n`;
+    const matchesWithExact = matches.filter(m => m.is_finished).map(m => {
+       const exactUsers = profiles.filter(p => {
+          const uPred = predictions.find(pred => pred.user_id === p.id && pred.match_id === m.id);
+          if(!uPred) return false;
+          return Number(uPred.home_score) === Number(m.home_score_final) && Number(uPred.away_score) === Number(m.away_score_final);
+       }).map(p => p.username);
+       return { ...m, exactUsers, group: TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === formatMatchName(m.home_team).toLowerCase()))?.name || 'Fase Finale' };
+    }).filter(m => m.exactUsers.length > 0);
+
+    if(matchesWithExact.length === 0) {
+       text += `\nAncora nessun risultato esatto!\n`;
+    } else {
+       const grouped: any = {};
+       matchesWithExact.forEach(m => {
+          if(!grouped[m.group]) grouped[m.group] = [];
+          grouped[m.group].push(m);
+       });
+       
+       const sortedGroups = Object.keys(grouped).sort((a, b) => {
+          if(a.includes('Gruppo') && b.includes('Gruppo')) return a.localeCompare(b);
+          if(a.includes('Gruppo')) return -1;
+          return 1;
+       });
+
+       sortedGroups.forEach(g => {
+          text += `\n*${g}*\n`;
+          grouped[g].forEach((m: any) => {
+             text += `⚽ ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)}\n`;
+             text += `   👉 ${m.exactUsers.join(', ')}\n`;
+          });
+       });
+    }
+
+    text += `\n👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Report Cecchini copiato! 🎯', { icon: '🎯' });
+  };
+
   const isExpired = new Date() > WORLD_CUP_START_DATE;
   const navItems = [
     { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
@@ -392,10 +493,25 @@ export default function AdminPage() {
 
       <header className="flex flex-col items-center mb-8 pt-4 gap-4 mt-8 sm:mt-4">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none">Control Tower</h1>
-        <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800 shadow-xl">
-          <button onClick={copyWhatsAppReport} className="flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-black uppercase text-emerald-500 hover:bg-emerald-500/10 transition-colors rounded-full"><MessageCircle size={16} /> WhatsApp</button>
-          <div className="w-px h-6 bg-slate-800"></div>
-          <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs font-black uppercase text-blue-500 hover:bg-blue-500/10 transition-colors rounded-full ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}><RefreshCw size={16} className={syncing ? 'animate-spin' : ''} /> Sincronizza</button>
+        
+        <div className="flex flex-wrap items-center justify-center gap-2 px-2">
+          <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800 shadow-xl overflow-x-auto max-w-full">
+            <button onClick={copyClassificaReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-emerald-500 hover:bg-emerald-500/10 transition-colors rounded-full whitespace-nowrap">
+              <Trophy size={14} /> Classifica
+            </button>
+            <div className="w-px h-5 bg-slate-800"></div>
+            <button onClick={copyBonusReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-purple-500 hover:bg-purple-500/10 transition-colors rounded-full whitespace-nowrap">
+              <Star size={14} /> Bonus
+            </button>
+            <div className="w-px h-5 bg-slate-800"></div>
+            <button onClick={copyCecchiniReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-orange-500 hover:bg-orange-500/10 transition-colors rounded-full whitespace-nowrap">
+              <Zap size={14} /> Cecchini
+            </button>
+            <div className="w-px h-5 bg-slate-800"></div>
+            <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-blue-500 hover:bg-blue-500/10 transition-colors rounded-full whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Sync
+            </button>
+          </div>
         </div>
       </header>
 
@@ -407,27 +523,48 @@ export default function AdminPage() {
           </button>
           {openSection.iscrizioni && (
             <div className="bg-slate-950/50 divide-y divide-slate-800/50">
-              {profiles.map(p => (
-                <div key={p.id} className="p-4 flex items-center justify-between gap-2">
-                  <div className="min-w-0"><p className="font-black text-xs uppercase truncate italic">
-  {p.username}
-  {p.full_name ? (
-    <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
-      ({p.full_name})
-    </span>
-  ) : (
-    <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
-      (Nessun Nome)
-    </span>
-  )}
-  <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
-</p><p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p></div>
-                  <div className="flex gap-2 shrink-0">
-                    <div className="relative"><select value={p.payment_method || (p.is_paid ? 'Pagato' : '')} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}><option value="">NON PAGATO</option><option value="Pagato" hidden>PAGATO ✓</option><option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option></select><ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} /></div>
-                    <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl"><Trash2 size={16} /></button>
+              {profiles.map(p => {
+                const userExacts = getUserExactMatches(p.id);
+                return (
+                  <div key={p.id} className="p-4 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-black text-xs uppercase truncate italic">
+                        {p.username}
+                        {p.full_name ? (
+                          <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
+                            ({p.full_name})
+                          </span>
+                        ) : (
+                          <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
+                            (Nessun Nome)
+                          </span>
+                        )}
+                        <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
+                      </p>
+                      <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
+                      
+                      {userExacts.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {userExacts.map((m: any) => (
+                            <div key={m.id} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[8px] text-slate-300 shadow-sm">
+                              <img src={`https://flagcdn.com/w20/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
+                              <span className="uppercase font-black">{formatTeamName(m.home_team)}</span>
+                              <span className="text-emerald-400 font-black">{m.home_score_final}-{m.away_score_final}</span>
+                              <span className="uppercase font-black">{formatTeamName(m.away_team)}</span>
+                              <img src={`https://flagcdn.com/w20/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                    </div>
+                    <div className="flex gap-2 shrink-0 self-start">
+                      <div className="relative"><select value={p.payment_method || (p.is_paid ? 'Pagato' : '')} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}><option value="">NON PAGATO</option><option value="Pagato" hidden>PAGATO ✓</option><option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option></select><ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} /></div>
+                      <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl"><Trash2 size={16} /></button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -521,16 +658,72 @@ export default function AdminPage() {
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                {[ { label: 'MVP Mondiale', key: 'mvp_world_cup' }, { label: 'Capocannoniere', key: 'top_scorer' }, { label: 'Miglior Portiere', key: 'best_goalkeeper' }, { label: 'Match + Gol', key: 'high_scoring_match' } ].map((s) => (
-                  <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800"><p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic">{s.label}</p><div className="space-y-2">{getTopPicks(s.key).map(([name, count]: any) => (<div key={name} className="flex justify-between text-[10px] font-black uppercase italic"><span className="truncate pr-2 text-white">{name}</span><span className="text-cyan-500 font-mono shrink-0">{count} voti</span></div>))}</div></div>
-                ))}
+                
+                {/* --- BLOCCO CECCHINI (RISULTATI ESATTI) --- */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
+                  <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Cecchini (Ris. Esatti)</p>
+                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    {getTopExactMatches().length > 0 ? getTopExactMatches().map(p => {
+                      const exactsList = getUserExactMatches(p.id);
+                      return (
+                        <div key={p.username} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
+                            <span className="truncate pr-2 text-white">{p.username}</span>
+                            <span className="text-emerald-500 font-mono shrink-0">{p.exact_matches || 0} presi</span>
+                          </div>
+                          
+                          {exactsList.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {exactsList.map((m: any) => (
+                                <div key={m.id} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[8px] text-slate-300 shadow-sm">
+                                  <img src={`https://flagcdn.com/w20/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
+                                  <span className="uppercase font-black">{formatTeamName(m.home_team)}</span>
+                                  <span className="text-emerald-400 font-black">{m.home_score_final}-{m.away_score_final}</span>
+                                  <span className="uppercase font-black">{formatTeamName(m.away_team)}</span>
+                                  <img src={`https://flagcdn.com/w20/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }) : (
+                      <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun risultato</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* --- SEZIONE ALTRI BONUS CON LOGICA DETTAGLIATA --- */}
+                {[ { label: 'MVP Mondiale', key: 'mvp_world_cup' }, { label: 'Capocannoniere', key: 'top_scorer' }, { label: 'Miglior Portiere', key: 'best_goalkeeper' }, { label: 'Match + Gol', key: 'high_scoring_match' } ].map((s) => {
+                  const details = getBonusDetails(s.key);
+                  return (
+                    <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
+                      <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">{s.label}</p>
+                      <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                        {details.length > 0 ? details.map((item: any) => (
+                          <div key={item.originalName} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
+                              <span className="truncate pr-2 text-white">{formatMatchName(item.originalName)}</span>
+                              <span className="text-cyan-500 font-mono shrink-0">{item.count} {item.count === 1 ? 'voto' : 'voti'}</span>
+                            </div>
+                            <p className="text-[8px] text-slate-500 tracking-tight font-medium leading-tight">
+                              Scelto da: <span className="text-slate-400 font-semibold">{item.users.join(', ')}</span>
+                            </p>
+                          </div>
+                        )) : (
+                          <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun voto inserito</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
               </div>
             </div>
           )}
         </section>
       </div>
 
-      {/* --- NAVBAR UFFICIALE INTEGRATA NELL'ADMIN --- */}
       <nav className="fixed bottom-0 left-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-md mx-auto flex items-center justify-around py-2 px-1">
           {navItems.map((item) => (
