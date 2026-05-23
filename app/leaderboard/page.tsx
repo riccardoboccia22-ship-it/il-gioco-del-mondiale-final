@@ -60,7 +60,7 @@ const AVATARS = [
   { id: 'panda', name: 'Panda', emoji: '🐼', color: 'from-slate-800 to-slate-950' },
   { id: 'parrot', name: 'Pappagallo', emoji: '🦜', color: 'from-red-400 to-green-500' },
   { id: 'dodo', name: 'Dodo', emoji: '🦤', color: 'from-stone-500 to-stone-700' },
-  { id: 'moose', name: 'Alce', emoji: '🪎', color: 'from-amber-700 to-stone-600' },
+  { id: 'moose', name: 'Alce', emoji: '🫎', color: 'from-amber-700 to-stone-600' },
 
   // --- FOOD & DRINKS ---
   { id: 'beer', name: 'Birra', emoji: '🍺', color: 'from-yellow-400 to-amber-500' },
