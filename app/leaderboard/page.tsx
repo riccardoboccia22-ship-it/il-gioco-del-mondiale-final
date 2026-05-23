@@ -25,6 +25,7 @@ const AVATARS = [
   { id: 'pirate', name: 'Pirati', emoji: '🏴‍☠️', color: 'from-zinc-900 to-zinc-700' },
 
   // --- ANIMALI ---
+  { id: 'lion', name: 'Leone', emoji: '🦁', color: 'from-amber-500 to-orange-600' },
   { id: 'shark', name: 'Squalo', emoji: '🦈', color: 'from-sky-700 to-blue-900' },
   { id: 'bull', name: 'Toro', emoji: '🐂', color: 'from-red-700 to-orange-600' },
   { id: 'wolf', name: 'Lupo', emoji: '🐺', color: 'from-slate-700 to-slate-500' },
