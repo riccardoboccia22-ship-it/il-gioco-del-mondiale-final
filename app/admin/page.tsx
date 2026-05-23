@@ -497,15 +497,15 @@ export default function AdminPage() {
         <div className="flex flex-wrap items-center justify-center gap-2 px-2">
           <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800 shadow-xl overflow-x-auto max-w-full">
             <button onClick={copyClassificaReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-emerald-500 hover:bg-emerald-500/10 transition-colors rounded-full whitespace-nowrap">
-              <Trophy size={14} /> Classifica
+              <MessageCircle size={14} /> Classifica
             </button>
             <div className="w-px h-5 bg-slate-800"></div>
             <button onClick={copyBonusReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-purple-500 hover:bg-purple-500/10 transition-colors rounded-full whitespace-nowrap">
-              <Star size={14} /> Bonus
+              <MessageCircle size={14} /> Statistiche
             </button>
             <div className="w-px h-5 bg-slate-800"></div>
             <button onClick={copyCecchiniReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-orange-500 hover:bg-orange-500/10 transition-colors rounded-full whitespace-nowrap">
-              <Zap size={14} /> Cecchini
+              <MessageCircle size={14} /> Cecchini
             </button>
             <div className="w-px h-5 bg-slate-800"></div>
             <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-blue-500 hover:bg-blue-500/10 transition-colors rounded-full whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -523,48 +523,30 @@ export default function AdminPage() {
           </button>
           {openSection.iscrizioni && (
             <div className="bg-slate-950/50 divide-y divide-slate-800/50">
-              {profiles.map(p => {
-                const userExacts = getUserExactMatches(p.id);
-                return (
-                  <div key={p.id} className="p-4 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-black text-xs uppercase truncate italic">
-                        {p.username}
-                        {p.full_name ? (
-                          <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
-                            ({p.full_name})
-                          </span>
-                        ) : (
-                          <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
-                            (Nessun Nome)
-                          </span>
-                        )}
-                        <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
-                      </p>
-                      <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
-                      
-                      {userExacts.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {userExacts.map((m: any) => (
-                            <div key={m.id} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[8px] text-slate-300 shadow-sm">
-                              <img src={`https://flagcdn.com/w20/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
-                              <span className="uppercase font-black">{formatTeamName(m.home_team)}</span>
-                              <span className="text-emerald-400 font-black">{m.home_score_final}-{m.away_score_final}</span>
-                              <span className="uppercase font-black">{formatTeamName(m.away_team)}</span>
-                              <img src={`https://flagcdn.com/w20/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
-                            </div>
-                          ))}
-                        </div>
+              {profiles.map(p => (
+                <div key={p.id} className="p-4 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-black text-xs uppercase truncate italic">
+                      {p.username}
+                      {p.full_name ? (
+                        <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
+                          ({p.full_name})
+                        </span>
+                      ) : (
+                        <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
+                          (Nessun Nome)
+                        </span>
                       )}
-
-                    </div>
-                    <div className="flex gap-2 shrink-0 self-start">
-                      <div className="relative"><select value={p.payment_method || (p.is_paid ? 'Pagato' : '')} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}><option value="">NON PAGATO</option><option value="Pagato" hidden>PAGATO ✓</option><option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option></select><ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} /></div>
-                      <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl"><Trash2 size={16} /></button>
-                    </div>
+                      <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
+                    </p>
+                    <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
                   </div>
-                );
-              })}
+                  <div className="flex gap-2 shrink-0 self-center">
+                    <div className="relative"><select value={p.payment_method || (p.is_paid ? 'Pagato' : '')} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}><option value="">NON PAGATO</option><option value="Pagato" hidden>PAGATO ✓</option><option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option></select><ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} /></div>
+                    <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>
@@ -659,7 +641,7 @@ export default function AdminPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 
-                {/* --- BLOCCO CECCHINI (RISULTATI ESATTI) --- */}
+                {/* --- BLOCCO CECCHINI (RISULTATI ESATTI) CON SCHEDE VIDEO --- */}
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
                   <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Cecchini (Ris. Esatti)</p>
                   <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">

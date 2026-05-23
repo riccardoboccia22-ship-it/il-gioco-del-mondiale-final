@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import {
-  Award, Flame, Zap, Info, Trophy, Trash2, 
-  ShieldCheck, ChevronDown, X, Target, Goal, ArrowUpToLine, ArrowDownToLine
+  Award, Flame, Zap, Trophy, Trash2, 
+  ShieldCheck, ChevronDown, X, Target, Goal, ArrowUpToLine, ArrowDownToLine,
+  Search, Shield, User, BarChart3, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -28,35 +29,61 @@ const TOURNAMENT_GROUPS = [
 ];
 
 const flagMap: { [key: string]: string } = {
-  algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
-  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia': 'ba', 'brasile': 'br', canada: 'ca', 'capo verde': 'cv',
-  colombia: 'co', 'corea sud': 'kr', "costa avorio": 'ci', croazia: 'hr', 'curacao': 'cw',
+  algeria: 'dz', 'arabia saudita': 'sa', 'arabia s.': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', 'bosnia': 'ba',
+  brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea sud': 'kr', 'corea del sud': 'kr', 
+  "costa avorio": 'ci', "costa d'avorio": 'ci', croazia: 'hr', 'curacao': 'cw', 'curaçao': 'cw',
   ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp',
   giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma',
-  messico: 'mx', norvegia: 'no', 'n. zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
-  portogallo: 'pt', qatar: 'qa', 'rep. ceca': 'cz', 'r.d. congo': 'cd',
-  scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'usa': 'us',
+  messico: 'mx', norvegia: 'no', 'n. zelanda': 'nz', 'nuova zelanda': 'nz', olanda: 'nl', 
+  panama: 'pa', paraguay: 'py', portogallo: 'pt', qatar: 'qa', 'rep. ceca': 'cz', 
+  'repubblica ceca': 'cz', 'r.d. congo': 'cd', 'repubblica democratica del congo': 'cd',
+  scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'usa': 'us', 'stati uniti': 'us',
   sudafrica: 'za', svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', 
   uruguay: 'uy', uzbekistan: 'uz',
 };
 
 const getFlag = (team: string) => {
-    const code = flagMap[team?.toLowerCase().trim()];
+    if (!team) return null;
+    const code = flagMap[team.toLowerCase().trim()];
     return code ? `https://flagcdn.com/w40/${code}.png` : null;
+};
+
+const formatTeamName = (teamName: string) => {
+  if (!teamName) return '';
+  const lowerName = teamName.toLowerCase().trim();
+  if (lowerName === 'repubblica democratica del congo') return 'R.D. Congo';
+  if (lowerName === 'bosnia ed erzegovina') return 'Bosnia';
+  if (lowerName === 'repubblica ceca') return 'Rep. Ceca';
+  if (lowerName === 'arabia saudita') return 'Arabia S.';
+  if (lowerName === 'corea del sud') return 'Corea Sud';
+  if (lowerName === 'stati uniti') return 'USA';
+  if (lowerName === 'nuova zelanda') return 'N. Zelanda';
+  if (lowerName === "costa d'avorio") return 'Costa Avorio';
+  if (teamName.length > 12) return teamName.substring(0, 10) + '.';
+  return teamName;
 };
 
 export default function BonusPage() {
   const router = useRouter();
+  
   const [formData, setFormData] = useState<any>({
     total_red_cards: '', top_scorer: '', high_scoring_match: '', total_penalties: '',
     total_own_goals: '', highest_scoring_group: '', lowest_scoring_group: '',
     mvp_world_cup: '', best_goalkeeper: '',
   });
   
-  const [availableMatches, setAvailableMatches] = useState<string[]>([]);
+  const [initialData, setInitialData] = useState<any>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [availableMatches, setAvailableMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  
+  // TABS e MODALS
+  const [activeTab, setActiveTab] = useState<'GIOCATORI' | 'SQUADRE' | 'STATISTICHE'>('GIOCATORI');
   const [activeBonusField, setActiveBonusField] = useState<string | null>(null);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchSearch, setMatchSearch] = useState('');
 
   const isExpired = new Date() > LOCK_TIME;
 
@@ -66,26 +93,29 @@ export default function BonusPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/'); return; }
 
-        // --- BLOCCO DI CORTESIA ---
         const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
         if (!profile || !profile.full_name) {
           router.push('/setup-profilo');
           return;
         }
-        // --------------------------
 
         const [bonusRes, matchesRes] = await Promise.all([
             supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
-            supabase.from('matches').select('home_team, away_team').order('id', { ascending: true }),
+            supabase.from('matches').select('id, home_team, away_team').order('id', { ascending: true }),
         ]);
 
         if (matchesRes.data) {
-            const validMatches = matchesRes.data.filter((m) => m.home_team && m.away_team && !m.home_team.includes('TBD')).map((m) => `${m.home_team} - ${m.away_team}`);
+            const validMatches = matchesRes.data.filter((m) => m.home_team && m.away_team && !m.home_team.includes('TBD')).map((m) => ({
+              id: m.id,
+              rawStr: `${m.home_team} - ${m.away_team}`,
+              home: m.home_team,
+              away: m.away_team
+            }));
             setAvailableMatches(validMatches);
         }
 
         if (bonusRes.data) {
-          setFormData({
+          const loadedData = {
             total_red_cards: bonusRes.data.total_red_cards ?? '',
             top_scorer: bonusRes.data.top_scorer || '',
             high_scoring_match: bonusRes.data.high_scoring_match || '',
@@ -95,15 +125,36 @@ export default function BonusPage() {
             lowest_scoring_group: bonusRes.data.lowest_scoring_group || '',
             mvp_world_cup: bonusRes.data.mvp_world_cup || '',
             best_goalkeeper: bonusRes.data.best_goalkeeper || '',
-          });
+          };
+          setFormData(loadedData);
+          setInitialData(loadedData);
+        } else {
+          setInitialData(formData);
         }
       } catch (err) { console.error(err); } finally { setFetching(false); }
     }
     loadData();
   }, [router]);
 
-  const saveBonus = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (fetching) return;
+    const isChanged = JSON.stringify(formData) !== JSON.stringify(initialData);
+    setHasUnsavedChanges(isChanged);
+  }, [formData, initialData, fetching]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && !isExpired) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, isExpired]);
+
+  const saveBonus = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (isExpired) return toast.error('Tempo scaduto!');
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -126,6 +177,8 @@ export default function BonusPage() {
     if (error) {
       toast.error('Errore: ' + error.message);
     } else {
+      setInitialData(formData);
+      setHasUnsavedChanges(false);
       toast.success('Pronostici bonus salvati! 🍀');
       confetti({
         particleCount: 150,
@@ -146,87 +199,246 @@ export default function BonusPage() {
     }
   };
 
-  if (fetching) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse uppercase italic">Analizzando le quote...</div>;
+  const handleMatchSelect = (matchString: string) => {
+    const isCurrentlySelected = formData.high_scoring_match === matchString;
+    setFormData((prev: any) => ({ ...prev, high_scoring_match: isCurrentlySelected ? '' : matchString }));
+    setShowMatchModal(false);
+  };
+
+  const clearForm = () => {
+    if (window.confirm("Sei sicuro di voler resettare tutti i tuoi bonus? Non verrà salvato finché non premi il tasto Salva.")) {
+      setFormData({
+        total_red_cards: '', top_scorer: '', high_scoring_match: '', total_penalties: '',
+        total_own_goals: '', highest_scoring_group: '', lowest_scoring_group: '',
+        mvp_world_cup: '', best_goalkeeper: '',
+      });
+    }
+  };
+
+  const calculateProgress = () => {
+    let count = 0;
+    Object.values(formData).forEach(val => {
+      if (val !== null && val !== '') count++;
+    });
+    return count;
+  };
+
+  const completedCount = calculateProgress();
+  const progressPct = Math.round((completedCount / 9) * 100);
+
+  if (fetching) return <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4"><div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div><div className="text-yellow-500 font-black animate-pulse uppercase tracking-widest text-xs">Apertura Quote...</div></div>;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6 pb-48 font-sans">
-      <header className="mb-10 pt-4 text-center flex flex-col items-center">
-        <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
-      </header>
-
-      <form onSubmit={saveBonus} className="max-w-md mx-auto space-y-6 text-left">
-        <div className={`space-y-4 ${isExpired ? 'opacity-50 pointer-events-none' : ''}`}>
+    <main className="min-h-[100dvh] bg-slate-950 text-white font-sans flex flex-col">
+      
+      {/* HEADER FISSO IN ALTO */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md pt-6 pb-2 border-b border-slate-900 shadow-xl">
+        <div className="max-w-md mx-auto px-4">
           
-          {/* Domande Input Testo */}
-          {[ {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 punti', icon: Trophy}, {id: 'top_scorer', label: 'Capocannoniere - 10 punti', icon: Award}, {id: 'best_goalkeeper', label: 'Miglior Portiere - 10 punti', icon: ShieldCheck}].map(field => (
-             <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-               <label><span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-               <input type="text" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none focus:border-yellow-500 font-black text-lg sm:text-xl uppercase transition-all" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
-             </div>
-          ))}
-
-          {/* Selezione Gironi */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 punti</label>
-             <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg sm:text-xl uppercase text-white flex justify-between items-center transition-all hover:border-yellow-500">
-                {formData.highest_scoring_group || 'Seleziona'} <ChevronDown size={20} />
-             </button>
-          </div>
-
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 punti</label>
-             <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-left font-black text-lg sm:text-xl uppercase text-white flex justify-between items-center transition-all hover:border-yellow-500">
-                {formData.lowest_scoring_group || 'Seleziona'} <ChevronDown size={20} />
-             </button>
-          </div>
-
-          {/* Match più gol */}
-          <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-             <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol - 5 punti</label>
-             <select value={formData.high_scoring_match} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 outline-none font-black text-sm sm:text-base uppercase transition-all hover:border-yellow-500 focus:border-yellow-500" onChange={(e) => setFormData({ ...formData, high_scoring_match: e.target.value })}>
-                <option value="">Seleziona Partita...</option>
-                {availableMatches.map((m) => <option key={m} value={m}>{m}</option>)}
-             </select>
-          </div>
-
-          {/* Numerici */}
-          {[ {id: 'total_own_goals', label: 'Totale Autogol - 3 punti', icon: Target}, {id: 'total_penalties', label: 'Totale Rigori - 3 punti', icon: Goal}, {id: 'total_red_cards', label: 'Totale Rossi - 3 punti', icon: Zap}].map(field => (
-            <div key={field.id} className="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
-              <label><span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-4 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-              <input type="number" value={formData[field.id]} className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 font-black text-2xl text-yellow-500 transition-all focus:border-yellow-500 outline-none" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} /></label>
+          <div className="flex justify-between items-end mb-4">
+            <h1 className="text-3xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
+            <div className="flex flex-col items-end">
+               <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">{completedCount}/9 Completati</span>
+               <div className="w-24 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                  <div className={`h-full transition-all duration-500 ${progressPct === 100 ? 'bg-emerald-500' : 'bg-yellow-500'}`} style={{ width: `${progressPct}%` }}></div>
+               </div>
             </div>
-          ))}
+          </div>
+
+          <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800">
+            {[
+              { id: 'GIOCATORI', icon: <User size={14} /> },
+              { id: 'SQUADRE', icon: <Shield size={14} /> },
+              { id: 'STATISTICHE', icon: <BarChart3 size={14} /> },
+            ].map((tab: any) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-yellow-500 text-slate-950 shadow-lg'
+                    : 'text-slate-500 hover:text-white'
+                }`}
+              >
+                {tab.icon} {tab.id}
+              </button>
+            ))}
+          </div>
+
         </div>
+      </div>
 
-        <button type="submit" disabled={loading || isExpired} className="w-full bg-yellow-500 text-slate-950 font-black py-5 rounded-2xl uppercase tracking-widest shadow-2xl active:scale-95 transition-all text-sm">
-            {loading ? 'Salvataggio...' : 'Salva Bonus'}
-        </button>
-      </form>
+      {/* CONTENUTO SCORREVOLE */}
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32">
+        <form id="bonusForm" onSubmit={saveBonus} className="max-w-md mx-auto space-y-5 text-left pb-10">
+          
+          <div className={`space-y-4 ${isExpired ? 'opacity-60 pointer-events-none' : ''}`}>
+            
+            {/* TABS 1: GIOCATORI */}
+            {activeTab === 'GIOCATORI' && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+                {[ 
+                  {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy}, 
+                  {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award}, 
+                  {id: 'best_goalkeeper', label: 'Miglior Portiere - 10 pt', icon: ShieldCheck}
+                ].map(field => (
+                   <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                     <label>
+                       <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
+                       <input type="text" placeholder="Nome Giocatore..." value={formData[field.id]} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 outline-none focus:border-yellow-500 font-black text-sm sm:text-base uppercase transition-all text-white placeholder:text-slate-700" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} />
+                     </label>
+                   </div>
+                ))}
+              </div>
+            )}
 
-      {/* MODAL BOTTOM SHEET GIRONI */}
+            {/* TABS 2: SQUADRE */}
+            {activeTab === 'SQUADRE' && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+                
+                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.highest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 pt</label>
+                   <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.highest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                      {formData.highest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.highest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
+                   </button>
+                </div>
+
+                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.lowest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 pt</label>
+                   <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.lowest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                      {formData.lowest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.lowest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
+                   </button>
+                </div>
+
+                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.high_scoring_match ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol - 5 pt</label>
+                   <button type="button" onClick={() => setShowMatchModal(true)} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.high_scoring_match ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                      {formData.high_scoring_match ? (
+                         <div className="flex items-center gap-2 truncate pr-2 w-[90%]">
+                             {getFlag(formData.high_scoring_match.split(' - ')[0]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[0])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
+                             <span className="truncate">{formatTeamName(formData.high_scoring_match.split(' - ')[0])} - {formatTeamName(formData.high_scoring_match.split(' - ')[1])}</span>
+                             {getFlag(formData.high_scoring_match.split(' - ')[1]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[1])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
+                         </div>
+                      ) : (
+                         <span>Scegli la Partita...</span>
+                      )}
+                      <Search size={18} className={`shrink-0 ${formData.high_scoring_match ? 'text-yellow-500' : 'text-slate-600'}`} />
+                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* TABS 3: STATISTICHE (Numerici) */}
+            {activeTab === 'STATISTICHE' && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+                {[ 
+                  {id: 'total_own_goals', label: 'Totale Autogol - 3 pt', icon: Target}, 
+                  {id: 'total_penalties', label: 'Totale Rigori - 3 pt', icon: Goal}, 
+                  {id: 'total_red_cards', label: 'Totale Rossi - 3 pt', icon: Zap}
+                ].map(field => (
+                  <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                    <label>
+                      <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
+                      <input type="number" placeholder="Es. 12" value={formData[field.id]} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={clearForm} disabled={isExpired || completedCount === 0} className="p-5 bg-slate-900 border border-slate-800 text-rose-500 rounded-[2rem] hover:bg-rose-500/10 hover:border-rose-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none">
+              <Trash2 size={20} />
+            </button>
+            <button type="button" onClick={() => saveBonus()} disabled={loading || isExpired} className={`flex-1 font-black py-5 rounded-[2rem] uppercase tracking-widest transition-all text-sm flex items-center justify-center gap-2 ${hasUnsavedChanges ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-yellow-500 text-slate-950 shadow-xl'} disabled:opacity-50 disabled:pointer-events-none`}>
+                {loading ? <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div> : hasUnsavedChanges ? <><CheckCircle2 size={18}/> Salva Modifiche</> : 'Pronostici Salvati'}
+            </button>
+          </div>
+          
+          {hasUnsavedChanges && !isExpired && (
+             <p className="text-center text-[10px] font-black text-rose-400 uppercase tracking-widest animate-pulse mt-2 flex items-center justify-center gap-1.5"><AlertCircle size={12}/> Modifiche non salvate</p>
+          )}
+
+        </form>
+      </div>
+
+      {/* MODAL GIRONI */}
       {activeBonusField && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveBonusField(null)}></div>
-          <div className="relative w-full max-w-xl bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="p-7 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Scegli Girone</h3>
-              <button onClick={() => setActiveBonusField(null)} className="p-3 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={20}/></button>
+          <div className="relative w-full max-w-md bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+            <div className="p-6 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-yellow-500 text-lg font-black uppercase italic tracking-tight">Scegli Girone</h3>
+              <button onClick={() => setActiveBonusField(null)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18}/></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar pb-10">
               {TOURNAMENT_GROUPS.map((group) => {
                  const isSelected = formData[activeBonusField] === group.name;
                  return (
-                    <button key={group.name} onClick={() => handleGroupSelect(group.name)} className={`w-full p-4 rounded-2xl border-2 flex flex-col gap-3 transition-all active:scale-95 ${isSelected ? 'bg-yellow-500/10 border-yellow-500' : 'bg-slate-950 border-slate-800'}`}>
+                    <button key={group.name} onClick={() => handleGroupSelect(group.name)} className={`w-full p-4 rounded-[1.5rem] border-2 flex flex-col gap-3 transition-all active:scale-95 ${isSelected ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}`}>
                         <div className="flex justify-between w-full items-center">
-                            <span className={`font-black uppercase text-base ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{group.name}</span>
-                            {isSelected && <div className="bg-rose-500 rounded-full w-6 h-6 flex items-center justify-center text-white"><X size={14}/></div>}
+                            <span className={`font-black uppercase text-sm ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{group.name}</span>
+                            {isSelected && <div className="bg-rose-500 rounded-full w-5 h-5 flex items-center justify-center text-white"><X size={12}/></div>}
                         </div>
                         <div className="flex gap-2">
-                            {group.teams.map(team => <img key={team} src={getFlag(team)!} className="w-10 h-7 rounded object-cover shadow-sm border border-slate-800" alt={team} />)}
+                            {group.teams.map(team => <img key={team} src={getFlag(team)!} className="w-8 h-5 rounded-[4px] object-cover shadow-sm border border-slate-800" alt={team} />)}
                         </div>
                     </button>
                  );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MATCH (Ricerca e Selezione) */}
+      {showMatchModal && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setShowMatchModal(false)}></div>
+          <div className="relative w-full max-w-md bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+            <div className="p-6 bg-slate-950/80 border-b border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-yellow-500 text-lg font-black uppercase italic tracking-tight flex items-center gap-2"><Flame size={18}/> Partita con più gol</h3>
+                <button onClick={() => setShowMatchModal(false)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18}/></button>
+              </div>
+              <div className="relative">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                 <input type="text" placeholder="Cerca squadra..." className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-black uppercase text-white outline-none focus:border-yellow-500 transition-colors placeholder:text-slate-600" value={matchSearch} onChange={e => setMatchSearch(e.target.value)} />
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar pb-10">
+              {availableMatches.filter(m => m.rawStr.toLowerCase().includes(matchSearch.toLowerCase())).map((m) => {
+                 const isSelected = formData.high_scoring_match === m.rawStr;
+                 const hFlag = getFlag(m.home);
+                 const aFlag = getFlag(m.away);
+                 return (
+                    <button key={m.id} onClick={() => handleMatchSelect(m.rawStr)} className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all active:scale-95 ${isSelected ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}`}>
+                        
+                        <div className="flex-1 flex items-center justify-between min-w-0 pr-4">
+                             <div className="flex items-center gap-2 sm:gap-3 w-[45%] min-w-0">
+                                 {hFlag ? <img src={hFlag} className="w-6 h-4 shrink-0 rounded-[3px] shadow border border-slate-800 object-cover" alt="" /> : <Shield size={16} className="text-slate-600 shrink-0"/>}
+                                 <span className={`font-black uppercase text-[10px] sm:text-xs tracking-tight truncate text-left ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{formatTeamName(m.home)}</span>
+                             </div>
+                             <span className="text-slate-600 font-black px-1 shrink-0">-</span>
+                             <div className="flex items-center gap-2 sm:gap-3 w-[45%] justify-end min-w-0">
+                                 <span className={`font-black uppercase text-[10px] sm:text-xs tracking-tight truncate text-right ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{formatTeamName(m.away)}</span>
+                                 {aFlag ? <img src={aFlag} className="w-6 h-4 shrink-0 rounded-[3px] shadow border border-slate-800 object-cover" alt="" /> : <Shield size={16} className="text-slate-600 shrink-0"/>}
+                             </div>
+                        </div>
+
+                        <div className="w-5 shrink-0 flex justify-end">
+                            {isSelected && <div className="bg-rose-500 rounded-full w-5 h-5 flex items-center justify-center text-white"><X size={12}/></div>}
+                        </div>
+                    </button>
+                 );
+              })}
+              {availableMatches.filter(m => m.rawStr.toLowerCase().includes(matchSearch.toLowerCase())).length === 0 && (
+                 <p className="text-center text-slate-600 text-xs font-black uppercase mt-6">Nessuna partita trovata</p>
+              )}
             </div>
           </div>
         </div>
