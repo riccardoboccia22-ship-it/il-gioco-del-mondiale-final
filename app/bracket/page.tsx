@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
-import { useRouter } from 'next/navigation'; // <-- Import router
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -61,7 +61,7 @@ const formatTeamName = (name: string) => {
 };
 
 export default function BracketPage() {
-  const router = useRouter(); // <-- Initialize router
+  const router = useRouter(); 
   const [selections, setSelections] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -90,15 +90,13 @@ export default function BracketPage() {
     try {
       setFetching(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/'); return; } // <-- Controlla se è loggato
+      if (!user) { router.push('/'); return; } 
 
-      // --- BLOCCO DI CORTESIA ---
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (!profile || !profile.full_name) {
         router.push('/setup-profilo');
         return;
       }
-      // --------------------------
 
       const { data, error } = await supabase.from('brackets').select('stage, team_name').eq('user_id', user.id);
       if (error) throw error;
@@ -306,6 +304,26 @@ export default function BracketPage() {
                           const isPickedByOther = alreadySelectedByOthers.includes(t);
                           const isCurrentSelection = currentCellSelection === t;
                           
+                          // LOGICA BADGE: cerchiamo in quali altri turni è già stata selezionata la squadra
+                          const teamStageIds = Object.entries(selections)
+                            .filter(([key, val]) => val === t)
+                            .map(([key]) => key.split('-')[0]);
+
+                          const uniqueStages = Array.from(new Set(teamStageIds)).sort((a, b) => 
+                            STAGES.findIndex(s => s.id === a) - STAGES.findIndex(s => s.id === b)
+                          );
+
+                          // Creiamo etichette abbreviate da mostrare
+                          const stageLabels = uniqueStages.map(sId => {
+                            if (sId === 'R32') return '16°';
+                            if (sId === 'R16') return '8°';
+                            if (sId === 'QF') return '4°';
+                            if (sId === 'SF') return 'SF';
+                            if (sId === 'F') return 'FIN';
+                            if (sId === 'WINNER') return '🏆';
+                            return sId;
+                          });
+                          
                           let buttonStyle = "bg-slate-950 border-slate-800 active:border-yellow-500 active:bg-slate-900 shadow-md";
                           if (isCurrentSelection) {
                             buttonStyle = "bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]";
@@ -332,23 +350,37 @@ export default function BracketPage() {
                                   handleSelect(activeCell.stageId, activeCell.index, t);
                                 }
                               }}
-                              className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-95 ${buttonStyle}`}
+                              className={`flex items-center justify-between p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-95 ${buttonStyle}`}
                             >
-                              <div className="flex items-center gap-4">
-                                <img src={getFlag(t)!} className="w-9 h-auto rounded shadow-lg border border-slate-800" alt="" />
-                                <span className={`text-[13px] font-black uppercase italic tracking-tight ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
-                                  {formatTeamName(t)}
-                                </span>
+                              <div className="flex items-center gap-3 w-full">
+                                <img src={getFlag(t)!} className="w-9 h-auto rounded shadow-lg border border-slate-800 shrink-0" alt="" />
+                                
+                                <div className="flex flex-col items-start gap-1 w-full">
+                                  <span className={`text-[12px] sm:text-[13px] font-black uppercase italic tracking-tight leading-none ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
+                                    {formatTeamName(t)}
+                                  </span>
+                                  
+                                  {/* RENDER DEI BADGE DEI TURNI GIA SELEZIONATI */}
+                                  {stageLabels.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      {stageLabels.map(lbl => (
+                                        <span key={lbl} className={`text-[8px] font-black px-1.5 py-0.5 rounded-sm tracking-widest ${isCurrentSelection ? 'bg-yellow-500/20 text-yellow-600' : 'bg-slate-800 text-slate-400'}`}>
+                                          {lbl}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
 
                               {isCurrentSelection && (
-                                <div className="flex items-center justify-center bg-rose-500 rounded-full w-6 h-6 shadow-md text-white shrink-0">
+                                <div className="flex items-center justify-center bg-rose-500 rounded-full w-6 h-6 shadow-md text-white shrink-0 absolute right-3">
                                   <X size={14} strokeWidth={4} />
                                 </div>
                               )}
                               
                               {isPickedByOther && (
-                                <div className="flex items-center justify-center bg-slate-700 rounded-full w-6 h-6 shadow-md text-slate-300 shrink-0" title="Rimuovi da altra cella per liberarla">
+                                <div className="flex items-center justify-center bg-slate-700 rounded-full w-6 h-6 shadow-md text-slate-300 shrink-0 absolute right-3" title="Rimuovi da altra cella per liberarla">
                                   <Trash2 size={12} strokeWidth={2} />
                                 </div>
                               )}

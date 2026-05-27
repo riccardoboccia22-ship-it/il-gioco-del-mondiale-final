@@ -12,8 +12,8 @@ const TOURNAMENT_GROUPS = [
   { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea del Sud', 'Repubblica Ceca'] },
   { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia Erzegovina'] }, 
   { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
-  { name: 'Gruppo D', teams: ['Usa', 'Australia', 'Paraguay', 'Turchia'] }, // CORRETTO: Usa
-  { name: 'Gruppo E', teams: ['Germania', "Costa d'avorio", 'Ecuador', 'Curacao'] }, // CORRETTO: Curacao
+  { name: 'Gruppo D', teams: ['Usa', 'Australia', 'Paraguay', 'Turchia'] }, 
+  { name: 'Gruppo E', teams: ['Germania', "Costa d'avorio", 'Ecuador', 'Curacao'] }, 
   { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
   { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'Nuova Zelanda'] },
   { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia Saudita', 'Capo Verde'] },
@@ -92,19 +92,6 @@ export default function StandingsPage() {
       const matches = matchesRes.data || [];
       const predictions = predsRes.data || [];
 
-      // AUTOMATED SANITY CHECK
-      const tutteLeSquadreDelCodice = TOURNAMENT_GROUPS.flatMap(g => g.teams.map(t => t.trim().toLowerCase()));
-      matches.forEach(m => {
-        const home = m.home_team?.trim().toLowerCase();
-        const away = m.away_team?.trim().toLowerCase();
-        if (home && !tutteLeSquadreDelCodice.includes(home)) {
-          console.error(`🚨 DISCREPANZA DB/CODICE: La squadra "${m.home_team}" è nel DB ma non esiste nel codice!`);
-        }
-        if (away && !tutteLeSquadreDelCodice.includes(away)) {
-          console.error(`🚨 DISCREPANZA DB/CODICE: La squadra "${m.away_team}" è nel DB ma non esiste nel codice!`);
-        }
-      });
-
       const calcStandings: Record<string, TeamStats[]> = {};
       
       TOURNAMENT_GROUPS.forEach(group => {
@@ -152,8 +139,6 @@ export default function StandingsPage() {
             hStats.drawn += 1; hStats.points += 1;
             aStats.drawn += 1; aStats.points += 1;
           }
-        } else {
-          console.log(`❌ Partita saltata! Controlla i nomi nel DB. Casa trovata: ${!!hStats} ("${match.home_team}"), Fuori trovata: ${!!aStats} ("${match.away_team}")`);
         }
       });
 
@@ -207,12 +192,21 @@ export default function StandingsPage() {
 
       const all32Teams = [...qualifiedTeams, ...bestThirds];
 
+      // --- TRADUTTORE NOMI PER IL TABELLONE ---
+      const normalizeForBracket = (teamName: string) => {
+        const lower = teamName.toLowerCase().trim();
+        if (lower === 'usa') return 'Stati Uniti';
+        if (lower === 'curacao') return 'Curaçao';
+        if (lower === 'bosnia erzegovina') return 'Bosnia ed Erzegovina';
+        return teamName;
+      };
+
       await supabase.from('brackets').delete().eq('user_id', userId);
 
       const rows = all32Teams.map(t => ({
         user_id: userId,
         stage: 'R32',
-        team_name: t
+        team_name: normalizeForBracket(t) // Applichiamo il traduttore qui!
       }));
 
       const { error } = await supabase.from('brackets').insert(rows);
