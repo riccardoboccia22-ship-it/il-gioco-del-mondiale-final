@@ -348,6 +348,18 @@ export default function AdminPage() {
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
+  // --- SEZIONE RICHIESTA: ACCCOPPIAMENTO UTENTE -> VINCITORE SCELTO ---
+  const getWinnerChoicesByUser = () => {
+    const winners = allBrackets.filter(b => b.stage === 'WINNER');
+    return winners.map(w => {
+      const p = profiles.find(prof => prof.id === w.user_id);
+      return {
+        username: p ? p.username : 'Anonimo',
+        team: w.team_name
+      };
+    }).sort((a, b) => a.username.localeCompare(b.username));
+  };
+
   const getTopExactMatches = () => {
     return [...profiles]
       .filter(p => p.exact_matches > 0)
@@ -625,7 +637,7 @@ export default function AdminPage() {
             <div className="p-5 bg-slate-950/50 space-y-6">
               
               <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800">
-                <p className="text-[9px] font-black text-slate-500 uppercase mb-4 border-b border-slate-800/50 pb-1 italic">Vincitore del Mondiale</p>
+                <p className="text-[9px] font-black text-slate-500 uppercase mb-4 border-b border-slate-800/50 pb-1 italic">Vincitore del Mondiale (Sentiment)</p>
                 <div className="space-y-2">
                   {getWinnerStats().slice(0,5).map(w => (
                     <div key={w.name} className="flex justify-between items-center text-[10px] font-black uppercase italic"><span className="text-white">{w.name}</span><span className="text-cyan-500">{w.pct}%</span></div>
@@ -641,7 +653,32 @@ export default function AdminPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 
-                {/* --- BLOCCO CECCHINI (RISULTATI ESATTI) CON SCHEDE VIDEO --- */}
+                {/* --- SCHEDA DETTAGLIATA: UTENTE -> SCELTA VINCITORE --- */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
+                  <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Scelte Vincitore (Per Utente)</p>
+                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    {getWinnerChoicesByUser().length > 0 ? getWinnerChoicesByUser().map((item, idx) => {
+                      const flagCode = flagMap[item.team?.toLowerCase().trim()];
+                      return (
+                        <div key={`${item.username}-${idx}`} className="flex justify-between items-center border-b border-slate-800/30 pb-2 last:border-0 last:pb-0">
+                          <span className="text-[10px] font-black uppercase italic text-white truncate pr-2">{item.username}</span>
+                          <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800 shadow-sm">
+                            {flagCode ? (
+                              <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-4 h-2.5 object-cover rounded-sm" alt="" />
+                            ) : (
+                              <div className="w-4 h-2.5 bg-slate-800 rounded-sm"></div>
+                            )}
+                            <span className="text-[9px] font-black uppercase italic text-yellow-500">{formatTeamName(item.team)}</span>
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun tabellone compilato</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* --- BLOCCO CECCHINI (RISULTATI ESATTI) --- */}
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
                   <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Cecchini (Ris. Esatti)</p>
                   <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
