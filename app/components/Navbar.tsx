@@ -1,22 +1,27 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Trophy, Star, ListOrdered, Users, Gamepad2 } from 'lucide-react';
+import { User, Trophy, Star, ListOrdered, Users, Gamepad2, Lock } from 'lucide-react';
 
-const WORLD_CUP_START_DATE = new Date('2025-06-11T21:00:00+02:00');
+// Corretto l'anno al 2026 come da progetto
+const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 export default function Navbar() {
   const pathname = usePathname();
   const isExpired = new Date() > WORLD_CUP_START_DATE;
 
-  // Ripristinati i nomi originali
   const navItems = [
     { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
     { name: 'Fase Gironi', path: '/matches', icon: <Gamepad2 size={20} strokeWidth={2.5} /> },
     { name: 'Fase Finale', path: '/bracket', icon: <Trophy size={20} strokeWidth={2.5} /> },
     { name: 'Bonus', path: '/bonus', icon: <Star size={20} strokeWidth={2.5} /> },
     { name: 'Classifica', path: '/leaderboard', icon: <ListOrdered size={20} strokeWidth={2.5} /> },
-    ...(isExpired ? [{ name: 'Globale', path: '/tutti-i-pronostici', icon: <Users size={20} strokeWidth={2.5} /> }] : []),
+    // Il link è sempre presente: se non è iniziato mostra il lucchetto, altrimenti le persone
+    { 
+      name: 'Globale', 
+      path: '/tutti-i-pronostici', 
+      icon: isExpired ? <Users size={20} strokeWidth={2.5} /> : <Lock size={20} strokeWidth={2.5} /> 
+    },
   ];
 
   if (pathname === '/' || pathname === '/login' || pathname === '/admin') return null;

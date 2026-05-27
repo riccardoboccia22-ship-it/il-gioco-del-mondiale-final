@@ -4,8 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame,
-  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck,
+  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock
 } from 'lucide-react';
+
+const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const AVATARS = [
   // --- PRO & CLASSICI ---
@@ -175,6 +177,8 @@ export default function TuttiPronosticiPage() {
   const [expandedBracketUser, setExpandedBracketUser] = useState<string | null>(null);
   const [expandedBonusUser, setExpandedBonusUser] = useState<string | null>(null);
 
+  const isStarted = new Date() > WORLD_CUP_START_DATE;
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -264,6 +268,22 @@ export default function TuttiPronosticiPage() {
         </div>
       </div>
     );
+
+  if (!isStarted) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white p-6 flex flex-col items-center justify-center text-center pb-32">
+        <div className="bg-slate-900 p-8 rounded-full mb-6 border border-slate-800 shadow-[0_0_40px_rgba(234,179,8,0.1)]">
+           <Lock size={48} className="text-yellow-500" />
+        </div>
+        <h1 className="text-3xl font-black uppercase italic tracking-tighter mb-4 text-white">Pronostici Segreti</h1>
+        <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-xs leading-relaxed">
+          La visione dei pronostici altrui sarà sbloccata solo al fischio d'inizio del Mondiale.
+          <br/><br/>
+          <span className="text-yellow-500">11 Giugno 2026 ore 21:00</span>
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans">
