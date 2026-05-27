@@ -10,10 +10,10 @@ const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const TOURNAMENT_GROUPS = [
   { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea del Sud', 'Repubblica Ceca'] },
-  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia ed Erzegovina'] }, 
+  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia Erzegovina'] }, 
   { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
-  { name: 'Gruppo D', teams: ['Stati Uniti', 'Australia', 'Paraguay', 'Turchia'] }, 
-  { name: 'Gruppo E', teams: ['Germania', "Costa d'avorio", 'Ecuador', 'Curaçao'] }, 
+  { name: 'Gruppo D', teams: ['Usa', 'Australia', 'Paraguay', 'Turchia'] }, // CORRETTO: Usa
+  { name: 'Gruppo E', teams: ['Germania', "Costa d'avorio", 'Ecuador', 'Curacao'] }, // CORRETTO: Curacao
   { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
   { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'Nuova Zelanda'] },
   { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia Saudita', 'Capo Verde'] },
@@ -47,7 +47,7 @@ const formatTeamName = (teamName: string) => {
   if (name === 'nuova zelanda') return 'N. Zelanda';
   if (name === 'bosnia ed erzegovina' || name === 'bosnia erzegovina') return 'Bosnia';
   if (name === "costa d'avorio") return 'Costa Avorio';
-  if (name === "stati uniti") return 'USA';
+  if (name === "stati uniti" || name === "usa") return 'USA';
   if (name.length > 12) return teamName.substring(0, 10) + '.';
   return teamName;
 };
@@ -92,6 +92,19 @@ export default function StandingsPage() {
       const matches = matchesRes.data || [];
       const predictions = predsRes.data || [];
 
+      // AUTOMATED SANITY CHECK
+      const tutteLeSquadreDelCodice = TOURNAMENT_GROUPS.flatMap(g => g.teams.map(t => t.trim().toLowerCase()));
+      matches.forEach(m => {
+        const home = m.home_team?.trim().toLowerCase();
+        const away = m.away_team?.trim().toLowerCase();
+        if (home && !tutteLeSquadreDelCodice.includes(home)) {
+          console.error(`🚨 DISCREPANZA DB/CODICE: La squadra "${m.home_team}" è nel DB ma non esiste nel codice!`);
+        }
+        if (away && !tutteLeSquadreDelCodice.includes(away)) {
+          console.error(`🚨 DISCREPANZA DB/CODICE: La squadra "${m.away_team}" è nel DB ma non esiste nel codice!`);
+        }
+      });
+
       const calcStandings: Record<string, TeamStats[]> = {};
       
       TOURNAMENT_GROUPS.forEach(group => {
@@ -103,21 +116,22 @@ export default function StandingsPage() {
       predictions.forEach(pred => {
         if (pred.home_score === null || pred.away_score === null) return;
         
-        const match = matches.find(m => m.id === pred.match_id);
+        const match = matches.find(m => String(m.id) === String(pred.match_id));
         if (!match) return;
 
-        const homeTeam = match.home_team;
-        const awayTeam = match.away_team;
-        const group = TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === homeTeam.toLowerCase()));
+        const homeTeam = match.home_team.trim().toLowerCase();
+        const awayTeam = match.away_team.trim().toLowerCase();
+        
+        const group = TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.trim().toLowerCase() === homeTeam));
         
         if (!group) return;
 
-        const hStats = calcStandings[group.name].find(t => t.name.toLowerCase() === homeTeam.toLowerCase());
-        const aStats = calcStandings[group.name].find(t => t.name.toLowerCase() === awayTeam.toLowerCase());
+        const hStats = calcStandings[group.name].find(t => t.name.trim().toLowerCase() === homeTeam);
+        const aStats = calcStandings[group.name].find(t => t.name.trim().toLowerCase() === awayTeam);
 
         if (hStats && aStats) {
-          const hGoal = pred.home_score;
-          const aGoal = pred.away_score;
+          const hGoal = Number(pred.home_score);
+          const aGoal = Number(pred.away_score);
 
           hStats.played += 1;
           aStats.played += 1;
@@ -138,6 +152,8 @@ export default function StandingsPage() {
             hStats.drawn += 1; hStats.points += 1;
             aStats.drawn += 1; aStats.points += 1;
           }
+        } else {
+          console.log(`❌ Partita saltata! Controlla i nomi nel DB. Casa trovata: ${!!hStats} ("${match.home_team}"), Fuori trovata: ${!!aStats} ("${match.away_team}")`);
         }
       });
 
@@ -158,11 +174,9 @@ export default function StandingsPage() {
     }
   }
 
-  // --- LA MAGIA: GENERA TABELLONE DAL SIMULATORE ---
   const generateBracket = async () => {
     if (isExpired || !userId) return;
     
-    // Controlliamo se ha fatto almeno un pronostico (se tutti hanno 0 giocate)
     const hasPlayed = Object.values(standings).some(group => group.some(t => t.played > 0));
     if (!hasPlayed) {
         toast.error("Non hai ancora inserito nessun pronostico nei gironi!");
@@ -178,7 +192,6 @@ export default function StandingsPage() {
       let qualifiedTeams: string[] = [];
       let thirdPlaces: any[] = [];
 
-      // Estrai le prime 2 e le terze
       Object.keys(standings).forEach(groupName => {
         const groupTeams = standings[groupName];
         if(groupTeams.length >= 2) {
@@ -189,16 +202,13 @@ export default function StandingsPage() {
         }
       });
 
-      // Le 8 migliori terze
       thirdPlaces.sort((a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || a.name.localeCompare(b.name));
       const bestThirds = thirdPlaces.slice(0, 8).map(t => t.name);
 
       const all32Teams = [...qualifiedTeams, ...bestThirds];
 
-      // Elimina il vecchio tabellone per evitare sovrapposizioni
       await supabase.from('brackets').delete().eq('user_id', userId);
 
-      // Inserisce le nuove 32
       const rows = all32Teams.map(t => ({
         user_id: userId,
         stage: 'R32',
@@ -209,8 +219,6 @@ export default function StandingsPage() {
       if (error) throw error;
 
       toast.success('Tabellone Generato! 🎉', { id: toastId });
-      
-      // Manda l'utente a vedere l'opera d'arte
       router.push('/bracket');
       
     } catch (error) {
