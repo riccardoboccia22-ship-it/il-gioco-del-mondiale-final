@@ -20,7 +20,6 @@ const AVATARS = [
   { id: 'pirate', name: 'Pirati', emoji: '🏴‍☠️', color: 'from-zinc-900 to-zinc-700' },
 
   // --- ANIMALI ---
-  
   { id: 'shark', name: 'Squalo', emoji: '🦈', color: 'from-sky-700 to-blue-900' },
   { id: 'lion', name: 'Leone', emoji: '🦁', color: 'from-amber-500 to-orange-600' },
   { id: 'bull', name: 'Toro', emoji: '🐂', color: 'from-red-700 to-orange-600' },
@@ -139,54 +138,54 @@ const AVATARS = [
   { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' },
 
   // --- NAZIONALI MONDIALE 2026 ---
-  { id: 'algeria', name: 'Algeria', emoji: '🇩🇿', color: 'from-green-600 to-green-500' },
-  { id: 'arabia_saudita', name: 'Arabia Saudita', emoji: '🇸🇦', color: 'from-green-700 to-green-600' },
-  { id: 'argentina', name: 'Argentina', emoji: '🇦🇷', color: 'from-sky-400 to-sky-200' },
-  { id: 'australia', name: 'Australia', emoji: '🇦🇺', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'austria', name: 'Austria', emoji: '🇦🇹', color: 'from-red-600 to-red-500' },
-  { id: 'belgio', name: 'Belgio', emoji: '🇧🇪', color: 'from-red-600 to-red-500' },
-  { id: 'bosnia', name: 'Bosnia Erzegovina', emoji: '🇧🇦', color: 'from-blue-700 to-blue-600' },
-  { id: 'brasile', name: 'Brasile', emoji: '🇧🇷', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'canada', name: 'Canada', emoji: '🇨🇦', color: 'from-red-600 to-red-500' },
-  { id: 'capo_verde', name: 'Capo Verde', emoji: '🇨🇻', color: 'from-blue-700 to-blue-600' },
-  { id: 'colombia', name: 'Colombia', emoji: '🇨🇴', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'corea_sud', name: 'Corea del Sud', emoji: '🇰🇷', color: 'from-red-600 to-red-500' },
-  { id: 'costa_avorio', name: "Costa d'Avorio", emoji: '🇨🇮', color: 'from-orange-500 to-orange-400' },
-  { id: 'croazia', name: 'Croazia', emoji: '🇭🇷', color: 'from-red-600 to-slate-200' },
-  { id: 'curacao', name: 'Curaçao', emoji: '🇨🇼', color: 'from-blue-600 to-blue-500' },
-  { id: 'ecuador', name: 'Ecuador', emoji: '🇪🇨', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'egitto', name: 'Egitto', emoji: '🇪🇬', color: 'from-red-600 to-red-500' },
-  { id: 'francia', name: 'Francia', emoji: '🇫🇷', color: 'from-blue-800 to-blue-700' },
-  { id: 'germania', name: 'Germania', emoji: '🇩🇪', color: 'from-slate-200 to-slate-100' },
-  { id: 'ghana', name: 'Ghana', emoji: '🇬🇭', color: 'from-slate-200 to-slate-100' },
-  { id: 'giappone', name: 'Giappone', emoji: '🇯🇵', color: 'from-blue-600 to-blue-500' },
-  { id: 'giordania', name: 'Giordania', emoji: '🇯🇴', color: 'from-red-600 to-red-500' },
-  { id: 'haiti', name: 'Haiti', emoji: '🇭🇹', color: 'from-blue-700 to-blue-600' },
-  { id: 'inghilterra', name: 'Inghilterra', emoji: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', color: 'from-slate-200 to-slate-100' },
-  { id: 'iran', name: 'Iran', emoji: '🇮🇷', color: 'from-slate-200 to-slate-100' },
-  { id: 'iraq', name: 'Iraq', emoji: '🇮🇶', color: 'from-green-600 to-green-500' },
-  { id: 'marocco', name: 'Marocco', emoji: '🇲🇦', color: 'from-red-600 to-red-500' },
-  { id: 'messico', name: 'Messico', emoji: '🇲🇽', color: 'from-green-600 to-green-500' },
-  { id: 'norvegia', name: 'Norvegia', emoji: '🇳🇴', color: 'from-red-600 to-red-500' },
-  { id: 'nuova_zelanda', name: 'Nuova Zelanda', emoji: '🇳🇿', color: 'from-slate-200 to-slate-100' },
-  { id: 'olanda', name: 'Olanda', emoji: '🇳🇱', color: 'from-orange-500 to-orange-400' },
-  { id: 'panama', name: 'Panama', emoji: '🇵🇦', color: 'from-red-600 to-red-500' },
-  { id: 'paraguay', name: 'Paraguay', emoji: '🇵🇾', color: 'from-red-600 to-red-500' },
-  { id: 'portogallo', name: 'Portogallo', emoji: '🇵🇹', color: 'from-red-600 to-red-500' },
-  { id: 'qatar', name: 'Qatar', emoji: '🇶🇦', color: 'from-rose-800 to-rose-700' },
-  { id: 'rep_ceca', name: 'Repubblica Ceca', emoji: '🇨🇿', color: 'from-red-600 to-red-500' },
-  { id: 'rd_congo', name: 'R.D. Congo', emoji: '🇨🇩', color: 'from-sky-500 to-sky-400' },
-  { id: 'scozia', name: 'Scozia', emoji: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: 'from-blue-900 to-blue-800' },
-  { id: 'senegal', name: 'Senegal', emoji: '🇸🇳', color: 'from-green-600 to-green-500' },
-  { id: 'spagna', name: 'Spagna', emoji: '🇪🇸', color: 'from-red-600 to-red-500' },
-  { id: 'stati_uniti', name: 'Stati Uniti', emoji: '🇺🇸', color: 'from-slate-200 to-slate-100' },
-  { id: 'sudafrica', name: 'Sudafrica', emoji: '🇿🇦', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'svezia', name: 'Svezia', emoji: '🇸🇪', color: 'from-yellow-400 to-yellow-300' },
-  { id: 'svizzera', name: 'Svizzera', emoji: '🇨🇭', color: 'from-red-600 to-red-500' },
-  { id: 'tunisia', name: 'Tunisia', emoji: '🇹🇳', color: 'from-red-600 to-slate-100' },
-  { id: 'turchia', name: 'Turchia', emoji: '🇹🇷', color: 'from-red-600 to-red-500' },
-  { id: 'uruguay', name: 'Uruguay', emoji: '🇺🇾', color: 'from-sky-400 to-sky-300' },
-  { id: 'uzbekistan', name: 'Uzbekistan', emoji: '🇺🇿', color: 'from-blue-600 to-blue-500' }
+  { id: 'algeria', name: 'Algeria', flagCode: 'dz', color: 'from-green-600 to-green-500' },
+  { id: 'arabia_saudita', name: 'Arabia Saudita', flagCode: 'sa', color: 'from-green-700 to-green-600' },
+  { id: 'argentina', name: 'Argentina', flagCode: 'ar', color: 'from-sky-400 to-sky-200' },
+  { id: 'australia', name: 'Australia', flagCode: 'au', color: 'from-yellow-500 to-yellow-400' },
+  { id: 'austria', name: 'Austria', flagCode: 'at', color: 'from-red-600 to-red-500' },
+  { id: 'belgio', name: 'Belgio', flagCode: 'be', color: 'from-red-600 to-red-500' },
+  { id: 'bosnia', name: 'Bosnia Erzegovina', flagCode: 'ba', color: 'from-blue-700 to-blue-600' },
+  { id: 'brasile', name: 'Brasile', flagCode: 'br', color: 'from-yellow-500 to-yellow-400' },
+  { id: 'canada', name: 'Canada', flagCode: 'ca', color: 'from-red-600 to-red-500' },
+  { id: 'capo_verde', name: 'Capo Verde', flagCode: 'cv', color: 'from-blue-700 to-blue-600' },
+  { id: 'colombia', name: 'Colombia', flagCode: 'co', color: 'from-yellow-500 to-yellow-400' },
+  { id: 'corea_sud', name: 'Corea del Sud', flagCode: 'kr', color: 'from-red-600 to-red-500' },
+  { id: 'costa_avorio', name: "Costa d'Avorio", flagCode: 'ci', color: 'from-orange-500 to-orange-400' },
+  { id: 'croazia', name: 'Croazia', flagCode: 'hr', color: 'from-red-600 to-slate-200' },
+  { id: 'curacao', name: 'Curaçao', flagCode: 'cw', color: 'from-blue-600 to-blue-500' },
+  { id: 'ecuador', name: 'Ecuador', flagCode: 'ec', color: 'from-yellow-500 to-yellow-400' },
+  { id: 'egitto', name: 'Egitto', flagCode: 'eg', color: 'from-red-600 to-red-500' },
+  { id: 'francia', name: 'Francia', flagCode: 'fr', color: 'from-blue-800 to-blue-700' },
+  { id: 'germania', name: 'Germania', flagCode: 'de', color: 'from-slate-200 to-slate-100' },
+  { id: 'ghana', name: 'Ghana', flagCode: 'gh', color: 'from-slate-200 to-slate-100' },
+  { id: 'giappone', name: 'Giappone', flagCode: 'jp', color: 'from-blue-600 to-blue-500' },
+  { id: 'giordania', name: 'Giordania', flagCode: 'jo', color: 'from-red-600 to-red-500' },
+  { id: 'haiti', name: 'Haiti', flagCode: 'ht', color: 'from-blue-700 to-blue-600' },
+  { id: 'inghilterra', name: 'Inghilterra', flagCode: 'gb-eng', color: 'from-slate-200 to-slate-100' },
+  { id: 'iran', name: 'Iran', flagCode: 'ir', color: 'from-slate-200 to-slate-100' },
+  { id: 'iraq', name: 'Iraq', flagCode: 'iq', color: 'from-green-600 to-green-500' },
+  { id: 'marocco', name: 'Marocco', flagCode: 'ma', color: 'from-red-600 to-red-500' },
+  { id: 'messico', name: 'Messico', flagCode: 'mx', color: 'from-green-600 to-green-500' },
+  { id: 'norvegia', name: 'Norvegia', flagCode: 'no', color: 'from-red-600 to-red-500' },
+  { id: 'nuova_zelanda', name: 'Nuova Zelanda', flagCode: 'nz', color: 'from-slate-200 to-slate-100' },
+  { id: 'olanda', name: 'Olanda', flagCode: 'nl', color: 'from-orange-500 to-orange-400' },
+  { id: 'panama', name: 'Panama', flagCode: 'pa', color: 'from-red-600 to-red-500' },
+  { id: 'paraguay', name: 'Paraguay', flagCode: 'py', color: 'from-red-600 to-red-500' },
+  { id: 'portogallo', name: 'Portogallo', flagCode: 'pt', color: 'from-red-600 to-red-500' },
+  { id: 'qatar', name: 'Qatar', flagCode: 'qa', color: 'from-rose-800 to-rose-700' },
+  { id: 'rep_ceca', name: 'Repubblica Ceca', flagCode: 'cz', color: 'from-red-600 to-red-500' },
+  { id: 'rd_congo', name: 'R.D. Congo', flagCode: 'cd', color: 'from-sky-500 to-sky-400' },
+  { id: 'scozia', name: 'Scozia', flagCode: 'gb-sct', color: 'from-blue-900 to-blue-800' },
+  { id: 'senegal', name: 'Senegal', flagCode: 'sn', color: 'from-green-600 to-green-500' },
+  { id: 'spagna', name: 'Spagna', flagCode: 'es', color: 'from-red-600 to-red-500' },
+  { id: 'stati_uniti', name: 'Stati Uniti', flagCode: 'us', color: 'from-slate-200 to-slate-100' },
+  { id: 'sudafrica', name: 'Sudafrica', flagCode: 'za', color: 'from-yellow-500 to-yellow-400' },
+  { id: 'svezia', name: 'Svezia', flagCode: 'se', color: 'from-yellow-400 to-yellow-300' },
+  { id: 'svizzera', name: 'Svizzera', flagCode: 'ch', color: 'from-red-600 to-red-500' },
+  { id: 'tunisia', name: 'Tunisia', flagCode: 'tn', color: 'from-red-600 to-slate-100' },
+  { id: 'turchia', name: 'Turchia', flagCode: 'tr', color: 'from-red-600 to-red-500' },
+  { id: 'uruguay', name: 'Uruguay', flagCode: 'uy', color: 'from-sky-400 to-sky-300' },
+  { id: 'uzbekistan', name: 'Uzbekistan', flagCode: 'uz', color: 'from-blue-600 to-blue-500' }
 ];
 
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
@@ -442,9 +441,16 @@ export default function TuttiPronosticiPage() {
                       return (
                         <div key={user.id} className={`flex justify-between items-center px-4 py-2.5 bg-slate-900/50 rounded-2xl border transition-all ${info.pts > 0 ? 'border-emerald-500/20' : 'border-slate-800/50'}`}>
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[10px] shadow-inner bg-gradient-to-br ${userAvatar.color}`}>
-                              {userAvatar.emoji}
+                            
+                            {/* MODIFICA IMMAGINE AVATAR */}
+                            <div className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[10px] shadow-inner bg-gradient-to-br overflow-hidden ${userAvatar.color}`}>
+                              {userAvatar.flagCode ? (
+                                 <img src={`https://flagcdn.com/w80/${userAvatar.flagCode}.png`} alt={userAvatar.name} className="w-full h-full object-cover" />
+                              ) : (
+                                 <span>{userAvatar.emoji}</span>
+                              )}
                             </div>
+
                             <span className="text-[10px] font-black uppercase italic truncate max-w-[100px] sm:max-w-[150px]">
                               {user.username}
                             </span>
@@ -492,9 +498,16 @@ export default function TuttiPronosticiPage() {
               <div key={user.id} className={`bg-slate-900/40 border rounded-[2.5rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-blue-500/30' : 'border-slate-800'}`}>
                 <button onClick={() => setExpandedBracketUser(isExpanded ? null : user.id)} className="w-full p-6 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-inner bg-gradient-to-br ${userAvatar.color}`}>
-                      {userAvatar.emoji}
+                    
+                    {/* MODIFICA IMMAGINE AVATAR */}
+                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-inner bg-gradient-to-br overflow-hidden ${userAvatar.color}`}>
+                      {userAvatar.flagCode ? (
+                         <img src={`https://flagcdn.com/w80/${userAvatar.flagCode}.png`} alt={userAvatar.name} className="w-full h-full object-cover" />
+                      ) : (
+                         <span>{userAvatar.emoji}</span>
+                      )}
                     </div>
+
                     <div className="text-left flex flex-col">
                       <span className="font-black uppercase italic text-sm">{user.username}</span>
                       <span className="text-[10px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 w-max mt-1">
@@ -558,9 +571,16 @@ export default function TuttiPronosticiPage() {
               <div key={user.id} className={`bg-slate-900/40 border rounded-[2.5rem] overflow-hidden ${isExpanded ? 'border-purple-500/30' : 'border-slate-800'}`}>
                 <button onClick={() => setExpandedBonusUser(isExpanded ? null : user.id)} className="w-full p-6 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-inner bg-gradient-to-br ${userAvatar.color}`}>
-                      {userAvatar.emoji}
+                    
+                    {/* MODIFICA IMMAGINE AVATAR */}
+                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-inner bg-gradient-to-br overflow-hidden ${userAvatar.color}`}>
+                      {userAvatar.flagCode ? (
+                         <img src={`https://flagcdn.com/w80/${userAvatar.flagCode}.png`} alt={userAvatar.name} className="w-full h-full object-cover" />
+                      ) : (
+                         <span>{userAvatar.emoji}</span>
+                      )}
                     </div>
+
                     <span className="font-black uppercase italic text-sm">{user.username}</span>
                   </div>
                   <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-purple-500' : 'text-slate-500'}`} />

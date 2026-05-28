@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key
+  User, ListOrdered, Gamepad2, Key, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -388,7 +388,6 @@ export default function AdminPage() {
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
-  // --- NUOVA LOGICA: Raggruppamento Scelte Vincitore per Squadra ---
   const getWinnerChoicesGroupedByTeam = () => {
     const winners = allBrackets.filter(b => b.stage === 'WINNER');
     const grouped: Record<string, string[]> = {};
@@ -446,6 +445,41 @@ export default function AdminPage() {
       }
     });
     return Object.values(choices).sort((a, b) => b.count - a.count);
+  };
+
+  // --- NUOVA LOGICA: CALCOLO COMPLETAMENTO PRONOSTICI ---
+  const getCompletionStats = () => {
+    return profiles.map(p => {
+      // 1. Gironi (su 72)
+      const uPreds = predictions.filter(pred => pred.user_id === p.id).length;
+      
+      // 2. Fase Finale (su 63)
+      const uBracks = allBrackets.filter(b => b.user_id === p.id && b.team_name).length;
+      
+      // 3. Bonus (su 9)
+      let uBonus = 0;
+      const bRow = allUserBonuses.find(b => b.user_id === p.id);
+      if (bRow) {
+        const fields = ['total_red_cards', 'top_scorer', 'high_scoring_match', 'total_penalties', 'total_own_goals', 'highest_scoring_group', 'lowest_scoring_group', 'mvp_world_cup', 'best_goalkeeper'];
+        fields.forEach(f => {
+          if (bRow[f] !== null && bRow[f] !== '') uBonus++;
+        });
+      }
+      
+      const totalCompleted = uPreds + uBracks + uBonus;
+      const totalMax = 72 + 63 + 9;
+      const pct = Math.round((totalCompleted / totalMax) * 100);
+      
+      return {
+        ...p,
+        uPreds,
+        uBracks,
+        uBonus,
+        totalCompleted,
+        totalMax,
+        pct
+      };
+    }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
   const copyClassificaReport = () => {
@@ -691,6 +725,34 @@ export default function AdminPage() {
           {openSection.statistiche && (
             <div className="p-5 bg-slate-950/50 space-y-6">
               
+              {/* --- STATO COMPLETAMENTO UTENTI --- */}
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
+                <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0 flex items-center gap-1.5">
+                  <CheckCircle2 size={12}/> Completamento Pronostici
+                </p>
+                <div className="space-y-3 overflow-y-auto max-h-80 pr-2 custom-scrollbar">
+                  {getCompletionStats().map(u => (
+                    <div key={u.id} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
+                        <span className="truncate pr-2 text-white">{u.username}</span>
+                        <div className="flex items-center gap-1">
+                          {u.pct < 100 && <AlertCircle size={10} className="text-rose-500 animate-pulse"/>}
+                          <span className={u.pct === 100 ? 'text-emerald-400' : 'text-yellow-500'}>{u.pct}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-950 rounded-full h-1.5 mb-2 overflow-hidden border border-slate-800">
+                        <div className={`h-full rounded-full transition-all ${u.pct === 100 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`} style={{ width: `${u.pct}%` }}></div>
+                      </div>
+                      <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest px-1">
+                        <span title="Fase a Gironi">Gir: <span className={u.uPreds === 72 ? 'text-emerald-400' : 'text-slate-300'}>{u.uPreds}/72</span></span>
+                        <span title="Fase Finale (Tabellone)">FF: <span className={u.uBracks === 63 ? 'text-emerald-400' : 'text-slate-300'}>{u.uBracks}/63</span></span>
+                        <span title="Domande Bonus">Bon: <span className={u.uBonus === 9 ? 'text-emerald-400' : 'text-slate-300'}>{u.uBonus}/9</span></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800">
                 <p className="text-[9px] font-black text-slate-500 uppercase mb-4 border-b border-slate-800/50 pb-1 italic">Vincitore del Mondiale (Sentiment)</p>
                 <div className="space-y-2">
