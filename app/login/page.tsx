@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Trophy, ArrowLeft, Loader2 } from 'lucide-react';
+import { Trophy, ArrowLeft, Loader2, Info } from 'lucide-react';
 import Link from 'next/link';
 
 function AuthForm() {
@@ -152,9 +152,21 @@ function AuthForm() {
           </button>
         </form>
 
+        {/* AGGIUNTA: Messaggio recupero password solo se siamo in modalità Login */}
+        {!isRegistering && (
+          <div className="mt-6 flex flex-col items-center justify-center p-3 bg-slate-950/50 rounded-xl border border-slate-800/50">
+            <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
+              <Info size={12} className="text-yellow-500"/> Password Dimenticata?
+            </span>
+            <span className="text-[10px] text-center text-slate-500 font-bold">
+              Contatta l'amministratore per farti reimpostare la password.
+            </span>
+          </div>
+        )}
+
         <button 
           onClick={() => setIsRegistering(!isRegistering)} 
-          className="w-full mt-8 text-[9px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest text-center transition-colors"
+          className="w-full mt-6 text-[9px] font-black text-slate-500 hover:text-yellow-500 uppercase tracking-widest text-center transition-colors"
         >
           {isRegistering ? 'Hai già un account? Accedi' : 'Nuovo giocatore? Registrati'}
         </button>
