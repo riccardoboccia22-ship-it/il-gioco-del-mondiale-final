@@ -333,6 +333,34 @@ export default function AdminPage() {
 
   const deleteUser = async (uId: string, name: string) => { if (window.confirm(`Eliminare ${name}?`)) { await supabase.from('predictions').delete().eq('user_id', uId); await supabase.from('brackets').delete().eq('user_id', uId); await supabase.from('user_bonus_answers').delete().eq('user_id', uId); await supabase.from('profiles').delete().eq('id', uId); fetchData(); await syncLeaderboard(false); } };
   
+  // ---> NUOVA FUNZIONE DI RESET PASSWORD <---
+  const handleResetPassword = async (uId: string, username: string) => {
+    const newPassword = prompt(`Inserisci una nuova password temporanea per ${username} (min 6 caratteri):`);
+    
+    if (!newPassword) return; 
+    
+    if (newPassword.length < 6) {
+      toast.error('La password deve avere almeno 6 caratteri');
+      return;
+    }
+
+    const toastId = toast.loading('Resettando la password...');
+    try {
+      const res = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uId, newPassword })
+      });
+      
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      
+      toast.success(`Password di ${username} aggiornata!`, { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
+
   const getAverage = (k: string) => { 
     const v = allUserBonuses.filter(b => b[k] != null && String(b[k]).trim() !== '').map(b => Number(b[k])).filter(n => !isNaN(n)); 
     if (!v.length) return '0';
