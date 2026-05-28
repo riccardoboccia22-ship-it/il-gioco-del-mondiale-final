@@ -388,15 +388,22 @@ export default function AdminPage() {
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
-  const getWinnerChoicesByUser = () => {
+  // --- NUOVA LOGICA: Raggruppamento Scelte Vincitore per Squadra ---
+  const getWinnerChoicesGroupedByTeam = () => {
     const winners = allBrackets.filter(b => b.stage === 'WINNER');
-    return winners.map(w => {
+    const grouped: Record<string, string[]> = {};
+    
+    winners.forEach(w => {
+      const team = w.team_name;
       const p = profiles.find(prof => prof.id === w.user_id);
-      return {
-        username: p ? p.username : 'Anonimo',
-        team: w.team_name
-      };
-    }).sort((a, b) => a.username.localeCompare(b.username));
+      const username = p ? p.username : 'Anonimo';
+      if (!grouped[team]) grouped[team] = [];
+      grouped[team].push(username);
+    });
+
+    return Object.entries(grouped)
+      .map(([team, users]) => ({ team, users, count: users.length }))
+      .sort((a, b) => b.count - a.count || a.team.localeCompare(b.team));
   };
 
   const getTopExactMatches = () => {
@@ -701,23 +708,28 @@ export default function AdminPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 
-                {/* --- SCHEDA DETTAGLIATA: UTENTE -> SCELTA VINCITORE --- */}
+                {/* --- SCHEDA DETTAGLIATA: SCELTE VINCITORE RAGGRUPPATE PER SQUADRA --- */}
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
-                  <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Scelte Vincitore (Per Utente)</p>
+                  <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Scelte Vincitore (Per Squadra)</p>
                   <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    {getWinnerChoicesByUser().length > 0 ? getWinnerChoicesByUser().map((item, idx) => {
+                    {getWinnerChoicesGroupedByTeam().length > 0 ? getWinnerChoicesGroupedByTeam().map((item, idx) => {
                       const flagCode = flagMap[item.team?.toLowerCase().trim()];
                       return (
-                        <div key={`${item.username}-${idx}`} className="flex justify-between items-center border-b border-slate-800/30 pb-2 last:border-0 last:pb-0">
-                          <span className="text-[10px] font-black uppercase italic text-white truncate pr-2">{item.username}</span>
-                          <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800 shadow-sm">
-                            {flagCode ? (
-                              <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-4 h-2.5 object-cover rounded-sm" alt="" />
-                            ) : (
-                              <div className="w-4 h-2.5 bg-slate-800 rounded-sm"></div>
-                            )}
-                            <span className="text-[9px] font-black uppercase italic text-yellow-500">{formatTeamName(item.team)}</span>
+                        <div key={`${item.team}-${idx}`} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
+                            <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800 shadow-sm">
+                              {flagCode ? (
+                                <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-4 h-2.5 object-cover rounded-sm" alt="" />
+                              ) : (
+                                <div className="w-4 h-2.5 bg-slate-800 rounded-sm"></div>
+                              )}
+                              <span className="text-[9px] font-black uppercase italic text-yellow-500">{formatTeamName(item.team)}</span>
+                            </div>
+                            <span className="text-cyan-500 font-mono shrink-0">{item.count} {item.count === 1 ? 'voto' : 'voti'}</span>
                           </div>
+                          <p className="text-[8px] text-slate-500 tracking-tight font-medium leading-tight">
+                            Scelto da: <span className="text-slate-400 font-semibold">{item.users.join(', ')}</span>
+                          </p>
                         </div>
                       );
                     }) : (
@@ -760,8 +772,15 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* --- SEZIONE ALTRI BONUS CON LOGICA DETTAGLIATA --- */}
-                {[ { label: 'MVP Mondiale', key: 'mvp_world_cup' }, { label: 'Capocannoniere', key: 'top_scorer' }, { label: 'Miglior Portiere', key: 'best_goalkeeper' }, { label: 'Match + Gol', key: 'high_scoring_match' } ].map((s) => {
+                {/* --- SEZIONE ALTRI BONUS AGGIORNATA (CONTIENE ORA ANCHE GRUPPI +/- GOL) --- */}
+                {[ 
+                  { label: 'MVP Mondiale', key: 'mvp_world_cup' }, 
+                  { label: 'Capocannoniere', key: 'top_scorer' }, 
+                  { label: 'Miglior Portiere', key: 'best_goalkeeper' }, 
+                  { label: 'Match + Gol', key: 'high_scoring_match' },
+                  { label: 'Girone + Gol', key: 'highest_scoring_group' },
+                  { label: 'Girone - Gol', key: 'lowest_scoring_group' } 
+                ].map((s) => {
                   const details = getBonusDetails(s.key);
                   return (
                     <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
