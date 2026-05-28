@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key // <-- Ho aggiunto Key alla fine
+  User, ListOrdered, Gamepad2, Key
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -322,7 +322,11 @@ export default function AdminPage() {
     const t = (document.getElementById('q_team') as HTMLSelectElement).value, s = (document.getElementById('q_stage') as HTMLSelectElement).value;
     if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
   };
-  const deleteQualif = async (id: any) => { await supabase.from('official_bracket').delete().eq('id', id); await syncLeaderboard(false); };
+
+  const deleteQualif = async (id: any) => { 
+    await supabase.from('official_bracket').delete().eq('id', id); 
+    await syncLeaderboard(false); 
+  };
   
   const updatePaymentMethod = async (uId: string, method: string) => {
     const isPaid = method !== ''; 
@@ -331,9 +335,17 @@ export default function AdminPage() {
     if (error) { toast.error('Errore'); fetchData(); } else { toast.success('Metodo aggiornato!'); }
   };
 
-  const deleteUser = async (uId: string, name: string) => { if (window.confirm(`Eliminare ${name}?`)) { await supabase.from('predictions').delete().eq('user_id', uId); await supabase.from('brackets').delete().eq('user_id', uId); await supabase.from('user_bonus_answers').delete().eq('user_id', uId); await supabase.from('profiles').delete().eq('id', uId); fetchData(); await syncLeaderboard(false); } };
+  const deleteUser = async (uId: string, name: string) => { 
+    if (window.confirm(`Eliminare ${name}?`)) { 
+      await supabase.from('predictions').delete().eq('user_id', uId); 
+      await supabase.from('brackets').delete().eq('user_id', uId); 
+      await supabase.from('user_bonus_answers').delete().eq('user_id', uId); 
+      await supabase.from('profiles').delete().eq('id', uId); 
+      fetchData(); 
+      await syncLeaderboard(false); 
+    } 
+  };
   
-  // ---> NUOVA FUNZIONE DI RESET PASSWORD <---
   const handleResetPassword = async (uId: string, username: string) => {
     const newPassword = prompt(`Inserisci una nuova password temporanea per ${username} (min 6 caratteri):`);
     
@@ -376,7 +388,6 @@ export default function AdminPage() {
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
-  // --- SEZIONE RICHIESTA: ACCCOPPIAMENTO UTENTE -> VINCITORE SCELTO ---
   const getWinnerChoicesByUser = () => {
     const winners = allBrackets.filter(b => b.stage === 'WINNER');
     return winners.map(w => {
@@ -584,15 +595,15 @@ export default function AdminPage() {
                   <div className="flex gap-2 shrink-0 self-center">
                     <div className="relative"><select value={p.payment_method || (p.is_paid ? 'Pagato' : '')} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}><option value="">NON PAGATO</option><option value="Pagato" hidden>PAGATO ✓</option><option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option></select><ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} /></div>
                     <button 
-  onClick={() => handleResetPassword(p.id, p.username)} 
-  className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
-  title="Resetta Password"
->
-  <Key size={16} />
-</button>
-<button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
-  <Trash2 size={16} />
-</button>
+                      onClick={() => handleResetPassword(p.id, p.username)} 
+                      className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
+                      title="Resetta Password"
+                    >
+                      <Key size={16} />
+                    </button>
+                    <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
