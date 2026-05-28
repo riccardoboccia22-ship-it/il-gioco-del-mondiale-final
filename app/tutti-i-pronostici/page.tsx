@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -246,7 +247,6 @@ export default function TuttiPronosticiPage() {
       try {
         setLoading(true);
 
-        // --- AUTH & BLOCCO DI CORTESIA ---
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/'); return; }
 
@@ -255,7 +255,6 @@ export default function TuttiPronosticiPage() {
           router.push('/setup-profilo');
           return;
         }
-        // ---------------------------------
 
         const [p, m, pr, br, off, offBo, usrBo] = await Promise.all([
           supabase.from('profiles').select('*').order('username'),

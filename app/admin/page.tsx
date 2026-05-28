@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle2, AlertCircle
+  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -447,16 +447,11 @@ export default function AdminPage() {
     return Object.values(choices).sort((a, b) => b.count - a.count);
   };
 
-  // --- NUOVA LOGICA: CALCOLO COMPLETAMENTO PRONOSTICI ---
   const getCompletionStats = () => {
     return profiles.map(p => {
-      // 1. Gironi (su 72)
       const uPreds = predictions.filter(pred => pred.user_id === p.id).length;
-      
-      // 2. Fase Finale (su 63)
       const uBracks = allBrackets.filter(b => b.user_id === p.id && b.team_name).length;
       
-      // 3. Bonus (su 9)
       let uBonus = 0;
       const bRow = allUserBonuses.find(b => b.user_id === p.id);
       if (bRow) {
@@ -470,15 +465,7 @@ export default function AdminPage() {
       const totalMax = 72 + 63 + 9;
       const pct = Math.round((totalCompleted / totalMax) * 100);
       
-      return {
-        ...p,
-        uPreds,
-        uBracks,
-        uBonus,
-        totalCompleted,
-        totalMax,
-        pct
-      };
+      return { ...p, uPreds, uBracks, uBonus, totalCompleted, totalMax, pct };
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
@@ -728,7 +715,7 @@ export default function AdminPage() {
               {/* --- STATO COMPLETAMENTO UTENTI --- */}
               <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
                 <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0 flex items-center gap-1.5">
-                  <CheckCircle2 size={12}/> Completamento Pronostici
+                  <CheckCircle size={12}/> Completamento Pronostici
                 </p>
                 <div className="space-y-3 overflow-y-auto max-h-80 pr-2 custom-scrollbar">
                   {getCompletionStats().map(u => (
@@ -736,7 +723,7 @@ export default function AdminPage() {
                       <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
                         <span className="truncate pr-2 text-white">{u.username}</span>
                         <div className="flex items-center gap-1">
-                          {u.pct < 100 && <AlertCircle size={10} className="text-rose-500 animate-pulse"/>}
+                          {u.pct < 100 && <AlertTriangle size={10} className="text-rose-500 animate-pulse"/>}
                           <span className={u.pct === 100 ? 'text-emerald-400' : 'text-yellow-500'}>{u.pct}%</span>
                         </div>
                       </div>

@@ -196,7 +196,6 @@ export default function ProfilePage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
 
-  // NUOVO STATO PER IL COMPLETAMENTO
   const [completionPct, setCompletionPct] = useState(0);
 
   const [stats, setStats] = useState({
@@ -240,7 +239,6 @@ export default function ProfilePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Fetch del Profilo
         let { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         if (!profile) {
             const fallbackUsername = user.email ? user.email.split('@')[0] : 'Guerriero';
@@ -248,7 +246,6 @@ export default function ProfilePage() {
             profile = { username: fallbackUsername, points: 0, points_groups: 0, points_bracket: 0, points_bonus: 0, is_paid: false, avatar_id: 'trainer' };
         }
 
-        // --- BLOCCO DI CORTESIA ---
         if (!profile.full_name) {
           router.push('/setup-profilo');
           return;
@@ -260,15 +257,14 @@ export default function ProfilePage() {
           bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
 
-        // CALCOLO PERCENTUALE COMPLETAMENTO
         const [predsRes, bracketsRes, bonusRes] = await Promise.all([
           supabase.from('predictions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('brackets').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle()
         ]);
 
-        const predsCount = predsRes.count || 0;     // Max 72
-        const bracketsCount = bracketsRes.count || 0; // Max 63
+        const predsCount = predsRes.count || 0;
+        const bracketsCount = bracketsRes.count || 0;
         
         let bonusCount = 0;
         if (bonusRes.data) {
@@ -280,7 +276,7 @@ export default function ProfilePage() {
         }
 
         const totalCompleted = predsCount + bracketsCount + bonusCount;
-        const totalRequired = 72 + 63 + 9; // 144
+        const totalRequired = 72 + 63 + 9;
         const percentage = Math.min(100, Math.round((totalCompleted / totalRequired) * 100));
         
         setCompletionPct(percentage);
@@ -345,11 +341,9 @@ export default function ProfilePage() {
         {userProfile ? (
           <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
-            {/* 1. CARD PROFILO SUPERIORE */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
               <div className="flex items-center gap-5 text-left">
                 
-                {/* BOTTONE AVATAR AGGIORNATO (L'icona Edit ora è sempre ben visibile e fuori dall'overflow) */}
                 <button 
                   onClick={() => setShowAvatarModal(true)}
                   className="relative w-20 h-20 shrink-0 group"
@@ -366,7 +360,6 @@ export default function ProfilePage() {
                     )}
                   </div>
                   
-                  {/* ICONA MATITA (Messa in assoluto, slegata dal taglio overflow-hidden) */}
                   <div className="absolute -bottom-1 -right-1 bg-sky-500 text-white p-2 rounded-full shadow-lg border-2 border-slate-900 group-hover:scale-110 transition-all z-10">
                     <Edit3 size={14} strokeWidth={3} />
                   </div>
@@ -388,7 +381,6 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {/* BARRA DI PROGRESSIONE */}
             <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-md w-full">
                 <div className="flex justify-between items-end mb-2.5">
                     <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
@@ -410,7 +402,6 @@ export default function ProfilePage() {
                 )}
             </div>
 
-            {/* 2. BOX PUNTEGGIO E RANKING */}
             <div className="bg-yellow-500 p-6 rounded-3xl flex items-center justify-between shadow-md">
               <div>
                 <p className="text-[11px] font-black text-slate-950 uppercase tracking-widest opacity-80 italic">Punti Totali</p>
@@ -422,7 +413,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* 3. GRIGLIA DETTAGLI */}
             <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Gironi', val: stats.groups },
@@ -436,7 +426,6 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {/* 4. COUNTDOWN BOX */}
             <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden">
               <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
               
@@ -468,7 +457,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* 5. AZIONI RAPIDE */}
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => router.push('/groups')} className="py-4 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:bg-blue-600/20 transition-all flex items-center justify-center gap-2 shadow-sm">
                 <Map size={16} /> Gironi Ufficiali
@@ -486,7 +474,6 @@ export default function ProfilePage() {
             
           </div>
         ) : (
-          /* FORM LOGIN INVARIATO */
           <div className="bg-slate-900 border border-slate-800 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl mt-10 w-full">
             <div className="text-center mb-8">
               <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic">
@@ -508,7 +495,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* OVERLAY MODALE AVATAR */}
       {showAvatarModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md pb-24 sm:pb-4">
           <div className="bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
@@ -531,7 +517,6 @@ export default function ProfilePage() {
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-full mb-1.5 flex items-center justify-center text-2xl bg-gradient-to-br overflow-hidden ${avatar.color}`}>
-                    {/* MODIFICA PER IL MODALE (BANDIERE) */}
                     {avatar.flagCode ? (
                        <img 
                          src={`https://flagcdn.com/w80/${avatar.flagCode}.png`} 
