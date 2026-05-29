@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award
+  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -109,7 +109,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [openSection, setOpenSection] = useState({ iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: false, marcatori: false });
+  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: false, marcatori: false });
   const [matches, setMatches] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
@@ -118,6 +118,7 @@ export default function AdminPage() {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [topScorers, setTopScorers] = useState<any[]>([]);
   
+  const [announcement, setAnnouncement] = useState('');
   const [newScorerName, setNewScorerName] = useState('');
   const [newScorerTeam, setNewScorerTeam] = useState('');
 
@@ -135,7 +136,7 @@ export default function AdminPage() {
   }, []);
 
   async function fetchData() {
-    const [mRes, bRes, pRes, obRes, ubRes, brRes, predRes, scorersRes] = await Promise.all([
+    const [mRes, bRes, pRes, obRes, ubRes, brRes, predRes, scorersRes, settingsRes] = await Promise.all([
       supabase.from('matches').select('*').order('id', { ascending: true }),
       supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
       supabase.from('profiles').select('*').order('username', { ascending: true }),
@@ -143,7 +144,8 @@ export default function AdminPage() {
       supabase.from('user_bonus_answers').select('*'),
       supabase.from('brackets').select('*'),
       supabase.from('predictions').select('*'),
-      supabase.from('top_scorers').select('*').order('goals', { ascending: false })
+      supabase.from('top_scorers').select('*').order('goals', { ascending: false }),
+      supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
     ]);
     
     const fetchedMatches = mRes.data || [];
@@ -155,6 +157,10 @@ export default function AdminPage() {
     setPredictions(predRes.data || []);
     setTopScorers(scorersRes.data || []);
     
+    if (settingsRes.data) {
+      setAnnouncement(settingsRes.data.announcement || '');
+    }
+
     const tempGroups: Record<string, string[]> = {};
     fetchedMatches.forEach((m) => {
         if (!m.home_team || !m.away_team || m.home_team.includes('TBD')) return;
@@ -178,6 +184,12 @@ export default function AdminPage() {
       });
     }
   }
+
+  const saveAnnouncement = async (text: string) => {
+    const { error } = await supabase.from('app_settings').upsert({ id: 1, announcement: text });
+    if (error) toast.error('Errore durante il salvataggio');
+    else toast.success(text === '' ? 'Annuncio rimosso!' : 'Annuncio pubblicato!');
+  };
 
   // --- FUNZIONI MARCATORI ---
   const addScorer = async (e: React.FormEvent) => {
@@ -634,7 +646,29 @@ export default function AdminPage() {
 
       <div className="max-w-3xl mx-auto space-y-5">
 
-        {/* NUOVA SEZIONE: GESTIONE TOP MARCATORI */}
+        {/* NUOVA SEZIONE: ANNUNCIO GLOBALE */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+          <button onClick={() => setOpenSection({ ...openSection, annuncio: !openSection.annuncio })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Megaphone className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Annuncio Globale</h2></div>
+            {openSection.annuncio ? <ChevronUp /> : <ChevronDown />}
+          </button>
+          {openSection.annuncio && (
+            <div className="p-5 bg-slate-950/30">
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-3">Questo messaggio apparirà in cima al Profilo di tutti i giocatori.</p>
+              <textarea
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+                placeholder="Es: Stasera Brasile-Francia! Controllate i vostri risultati..."
+                className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-bold text-sm text-white outline-none focus:border-blue-500 min-h-[100px] custom-scrollbar"
+              />
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => { setAnnouncement(''); saveAnnouncement(''); }} className="p-5 bg-slate-900 border border-slate-700 text-slate-500 hover:text-rose-500 rounded-2xl transition-colors"><Trash2 size={20} /></button>
+                <button onClick={() => saveAnnouncement(announcement)} className="flex-1 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">Pubblica Annuncio</button>
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, marcatori: !openSection.marcatori })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Award className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Top Marcatori Live</h2></div>

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { 
   BookOpen, Timer, X, Edit3, Shield, Map, CheckCircle2, 
-  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3 
+  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3, Megaphone 
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -230,6 +230,7 @@ export default function ProfilePage() {
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
   const [userBonuses, setUserBonuses] = useState<any>(null);
   const [topScorers, setTopScorers] = useState<any[]>([]);
+  const [announcement, setAnnouncement] = useState('');
   
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -299,18 +300,20 @@ export default function ProfilePage() {
           bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
 
-        const [predsRes, bracketsRes, bonusRes, offBonusRes, matchesRes, scorersRes] = await Promise.all([
+        const [predsRes, bracketsRes, bonusRes, offBonusRes, matchesRes, scorersRes, settingsRes] = await Promise.all([
           supabase.from('predictions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('brackets').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
           supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
           supabase.from('matches').select('*').eq('is_finished', true),
-          supabase.from('top_scorers').select('*').order('goals', { ascending: false })
+          supabase.from('top_scorers').select('*').order('goals', { ascending: false }),
+          supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
         ]);
 
         setUserBonuses(bonusRes.data);
         setOfficialBonuses(offBonusRes.data);
         setTopScorers(scorersRes.data || []);
+        if (settingsRes.data) setAnnouncement(settingsRes.data.announcement || '');
 
         const predsCount = predsRes.count || 0;
         const bracketsCount = bracketsRes.count || 0;
@@ -402,6 +405,46 @@ export default function ProfilePage() {
         {userProfile ? (
           <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
+            {/* ANNUNCIO GLOBALE SCORREVOLE (TICKER) - ORA IN CIMA */}
+            {announcement && announcement.trim() !== '' && (
+              <div className="bg-gradient-to-r from-blue-600 to-blue-400 p-[1px] rounded-3xl shadow-lg animate-in fade-in zoom-in duration-500">
+                <div className="bg-slate-950 rounded-[calc(1.5rem-1px)] p-3 flex items-center gap-3 overflow-hidden relative">
+                  
+                  {/* Stili CSS per il testo scorrevole */}
+                  <style dangerouslySetInnerHTML={{__html: `
+                    .ticker-container { 
+                      width: 100%; 
+                      overflow: hidden; 
+                      white-space: nowrap; 
+                      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
+                      -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
+                    }
+                    .ticker-text { 
+                      display: inline-block; 
+                      padding-left: 100%; 
+                      animation: ticker 15s linear infinite; 
+                    }
+                    @keyframes ticker { 
+                      0% { transform: translate3d(0, 0, 0); } 
+                      100% { transform: translate3d(-100%, 0, 0); } 
+                    }
+                  `}} />
+
+                  <div className="relative z-10 bg-slate-950 bg-blue-500/20 p-2 rounded-full shrink-0 shadow-[5px_0_10px_rgba(2,6,23,1)]">
+                    <Megaphone size={16} className="text-blue-400 animate-pulse" />
+                  </div>
+                  
+                  <div className="ticker-container flex-1">
+                    <div className="ticker-text text-[11px] sm:text-xs font-black text-slate-200 uppercase tracking-widest">
+                      {announcement}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* BLOCCO AVATAR E NOME */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
               <div className="flex items-center gap-5 text-left">
                 
