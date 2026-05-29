@@ -5,7 +5,41 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Timer, X, Edit3, Shield, Map, CheckCircle2 } from 'lucide-react';
+import { 
+  BookOpen, Timer, X, Edit3, Shield, Map, CheckCircle2, 
+  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3 
+} from 'lucide-react';
+
+const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
+
+const TOURNAMENT_GROUPS = [
+  { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
+  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia'] },
+  { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
+  { name: 'Gruppo D', teams: ['USA', 'Australia', 'Paraguay', 'Turchia'] },
+  { name: 'Gruppo E', teams: ['Germania', "Costa Avorio", 'Ecuador', 'Curacao'] },
+  { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
+  { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'N. Zelanda'] },
+  { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia S.', 'Capo Verde'] },
+  { name: 'Gruppo I', teams: ['Francia', 'Senegal', 'Norvegia', 'Iraq'] },
+  { name: 'Gruppo J', teams: ['Argentina', 'Austria', 'Algeria', 'Giordania'] },
+  { name: 'Gruppo K', teams: ['Portogallo', 'Colombia', 'Uzbekistan', 'R.D. Congo'] },
+  { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
+];
+
+const formatMatchName = (matchString: string) => {
+  if (!matchString) return '';
+  let formatted = matchString;
+  formatted = formatted.replace(/Repubblica Democratica del Congo/gi, 'R.D. Congo');
+  formatted = formatted.replace(/Repubblica Ceca/gi, 'Rep. Ceca');
+  formatted = formatted.replace(/Bosnia ed Erzegovina|Bosnia Erzegovina/gi, 'Bosnia');
+  formatted = formatted.replace(/Stati Uniti|USA/gi, 'USA');
+  formatted = formatted.replace(/Arabia Saudita/gi, 'Arabia S.');
+  formatted = formatted.replace(/Nuova Zelanda/gi, 'N. Zelanda');
+  formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
+  formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
+  return formatted;
+};
 
 const AVATARS = [
   // --- PRO & CLASSICI ---
@@ -135,7 +169,7 @@ const AVATARS = [
   { id: 'pink', name: 'Rosa', emoji: '🩷', color: 'from-pink-500 to-pink-300' },
   { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' },
 
-  // --- NAZIONALI MONDIALE 2026 (Fix per Windows) ---
+  // --- NAZIONALI MONDIALE 2026 ---
   { id: 'algeria', name: 'Algeria', flagCode: 'dz', color: 'from-green-600 to-green-500' },
   { id: 'arabia_saudita', name: 'Arabia Saudita', flagCode: 'sa', color: 'from-green-700 to-green-600' },
   { id: 'argentina', name: 'Argentina', flagCode: 'ar', color: 'from-sky-400 to-sky-200' },
@@ -191,12 +225,20 @@ export default function ProfilePage() {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [officialBonuses, setOfficialBonuses] = useState<any>(null);
+  const [userBonuses, setUserBonuses] = useState<any>(null);
+  const [topScorers, setTopScorers] = useState<any[]>([]);
   
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  
+  const [showGroupsModal, setShowGroupsModal] = useState(false);
+  const [showScorersModal, setShowScorersModal] = useState(false);
 
   const [completionPct, setCompletionPct] = useState(0);
+  const [liveStats, setLiveStats] = useState<{ groupGoals: Record<string, number> }>({ groupGoals: {} });
 
   const [stats, setStats] = useState({
     total: 0,
@@ -257,15 +299,21 @@ export default function ProfilePage() {
           bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
 
-        const [predsRes, bracketsRes, bonusRes] = await Promise.all([
+        const [predsRes, bracketsRes, bonusRes, offBonusRes, matchesRes, scorersRes] = await Promise.all([
           supabase.from('predictions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('brackets').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle()
+          supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
+          supabase.from('matches').select('*').eq('is_finished', true),
+          supabase.from('top_scorers').select('*').order('goals', { ascending: false })
         ]);
+
+        setUserBonuses(bonusRes.data);
+        setOfficialBonuses(offBonusRes.data);
+        setTopScorers(scorersRes.data || []);
 
         const predsCount = predsRes.count || 0;
         const bracketsCount = bracketsRes.count || 0;
-        
         let bonusCount = 0;
         if (bonusRes.data) {
           const b = bonusRes.data;
@@ -274,12 +322,25 @@ export default function ProfilePage() {
             if (b[f] !== null && b[f] !== '') bonusCount++;
           });
         }
-
         const totalCompleted = predsCount + bracketsCount + bonusCount;
         const totalRequired = 72 + 63 + 9;
         const percentage = Math.min(100, Math.round((totalCompleted / totalRequired) * 100));
-        
         setCompletionPct(percentage);
+
+        const gGoals: Record<string, number> = {};
+        GROUPS.forEach(g => gGoals[g] = 0);
+
+        matchesRes.data?.forEach(m => {
+            const goals = (m.home_score_final || 0) + (m.away_score_final || 0);
+            const homeFormatted = formatMatchName(m.home_team).toLowerCase();
+            const groupObj = TOURNAMENT_GROUPS.find(gr => gr.teams.some(t => t.toLowerCase() === homeFormatted));
+            if (groupObj) {
+                gGoals[groupObj.name] += goals;
+            }
+        });
+
+        setLiveStats({ groupGoals: gGoals });
+
       }
     } catch (error) { console.error("Errore check utente:", error); } finally { setIsPageLoading(false); }
   }
@@ -381,26 +442,28 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-md w-full">
-                <div className="flex justify-between items-end mb-2.5">
-                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                       {completionPct === 100 ? <CheckCircle2 size={14} className="text-emerald-400"/> : <Map size={14} className="text-yellow-500" />}
-                       Completamento Pronostici
-                    </span>
-                    <span className={`text-sm sm:text-base font-black leading-none ${completionPct === 100 ? 'text-emerald-400' : 'text-yellow-500'}`}>{completionPct}%</span>
-                </div>
-                <div className="w-full bg-slate-950 rounded-full h-3 sm:h-3.5 overflow-hidden border border-slate-800">
-                    <div 
-                        className={`h-full rounded-full transition-all duration-1000 ease-out ${completionPct === 100 ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.3)]'}`}
-                        style={{ width: `${completionPct}%` }}
-                    ></div>
-                </div>
-                {completionPct === 100 ? (
-                    <p className="text-emerald-400 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">✓ Tutto pronto per il Mondiale!</p>
-                ) : (
-                    <p className="text-slate-500 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">Completa tutto prima della scadenza!</p>
-                )}
-            </div>
+            {!isExpired && (
+              <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-md w-full">
+                  <div className="flex justify-between items-end mb-2.5">
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                         {completionPct === 100 ? <CheckCircle2 size={14} className="text-emerald-400"/> : <Map size={14} className="text-yellow-500" />}
+                         Completamento Pronostici
+                      </span>
+                      <span className={`text-sm sm:text-base font-black leading-none ${completionPct === 100 ? 'text-emerald-400' : 'text-yellow-500'}`}>{completionPct}%</span>
+                  </div>
+                  <div className="w-full bg-slate-950 rounded-full h-3 sm:h-3.5 overflow-hidden border border-slate-800">
+                      <div 
+                          className={`h-full rounded-full transition-all duration-1000 ease-out ${completionPct === 100 ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.3)]'}`}
+                          style={{ width: `${completionPct}%` }}
+                      ></div>
+                  </div>
+                  {completionPct === 100 ? (
+                      <p className="text-emerald-400 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">✓ Tutto pronto per il Mondiale!</p>
+                  ) : (
+                      <p className="text-slate-500 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">Completa tutto prima della scadenza!</p>
+                  )}
+              </div>
+            )}
 
             <div className="bg-yellow-500 p-6 rounded-3xl flex items-center justify-between shadow-md">
               <div>
@@ -426,15 +489,92 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden">
-              <div className={`absolute top-0 left-0 w-full h-1 ${isExpired ? 'bg-rose-500' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`}></div>
-              
-              {isExpired ? (
-                <div className="text-center py-2 flex flex-col items-center">
-                  <span className="bg-rose-500/20 text-rose-500 text-xs font-black px-4 py-1.5 rounded-full uppercase italic flex items-center gap-1.5 mb-2"><Timer size={14}/> Pronostici Chiusi</span>
-                  <p className="text-sm sm:text-base font-black text-white uppercase italic">Il Mondiale è Iniziato!</p>
+            {isExpired ? (
+              <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-md w-full animate-in fade-in duration-500 mt-4">
+                <div className="flex items-center justify-between mb-4 border-b border-slate-800/50 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                    </div>
+                    <h2 className="text-rose-500 text-xs font-black uppercase italic tracking-widest">
+                      Statistiche Live Torneo
+                    </h2>
+                  </div>
+                  <BarChart3 size={14} className="text-slate-500" />
                 </div>
-              ) : (
+
+                <div className="grid grid-cols-3 gap-3 text-center mb-4">
+                   <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                     <Zap size={14} className="text-emerald-500 mx-auto mb-1" />
+                     <p className="text-[9px] text-slate-500 uppercase font-black">Rossi</p>
+                     <p className="text-xl font-black text-white">{officialBonuses?.total_red_cards || 0}</p>
+                   </div>
+                   <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                     <Goal size={14} className="text-blue-500 mx-auto mb-1" />
+                     <p className="text-[9px] text-slate-500 uppercase font-black">Rigori</p>
+                     <p className="text-xl font-black text-white">{officialBonuses?.total_penalties || 0}</p>
+                   </div>
+                   <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                     <Target size={14} className="text-rose-500 mx-auto mb-1" />
+                     <p className="text-[9px] text-slate-500 uppercase font-black">Autogol</p>
+                     <p className="text-xl font-black text-white">{officialBonuses?.total_own_goals || 0}</p>
+                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'mvp_world_cup', label: 'MVP', icon: <Trophy size={12}/> },
+                      { key: 'top_scorer', label: 'Capocannoniere', icon: <Award size={12}/> },
+                      { key: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={12}/> },
+                      { key: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={12}/> },
+                      { key: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={12}/> },
+                      { key: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={12}/> },
+                    ].map((s) => {
+                      const myPick = userBonuses?.[s.key];
+                      const offStat = officialBonuses?.[s.key];
+                      const displayOff = offStat != null && String(offStat).trim() !== '' ? offStat : '--';
+                      const isMatch = myPick && offStat && String(myPick).toLowerCase().trim() === String(offStat).toLowerCase().trim();
+
+                      return (
+                        <div key={s.key} className={`bg-slate-950 border p-2.5 rounded-2xl flex flex-col justify-between transition-colors ${isMatch ? 'border-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.1)]' : 'border-slate-800/60'}`}>
+                          <div className={`flex items-center gap-1 mb-2 ${isMatch ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {s.icon} <span className="text-[8px] font-black uppercase tracking-wider truncate">{s.label}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between items-center border-b border-slate-800/50 pb-1 gap-1">
+                              <span className="text-[7px] text-slate-600 uppercase font-black shrink-0">Scelta</span>
+                              <span className="text-[9px] text-slate-300 font-bold truncate text-right">
+                                {myPick || '--'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center pt-0.5 gap-1">
+                              <span className="text-[7px] text-rose-500 uppercase font-black shrink-0">Reale</span>
+                              <span className={`text-[10px] font-black truncate text-right ${isMatch ? 'text-emerald-400' : 'text-white'}`}>
+                                {displayOff}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button onClick={() => setShowGroupsModal(true)} className="py-3 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-black rounded-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2 hover:bg-yellow-500/20 transition-all shadow-sm">
+                     <BarChart3 size={14}/> Gol Gironi
+                  </button>
+                  <button onClick={() => setShowScorersModal(true)} className="py-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-black rounded-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2 hover:bg-cyan-500/20 transition-all shadow-sm">
+                     <Award size={14}/> Top Marcatori
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden animate-in fade-in duration-500">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
+                
                 <div className="flex justify-between items-center px-1">
                   <div className="flex flex-col items-start justify-center pr-3 sm:pr-4 border-r border-slate-800">
                      <Timer size={20} className="text-yellow-500 mb-1.5" />
@@ -454,8 +594,8 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => router.push('/groups')} className="py-4 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:bg-blue-600/20 transition-all flex items-center justify-center gap-2 shadow-sm">
@@ -532,6 +672,72 @@ export default function ProfilePage() {
                   </span>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE CLASSIFICA GOL GIRONI */}
+      {showGroupsModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md pb-safe-area sm:pb-4">
+          <div className="bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6 border-b border-slate-800/50 pb-4">
+              <div>
+                <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-lg">Gol per Girone</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Aggiornamento in tempo reale</p>
+              </div>
+              <button onClick={() => setShowGroupsModal(false)} className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {Object.entries(liveStats.groupGoals)
+                .sort((a,b) => b[1] - a[1])
+                .map(([g, pts], i) => (
+                <div key={g} className="flex justify-between items-center p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                  <span className="font-black text-xs uppercase text-slate-300">
+                    <span className="text-slate-600 mr-2">{i+1}.</span> {g}
+                  </span>
+                  <span className="font-black text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">{pts} Gol</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE CLASSIFICA MARCATORI (LETTA DA DATABASE) */}
+      {showScorersModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md pb-safe-area sm:pb-4">
+          <div className="bg-slate-900 border-t-2 sm:border-2 border-cyan-500/40 w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6 border-b border-slate-800/50 pb-4">
+              <div>
+                <h3 className="text-cyan-400 font-black uppercase italic tracking-tighter text-lg">Top Marcatori</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Classifica Ufficiale</p>
+              </div>
+              <button onClick={() => setShowScorersModal(false)} className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {topScorers.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Nessun marcatore inserito</p>
+                </div>
+              ) : (
+                topScorers.map((scorer, i) => (
+                  <div key={scorer.id} className="flex justify-between items-center p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-600 font-black text-xs">{i+1}.</span>
+                      <img src={`https://flagcdn.com/w40/${scorer.team_code}.png`} alt="" className="w-5 h-auto rounded-sm shadow-sm" />
+                      <span className="font-black text-xs uppercase text-slate-300">{scorer.name}</span>
+                    </div>
+                    <span className="font-black text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20">{scorer.goals} Gol</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

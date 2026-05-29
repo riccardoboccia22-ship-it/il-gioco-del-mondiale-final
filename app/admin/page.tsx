@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle
+  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -109,13 +109,18 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [openSection, setOpenSection] = useState({ iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: false });
+  const [openSection, setOpenSection] = useState({ iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: false, marcatori: false });
   const [matches, setMatches] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [allUserBonuses, setAllUserBonuses] = useState<any[]>([]);
   const [allBrackets, setAllBrackets] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any[]>([]);
+  const [topScorers, setTopScorers] = useState<any[]>([]);
+  
+  const [newScorerName, setNewScorerName] = useState('');
+  const [newScorerTeam, setNewScorerTeam] = useState('');
+
   const [bonusData, setBonusData] = useState({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
@@ -130,14 +135,15 @@ export default function AdminPage() {
   }, []);
 
   async function fetchData() {
-    const [mRes, bRes, pRes, obRes, ubRes, brRes, predRes] = await Promise.all([
+    const [mRes, bRes, pRes, obRes, ubRes, brRes, predRes, scorersRes] = await Promise.all([
       supabase.from('matches').select('*').order('id', { ascending: true }),
       supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
       supabase.from('profiles').select('*').order('username', { ascending: true }),
       supabase.from('official_bracket').select('*').order('id', { ascending: true }),
       supabase.from('user_bonus_answers').select('*'),
       supabase.from('brackets').select('*'),
-      supabase.from('predictions').select('*')
+      supabase.from('predictions').select('*'),
+      supabase.from('top_scorers').select('*').order('goals', { ascending: false })
     ]);
     
     const fetchedMatches = mRes.data || [];
@@ -147,6 +153,7 @@ export default function AdminPage() {
     setAllUserBonuses(ubRes.data || []);
     setAllBrackets(brRes.data || []);
     setPredictions(predRes.data || []);
+    setTopScorers(scorersRes.data || []);
     
     const tempGroups: Record<string, string[]> = {};
     fetchedMatches.forEach((m) => {
@@ -171,6 +178,37 @@ export default function AdminPage() {
       });
     }
   }
+
+  // --- FUNZIONI MARCATORI ---
+  const addScorer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newScorerName.trim() || !newScorerTeam) return toast.error('Compila tutti i campi');
+    const { data, error } = await supabase.from('top_scorers').insert([{ name: newScorerName.trim(), team_code: newScorerTeam, goals: 1 }]).select();
+    if (error) {
+      toast.error('Errore');
+    } else if (data) {
+      setTopScorers([...topScorers, data[0]].sort((a,b) => b.goals - a.goals));
+      setNewScorerName('');
+      setNewScorerTeam('');
+      toast.success('Marcatore Aggiunto!');
+    }
+  };
+
+  const updateScorerGoals = async (id: number, currentGoals: number, change: number) => {
+    const newGoals = currentGoals + change;
+    if (newGoals < 0) return;
+    const { error } = await supabase.from('top_scorers').update({ goals: newGoals }).eq('id', id);
+    if (!error) {
+      setTopScorers(topScorers.map(s => s.id === id ? { ...s, goals: newGoals } : s).sort((a,b) => b.goals - a.goals));
+    }
+  };
+
+  const deleteScorer = async (id: number) => {
+    if(window.confirm('Rimuovere questo marcatore?')) {
+      await supabase.from('top_scorers').delete().eq('id', id);
+      setTopScorers(topScorers.filter(s => s.id !== id));
+    }
+  };
 
   const syncLeaderboard = async (isManual = true) => {
     if (isManual && !window.confirm('Ricalcolare punti e spareggi per tutti?')) return;
@@ -595,6 +633,72 @@ export default function AdminPage() {
       </header>
 
       <div className="max-w-3xl mx-auto space-y-5">
+
+        {/* NUOVA SEZIONE: GESTIONE TOP MARCATORI */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+          <button onClick={() => setOpenSection({ ...openSection, marcatori: !openSection.marcatori })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Award className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Top Marcatori Live</h2></div>
+            {openSection.marcatori ? <ChevronUp /> : <ChevronDown />}
+          </button>
+          
+          {openSection.marcatori && (
+            <div className="p-5 bg-slate-950/30 space-y-6">
+              
+              <form onSubmit={addScorer} className="flex flex-col sm:flex-row gap-3">
+                <input 
+                  type="text" 
+                  placeholder="Nome (es. K. Mbappé)" 
+                  value={newScorerName} 
+                  onChange={(e) => setNewScorerName(e.target.value)} 
+                  className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500"
+                />
+                <div className="flex flex-1 gap-3">
+                  <select 
+                    value={newScorerTeam} 
+                    onChange={(e) => setNewScorerTeam(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500 appearance-none"
+                  >
+                    <option value="">Nazione...</option>
+                    {Object.entries(flagMap)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([country, code]) => (
+                        <option key={code + country} value={code}>{country}</option>
+                    ))}
+                  </select>
+                  <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-2xl text-white transition-all shadow-lg active:scale-95 shrink-0">
+                    <Plus size={20} />
+                  </button>
+                </div>
+              </form>
+
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                {topScorers.length === 0 && (
+                   <p className="text-center text-slate-600 font-black text-xs uppercase py-4">Nessun marcatore inserito</p>
+                )}
+                {topScorers.map(scorer => (
+                  <div key={scorer.id} className="flex items-center justify-between bg-slate-900 p-3 rounded-2xl border border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <img src={`https://flagcdn.com/w40/${scorer.team_code}.png`} alt="" className="w-6 h-auto rounded-sm" />
+                      <span className="font-black text-sm uppercase text-slate-200">{scorer.name}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 bg-slate-950 rounded-xl border border-slate-800 p-1">
+                        <button onClick={() => updateScorerGoals(scorer.id, scorer.goals, -1)} className="p-2 text-slate-500 hover:text-rose-500 transition-colors"><Minus size={14}/></button>
+                        <span className="w-6 text-center font-black text-cyan-400">{scorer.goals}</span>
+                        <button onClick={() => updateScorerGoals(scorer.id, scorer.goals, 1)} className="p-2 text-slate-500 hover:text-emerald-500 transition-colors"><Plus size={14}/></button>
+                      </div>
+                      <button onClick={() => deleteScorer(scorer.id)} className="p-3 text-rose-500 bg-rose-500/10 hover:bg-rose-500 hover:text-white rounded-xl transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({profiles.length})</h2></div>
@@ -712,7 +816,6 @@ export default function AdminPage() {
           {openSection.statistiche && (
             <div className="p-5 bg-slate-950/50 space-y-6">
               
-              {/* --- STATO COMPLETAMENTO UTENTI --- */}
               <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
                 <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0 flex items-center gap-1.5">
                   <CheckCircle size={12}/> Completamento Pronostici
@@ -757,7 +860,6 @@ export default function AdminPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 
-                {/* --- SCHEDA DETTAGLIATA: SCELTE VINCITORE RAGGRUPPATE PER SQUADRA --- */}
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
                   <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Scelte Vincitore (Per Squadra)</p>
                   <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -787,7 +889,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* --- BLOCCO CECCHINI (RISULTATI ESATTI) --- */}
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
                   <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Cecchini (Ris. Esatti)</p>
                   <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -821,7 +922,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* --- SEZIONE ALTRI BONUS AGGIORNATA (CONTIENE ORA ANCHE GRUPPI +/- GOL) --- */}
                 {[ 
                   { label: 'MVP Mondiale', key: 'mvp_world_cup' }, 
                   { label: 'Capocannoniere', key: 'top_scorer' }, 
