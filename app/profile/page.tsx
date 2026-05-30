@@ -405,43 +405,60 @@ export default function ProfilePage() {
         {userProfile ? (
           <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
-            {/* ANNUNCIO GLOBALE SCORREVOLE (TICKER) - ORA IN CIMA */}
+            {/* ANNUNCIO GLOBALE SCORREVOLE (TICKER SMART CON FONDO ROSSO LIVE) */}
             {announcement && announcement.trim() !== '' && (
-              <div className="bg-gradient-to-r from-blue-600 to-blue-400 p-[1px] rounded-3xl shadow-lg animate-in fade-in zoom-in duration-500">
-                <div className="bg-slate-950 rounded-[calc(1.5rem-1px)] p-3 flex items-center gap-3 overflow-hidden relative">
-                  
-                  {/* Stili CSS per il testo scorrevole */}
-                  <style dangerouslySetInnerHTML={{__html: `
-                    .ticker-container { 
-                      width: 100%; 
-                      overflow: hidden; 
-                      white-space: nowrap; 
-                      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
-                      -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
-                    }
-                    .ticker-text { 
-                      display: inline-block; 
-                      padding-left: 100%; 
-                      animation: ticker 15s linear infinite; 
-                    }
-                    @keyframes ticker { 
-                      0% { transform: translate3d(0, 0, 0); } 
-                      100% { transform: translate3d(-100%, 0, 0); } 
-                    }
-                  `}} />
+              (() => {
+                const isLive = announcement.trim().toUpperCase().startsWith('LIVE:');
+                const displayText = isLive ? announcement.replace(/^LIVE:\s*/i, '') : announcement;
+                
+                return (
+                  <div className={`p-[2px] rounded-3xl shadow-lg animate-in fade-in zoom-in duration-500 ${isLive ? 'bg-gradient-to-r from-red-600 via-rose-500 to-red-600 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'bg-gradient-to-r from-blue-600 to-blue-400'}`}>
+                    <div className={`h-full w-full rounded-[calc(1.5rem-2px)] p-3 flex items-center gap-3 overflow-hidden relative ${isLive ? 'bg-red-950' : 'bg-slate-950'}`}>
+                      
+                      <style dangerouslySetInnerHTML={{__html: `
+                        .ticker-container { 
+                          width: 100%; 
+                          overflow: hidden; 
+                          white-space: nowrap; 
+                          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
+                          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
+                        }
+                        .ticker-text { 
+                          display: inline-block; 
+                          padding-left: 100%; 
+                          animation: ticker 15s linear infinite; 
+                        }
+                        @keyframes ticker { 
+                          0% { transform: translate3d(0, 0, 0); } 
+                          100% { transform: translate3d(-100%, 0, 0); } 
+                        }
+                      `}} />
 
-                  <div className="relative z-10 bg-slate-950 bg-blue-500/20 p-2 rounded-full shrink-0 shadow-[5px_0_10px_rgba(2,6,23,1)]">
-                    <Megaphone size={16} className="text-blue-400 animate-pulse" />
-                  </div>
-                  
-                  <div className="ticker-container flex-1">
-                    <div className="ticker-text text-[11px] sm:text-xs font-black text-slate-200 uppercase tracking-widest">
-                      {announcement}
+                      {/* Icona o Pallino Live con dimensioni bloccate per non schiacciarsi */}
+                      <div className={`relative z-10 shrink-0 flex items-center justify-center shadow-[5px_0_10px_rgba(2,6,23,0.8)] ${isLive ? 'h-8 px-3 rounded-full bg-red-500/20 border border-red-500/30 gap-1.5' : 'w-8 h-8 rounded-full bg-blue-500/20'}`}>
+                        {isLive ? (
+                          <>
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            </span>
+                            <span className="text-[10px] font-black uppercase text-red-500 tracking-wider">Live</span>
+                          </>
+                        ) : (
+                          <Megaphone size={14} className="text-blue-400 animate-pulse" />
+                        )}
+                      </div>
+                      
+                      <div className="ticker-container flex-1">
+                        <div className={`ticker-text text-[11px] sm:text-xs font-black uppercase tracking-widest ${isLive ? 'text-red-50' : 'text-slate-200'}`}>
+                          {displayText}
+                        </div>
+                      </div>
+
                     </div>
                   </div>
-
-                </div>
-              </div>
+                );
+              })()
             )}
 
             {/* BLOCCO AVATAR E NOME */}
