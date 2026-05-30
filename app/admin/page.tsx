@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
-const WORLD_CUP_START_DATE = new Date('2025-06-11T21:00:00+02:00');
+const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const STAGES = [
   { id: 'R32', label: 'Sedicesimi (+2pt)', pts: 2 },
@@ -522,7 +522,7 @@ export default function AdminPage() {
   const copyClassificaReport = () => {
     const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
     let text = `🏆 *CLASSIFICA MONDIALE 2026* 🏆\n\n`;
-    sorted.slice(0, 10).forEach((p, i) => {
+    sorted.forEach((p, i) => {
         let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '⚽';
         const exactStr = p.exact_matches > 0 ? ` [🎯 ${p.exact_matches} esatt${p.exact_matches === 1 ? 'o' : 'i'}]` : '';
         text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt${exactStr}\n`;
@@ -536,7 +536,12 @@ export default function AdminPage() {
   const copyBonusReport = () => {
     const winners = getWinnerStats();
     let text = `📊 *STATISTICHE & SENTIMENTO DEL GRUPPO* 📊\n\n`;
-    text += `👑 *Vincitore più gettonato:* ${winners[0]?.name || 'Nessuno'} (${winners[0]?.pct || 0}%)\n`;
+    
+    text += `👑 *Vincitore del Mondiale (Scelte):*\n`;
+    winners.forEach(w => {
+      text += `- ${w.name}: ${w.pct}%\n`;
+    });
+    text += `\n`;
     
     const fields = [
       { l: '✨ MVP', k: 'mvp_world_cup' },
@@ -550,11 +555,15 @@ export default function AdminPage() {
     fields.forEach(f => {
       const details = getBonusDetails(f.k);
       if (details.length > 0) {
-        text += `${f.l}: ${formatMatchName(details[0].originalName)} (${details[0].count} voti)\n`;
+        text += `*${f.l}:*\n`;
+        details.forEach(d => {
+           text += `- ${formatMatchName(d.originalName)} (${d.count} voti)\n`;
+        });
+        text += `\n`;
       }
     });
 
-    text += `\n👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
+    text += `👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
 
     navigator.clipboard.writeText(text);
     toast.success('Statistiche copiate per WhatsApp! 📱', { icon: '💬' });
@@ -601,6 +610,24 @@ export default function AdminPage() {
     toast.success('Report Cecchini copiato! 🎯', { icon: '🎯' });
   };
 
+  const copyCompletionReport = () => {
+    const stats = getCompletionStats();
+    let text = `📋 *STATO COMPLETAMENTO PRONOSTICI* 📋\n\n`;
+
+    stats.forEach(u => {
+      const girIcon = u.uPreds === 72 ? '✅' : u.uPreds > 0 ? '⚠️' : '❌';
+      const tabIcon = u.uBracks === 63 ? '✅' : u.uBracks > 0 ? '⚠️' : '❌';
+      const bonIcon = u.uBonus === 9 ? '✅' : u.uBonus > 0 ? '⚠️' : '❌';
+
+      text += `👤 *${u.username}* (${u.pct}%)\n`;
+      text += `Gir: ${u.uPreds}/72 ${girIcon} | Tab: ${u.uBracks}/63 ${tabIcon} | Bon: ${u.uBonus}/9 ${bonIcon}\n\n`;
+    });
+
+    text += `👉 Entra per completare: www.iltuopronostico.it`;
+    navigator.clipboard.writeText(text);
+    toast.success('Stato completamento copiato! 📋', { icon: '📋' });
+  };
+
   const isExpired = new Date() > WORLD_CUP_START_DATE;
   const navItems = [
     { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
@@ -637,6 +664,10 @@ export default function AdminPage() {
               <MessageCircle size={14} /> Cecchini
             </button>
             <div className="w-px h-5 bg-slate-800"></div>
+            <button onClick={copyCompletionReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-yellow-500 hover:bg-yellow-500/10 transition-colors rounded-full whitespace-nowrap">
+              <MessageCircle size={14} /> Stato
+            </button>
+            <div className="w-px h-5 bg-slate-800"></div>
             <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-blue-500 hover:bg-blue-500/10 transition-colors rounded-full whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Sync
             </button>
@@ -658,7 +689,7 @@ export default function AdminPage() {
               <textarea
                 value={announcement}
                 onChange={(e) => setAnnouncement(e.target.value)}
-                placeholder="Es: Stasera Brasile-Francia! Controllate i vostri risultati..."
+                placeholder="Es: LIVE: Stasera Brasile-Francia! Controllate i vostri risultati..."
                 className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-bold text-sm text-white outline-none focus:border-blue-500 min-h-[100px] custom-scrollbar"
               />
               <div className="flex gap-4 pt-4">
