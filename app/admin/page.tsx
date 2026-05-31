@@ -647,37 +647,48 @@ export default function AdminPage() {
         <ArrowLeft size={16} /> Indietro
       </button>
 
-      <header className="flex flex-col items-center mb-8 pt-4 gap-4 mt-8 sm:mt-4">
-        <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none">Control Tower</h1>
+      <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4">
+        <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
         
-        <div className="flex flex-wrap items-center justify-center gap-2 px-2">
-          <div className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800 shadow-xl overflow-x-auto max-w-full">
-            <button onClick={copyClassificaReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-emerald-500 hover:bg-emerald-500/10 transition-colors rounded-full whitespace-nowrap">
+        {/* GRIGLIA PULSANTI REPORT E SYNC (Responsiva) */}
+        <div className="w-full max-w-2xl bg-slate-900/80 p-3 sm:p-2.5 rounded-3xl border border-slate-800 shadow-xl">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 sm:gap-0">
+            
+            <button onClick={copyClassificaReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-emerald-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
               <MessageCircle size={14} /> Classifica
             </button>
-            <div className="w-px h-5 bg-slate-800"></div>
-            <button onClick={copyBonusReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-purple-500 hover:bg-purple-500/10 transition-colors rounded-full whitespace-nowrap">
+            
+            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
+            
+            <button onClick={copyBonusReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-purple-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-purple-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
               <MessageCircle size={14} /> Statistiche
             </button>
-            <div className="w-px h-5 bg-slate-800"></div>
-            <button onClick={copyCecchiniReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-orange-500 hover:bg-orange-500/10 transition-colors rounded-full whitespace-nowrap">
+            
+            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
+            
+            <button onClick={copyCecchiniReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-orange-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-orange-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
               <MessageCircle size={14} /> Cecchini
             </button>
-            <div className="w-px h-5 bg-slate-800"></div>
-            <button onClick={copyCompletionReport} className="flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-yellow-500 hover:bg-yellow-500/10 transition-colors rounded-full whitespace-nowrap">
+
+            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
+            
+            <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-yellow-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
               <MessageCircle size={14} /> Stato
             </button>
-            <div className="w-px h-5 bg-slate-800"></div>
-            <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase text-blue-500 hover:bg-blue-500/10 transition-colors rounded-full whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Sync
+
+            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
+            
+            <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2.5 mt-1 sm:mt-0 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 sm:bg-transparent border border-blue-500/30 sm:border-0 hover:bg-blue-500/20 transition-colors rounded-xl sm:rounded-full whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
             </button>
+          
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto space-y-5">
 
-        {/* NUOVA SEZIONE: ANNUNCIO GLOBALE */}
+        {/* SEZIONE: ANNUNCIO GLOBALE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, annuncio: !openSection.annuncio })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Megaphone className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Annuncio Globale</h2></div>
