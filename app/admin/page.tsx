@@ -104,7 +104,6 @@ const formatMatchName = (matchString: string) => {
   return formatted;
 };
 
-// TRUCCO ANTI-LIMITE SUPABASE: Paginazione invisibile per aggirare il blocco di 1000 righe
 const fetchAllRecords = async (table: string) => {
   let result: any[] = [];
   let start = 0;
@@ -515,6 +514,7 @@ export default function AdminPage() {
     return Object.values(choices).sort((a, b) => b.count - a.count);
   };
 
+  // --- MOTORE DI CALCOLO PERCENTUALI PROPORZIONALE ---
   const getCompletionStats = () => {
     return profiles.map(p => {
       const uPreds = predictions.filter(pred => 
@@ -534,13 +534,12 @@ export default function AdminPage() {
         });
       }
       
+      // Calcoliamo la somma assoluta delle risposte (come nel Profilo)
       const maxBracks = uBracks > 31 ? 63 : 31;
-
-      const pctPreds = Math.min(100, Math.round((uPreds / 72) * 100)) || 0;
-      const pctBracks = Math.min(100, Math.round((uBracks / maxBracks) * 100)) || 0;
-      const pctBonus = Math.min(100, Math.round((uBonus / 9) * 100)) || 0;
+      const totalCompleted = uPreds + uBracks + uBonus;
+      const totalMax = 72 + maxBracks + 9;
       
-      const pct = Math.round((pctPreds + pctBracks + pctBonus) / 3);
+      const pct = Math.min(100, Math.round((totalCompleted / totalMax) * 100)) || 0;
       
       return { ...p, uPreds, uBracks, uBonus, pct, maxBracks };
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
@@ -661,7 +660,7 @@ export default function AdminPage() {
     { name: 'Fase Finale', path: '/bracket', icon: <Trophy size={20} strokeWidth={2.5} /> },
     { name: 'Bonus', path: '/bonus', icon: <Star size={20} strokeWidth={2.5} /> },
     { name: 'Classifica', path: '/leaderboard', icon: <ListOrdered size={20} strokeWidth={2.5} /> },
-    { name: 'Globale', path: '/tutti-i-pronostici', icon: <Users size={20} strokeWidth={2.5} /> }, // Admin bypassa il blocco temporale
+    { name: 'Globale', path: '/tutti-i-pronostici', icon: <Users size={20} strokeWidth={2.5} /> }, 
   ];
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
@@ -676,7 +675,6 @@ export default function AdminPage() {
       <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
         
-        {/* GRIGLIA PULSANTI REPORT E SYNC (Responsiva) */}
         <div className="w-full max-w-2xl bg-slate-900/80 p-3 sm:p-2.5 rounded-3xl border border-slate-800 shadow-xl">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 sm:gap-0">
             
