@@ -514,7 +514,6 @@ export default function AdminPage() {
     return Object.values(choices).sort((a, b) => b.count - a.count);
   };
 
-  // --- MOTORE DI CALCOLO PERCENTUALI PROPORZIONALE ---
   const getCompletionStats = () => {
     return profiles.map(p => {
       const uPreds = predictions.filter(pred => 
@@ -534,8 +533,7 @@ export default function AdminPage() {
         });
       }
       
-      // Calcoliamo la somma assoluta delle risposte (come nel Profilo)
-      const maxBracks = uBracks > 31 ? 63 : 31;
+      const maxBracks = 63; // FISSO A 63 PER TUTTI!
       const totalCompleted = uPreds + uBracks + uBonus;
       const totalMax = 72 + maxBracks + 9;
       
@@ -712,7 +710,6 @@ export default function AdminPage() {
 
       <div className="max-w-3xl mx-auto space-y-5">
 
-        {/* SEZIONE: ANNUNCIO GLOBALE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, annuncio: !openSection.annuncio })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Megaphone className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Annuncio Globale</h2></div>
