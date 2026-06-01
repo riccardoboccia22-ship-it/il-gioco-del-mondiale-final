@@ -104,6 +104,21 @@ const formatMatchName = (matchString: string) => {
   return formatted;
 };
 
+// TRUCCO ANTI-LIMITE SUPABASE: Paginazione invisibile per aggirare il blocco di 1000 righe
+const fetchAllRecords = async (table: string) => {
+  let result: any[] = [];
+  let start = 0;
+  const limit = 1000;
+  while (true) {
+    const { data, error } = await supabase.from(table).select('*').range(start, start + limit - 1);
+    if (error || !data || data.length === 0) break;
+    result.push(...data);
+    if (data.length < limit) break;
+    start += limit;
+  }
+  return result;
+};
+
 export default function AdminPage() {
   const router = useRouter(); 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -136,25 +151,26 @@ export default function AdminPage() {
   }, []);
 
   async function fetchData() {
-    const [mRes, bRes, pRes, obRes, ubRes, brRes, predRes, scorersRes, settingsRes] = await Promise.all([
+    const [mRes, bRes, obRes, scorersRes, settingsRes] = await Promise.all([
       supabase.from('matches').select('*').order('id', { ascending: true }),
       supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
-      supabase.from('profiles').select('*').order('username', { ascending: true }),
       supabase.from('official_bracket').select('*').order('id', { ascending: true }),
-      supabase.from('user_bonus_answers').select('*'),
-      supabase.from('brackets').select('*'),
-      supabase.from('predictions').select('*'),
       supabase.from('top_scorers').select('*').order('goals', { ascending: false }),
       supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
     ]);
     
+    const pData = await fetchAllRecords('profiles');
+    const ubData = await fetchAllRecords('user_bonus_answers');
+    const brData = await fetchAllRecords('brackets');
+    const predData = await fetchAllRecords('predictions');
+
     const fetchedMatches = mRes.data || [];
     setMatches(fetchedMatches); 
-    setProfiles(pRes.data || []); 
+    setProfiles(pData || []); 
     setOfficialBracket(obRes.data || []); 
-    setAllUserBonuses(ubRes.data || []);
-    setAllBrackets(brRes.data || []);
-    setPredictions(predRes.data || []);
+    setAllUserBonuses(ubData || []);
+    setAllBrackets(brData || []);
+    setPredictions(predData || []);
     setTopScorers(scorersRes.data || []);
     
     if (settingsRes.data) {
@@ -191,7 +207,6 @@ export default function AdminPage() {
     else toast.success(text === '' ? 'Annuncio rimosso!' : 'Annuncio pubblicato!');
   };
 
-  // --- FUNZIONI MARCATORI ---
   const addScorer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newScorerName.trim() || !newScorerTeam) return toast.error('Compila tutti i campi');
@@ -227,12 +242,18 @@ export default function AdminPage() {
     setSyncing(true);
     const syncToast = !isManual ? toast.loading('Calcolo Classifica...') : null;
     try {
-      const [{ data: profs }, { data: allMatches }, { data: allPreds }, { data: offBonuses }, { data: userBonuses }, { data: offBracket }, { data: userBrackets }] = await Promise.all([
-        supabase.from('profiles').select('*'), supabase.from('matches').select('*').eq('is_finished', true),
-        supabase.from('predictions').select('*'), supabase.from('official_bonuses').select('*').maybeSingle(),
-        supabase.from('user_bonus_answers').select('*'), supabase.from('official_bracket').select('*'), supabase.from('brackets').select('*'),
+      const [{ data: allMatches }, { data: offBonuses }, { data: offBracket }] = await Promise.all([
+        supabase.from('matches').select('*').eq('is_finished', true),
+        supabase.from('official_bonuses').select('*').maybeSingle(),
+        supabase.from('official_bracket').select('*'), 
       ]);
-      if (!profs) return;
+      
+      const profs = await fetchAllRecords('profiles');
+      const allPreds = await fetchAllRecords('predictions');
+      const userBrackets = await fetchAllRecords('brackets');
+      const userBonuses = await fetchAllRecords('user_bonus_answers');
+
+      if (!profs || profs.length === 0) return;
 
       const finishedMatchesCount = allMatches?.length || 0;
       const maxGroupPoints = finishedMatchesCount * 10;
@@ -322,7 +343,10 @@ export default function AdminPage() {
       });
 
       const ranked = sorted.map((u, i) => ({ ...u, ranking: (i + 1).toString() }));
-      await supabase.from('profiles').upsert(ranked, { onConflict: 'id' });
+      
+      for (const p of ranked) {
+        await supabase.from('profiles').upsert(p, { onConflict: 'id' });
+      }
       
       if (syncToast) toast.dismiss(syncToast);
       
@@ -332,7 +356,7 @@ export default function AdminPage() {
         toast.success('Classifica aggiornata in automatico! 🏆');
       }
       
-      fetchData();
+      fetchData(); 
     } catch (err: any) { toast.error(err.message); } finally { setSyncing(false); }
   };
 
@@ -423,12 +447,6 @@ export default function AdminPage() {
     }
   };
 
-  const getAverage = (k: string) => { 
-    const v = allUserBonuses.filter(b => b[k] != null && String(b[k]).trim() !== '').map(b => Number(b[k])).filter(n => !isNaN(n)); 
-    if (!v.length) return '0';
-    return (v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('it-IT', { maximumFractionDigits: 1 }); 
-  };
-
   const getWinnerStats = () => {
     const winners = allBrackets.filter(b => b.stage === 'WINNER');
     const total = winners.length;
@@ -499,23 +517,32 @@ export default function AdminPage() {
 
   const getCompletionStats = () => {
     return profiles.map(p => {
-      const uPreds = predictions.filter(pred => pred.user_id === p.id).length;
-      const uBracks = allBrackets.filter(b => b.user_id === p.id && b.team_name).length;
+      const uPreds = predictions.filter(pred => 
+        pred.user_id === p.id && 
+        pred.home_score !== null && String(pred.home_score).trim() !== '' &&
+        pred.away_score !== null && String(pred.away_score).trim() !== ''
+      ).length;
+      
+      const uBracks = allBrackets.filter(b => b.user_id === p.id && b.team_name && b.team_name.trim() !== '').length;
       
       let uBonus = 0;
       const bRow = allUserBonuses.find(b => b.user_id === p.id);
       if (bRow) {
         const fields = ['total_red_cards', 'top_scorer', 'high_scoring_match', 'total_penalties', 'total_own_goals', 'highest_scoring_group', 'lowest_scoring_group', 'mvp_world_cup', 'best_goalkeeper'];
         fields.forEach(f => {
-          if (bRow[f] !== null && bRow[f] !== '') uBonus++;
+          if (bRow[f] !== null && bRow[f] !== undefined && String(bRow[f]).trim() !== '') uBonus++;
         });
       }
       
-      const totalCompleted = uPreds + uBracks + uBonus;
-      const totalMax = 72 + 63 + 9;
-      const pct = Math.round((totalCompleted / totalMax) * 100);
+      const maxBracks = uBracks > 31 ? 63 : 31;
+
+      const pctPreds = Math.min(100, Math.round((uPreds / 72) * 100)) || 0;
+      const pctBracks = Math.min(100, Math.round((uBracks / maxBracks) * 100)) || 0;
+      const pctBonus = Math.min(100, Math.round((uBonus / 9) * 100)) || 0;
       
-      return { ...p, uPreds, uBracks, uBonus, totalCompleted, totalMax, pct };
+      const pct = Math.round((pctPreds + pctBracks + pctBonus) / 3);
+      
+      return { ...p, uPreds, uBracks, uBonus, pct, maxBracks };
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
@@ -616,11 +643,11 @@ export default function AdminPage() {
 
     stats.forEach(u => {
       const girIcon = u.uPreds === 72 ? '✅' : u.uPreds > 0 ? '⚠️' : '❌';
-      const tabIcon = u.uBracks === 63 ? '✅' : u.uBracks > 0 ? '⚠️' : '❌';
+      const tabIcon = u.uBracks >= u.maxBracks ? '✅' : u.uBracks > 0 ? '⚠️' : '❌';
       const bonIcon = u.uBonus === 9 ? '✅' : u.uBonus > 0 ? '⚠️' : '❌';
 
       text += `👤 *${u.username}* (${u.pct}%)\n`;
-      text += `Gir: ${u.uPreds}/72 ${girIcon} | Tab: ${u.uBracks}/63 ${tabIcon} | Bon: ${u.uBonus}/9 ${bonIcon}\n\n`;
+      text += `Gir: ${u.uPreds}/72 ${girIcon} | Tab: ${u.uBracks}/${u.maxBracks} ${tabIcon} | Bon: ${u.uBonus}/9 ${bonIcon}\n\n`;
     });
 
     text += `👉 Entra per completare: www.iltuopronostico.it`;
@@ -628,14 +655,13 @@ export default function AdminPage() {
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
   };
 
-  const isExpired = new Date() > WORLD_CUP_START_DATE;
   const navItems = [
     { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
     { name: 'Fase Gironi', path: '/matches', icon: <Gamepad2 size={20} strokeWidth={2.5} /> },
     { name: 'Fase Finale', path: '/bracket', icon: <Trophy size={20} strokeWidth={2.5} /> },
     { name: 'Bonus', path: '/bonus', icon: <Star size={20} strokeWidth={2.5} /> },
     { name: 'Classifica', path: '/leaderboard', icon: <ListOrdered size={20} strokeWidth={2.5} /> },
-    ...(isExpired ? [{ name: 'Globale', path: '/tutti-i-pronostici', icon: <Users size={20} strokeWidth={2.5} /> }] : []),
+    { name: 'Globale', path: '/tutti-i-pronostici', icon: <Users size={20} strokeWidth={2.5} /> }, // Admin bypassa il blocco temporale
   ];
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
@@ -911,7 +937,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest px-1">
                         <span title="Fase a Gironi">Gir: <span className={u.uPreds === 72 ? 'text-emerald-400' : 'text-slate-300'}>{u.uPreds}/72</span></span>
-                        <span title="Fase Finale (Tabellone)">FF: <span className={u.uBracks === 63 ? 'text-emerald-400' : 'text-slate-300'}>{u.uBracks}/63</span></span>
+                        <span title="Fase Finale (Tabellone)">FF: <span className={u.uBracks >= u.maxBracks ? 'text-emerald-400' : 'text-slate-300'}>{u.uBracks}/{u.maxBracks}</span></span>
                         <span title="Domande Bonus">Bon: <span className={u.uBonus === 9 ? 'text-emerald-400' : 'text-slate-300'}>{u.uBonus}/9</span></span>
                       </div>
                     </div>
@@ -928,10 +954,28 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rossi Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_red_cards')}</p></div>
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rigori Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_penalties')}</p></div>
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md"><p className="text-[8px] font-black text-slate-500 uppercase mb-1">Autogol Avg</p><p className="text-xl font-black text-cyan-400">{getAverage('total_own_goals')}</p></div>
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60 mt-0">
+                <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Bonus Numerici (Rossi - Rigori - Autogol)</p>
+                <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+                  {profiles.filter(p => allUserBonuses.some(b => b.user_id === p.id && (b.total_red_cards != null || b.total_penalties != null || b.total_own_goals != null))).length > 0 ? (
+                    profiles.map(p => {
+                      const uBonus = allUserBonuses.find(b => b.user_id === p.id);
+                      if (!uBonus || (uBonus.total_red_cards == null && uBonus.total_penalties == null && uBonus.total_own_goals == null)) return null;
+                      return (
+                        <div key={p.id} className="flex justify-between items-center border-b border-slate-800/30 pb-2 last:border-0 last:pb-0">
+                          <span className="text-[10px] font-black uppercase italic text-white truncate pr-2">{p.username}</span>
+                          <div className="flex gap-2 text-[9px] font-black uppercase tracking-wider text-cyan-400">
+                            <span className="bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm" title="Cartellini Rossi">🟥 {uBonus.total_red_cards ?? '-'}</span>
+                            <span className="bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm" title="Calci di Rigore">⚽ {uBonus.total_penalties ?? '-'}</span>
+                            <span className="bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm" title="Autogol">🤦 {uBonus.total_own_goals ?? '-'}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun dato inserito</div>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
