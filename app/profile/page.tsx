@@ -239,6 +239,7 @@ export default function ProfilePage() {
   const [showScorersModal, setShowScorersModal] = useState(false);
 
   const [completionPct, setCompletionPct] = useState(0);
+  const [completionDetails, setCompletionDetails] = useState({ preds: 0, brackets: 0, bonus: 0 });
   const [liveStats, setLiveStats] = useState<{ groupGoals: Record<string, number> }>({ groupGoals: {} });
 
   const [stats, setStats] = useState({
@@ -301,8 +302,8 @@ export default function ProfilePage() {
         });
 
         const [predsRes, bracketsRes, bonusRes, offBonusRes, matchesRes, scorersRes, settingsRes] = await Promise.all([
-          supabase.from('predictions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('brackets').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('predictions').select('home_score, away_score').eq('user_id', user.id),
+          supabase.from('brackets').select('team_name').eq('user_id', user.id),
           supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
           supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
           supabase.from('matches').select('*').eq('is_finished', true),
@@ -315,19 +316,26 @@ export default function ProfilePage() {
         setTopScorers(scorersRes.data || []);
         if (settingsRes.data) setAnnouncement(settingsRes.data.announcement || '');
 
-        const predsCount = predsRes.count || 0;
-        const bracketsCount = bracketsRes.count || 0;
-        let bonusCount = 0;
+        const validPreds = predsRes.data?.filter(p => p.home_score !== null && String(p.home_score).trim() !== '' && p.away_score !== null && String(p.away_score).trim() !== '').length || 0;
+        const validBrackets = bracketsRes.data?.filter(b => b.team_name && b.team_name.trim() !== '').length || 0;
+        
+        let validBonus = 0;
         if (bonusRes.data) {
           const b = bonusRes.data;
           const fields = ['total_red_cards', 'top_scorer', 'high_scoring_match', 'total_penalties', 'total_own_goals', 'highest_scoring_group', 'lowest_scoring_group', 'mvp_world_cup', 'best_goalkeeper'];
           fields.forEach(f => {
-            if (b[f] !== null && b[f] !== '') bonusCount++;
+            if (b[f] !== null && b[f] !== undefined && String(b[f]).trim() !== '') validBonus++;
           });
         }
-        const totalCompleted = predsCount + bracketsCount + bonusCount;
-        const totalRequired = 72 + 63 + 9;
-        const percentage = Math.min(100, Math.round((totalCompleted / totalRequired) * 100));
+
+        setCompletionDetails({ preds: validPreds, brackets: validBrackets, bonus: validBonus });
+
+        // --- FORMULA SOMMA ASSOLUTA (Allineata al Pannello Admin) ---
+        const maxBrackets = 63; 
+        const totalCompleted = validPreds + validBrackets + validBonus;
+        const totalMax = 72 + maxBrackets + 9; // 144
+        const percentage = Math.round((totalCompleted / totalMax) * 100);
+        
         setCompletionPct(percentage);
 
         const gGoals: Record<string, number> = {};
@@ -405,7 +413,6 @@ export default function ProfilePage() {
         {userProfile ? (
           <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
-            {/* ANNUNCIO GLOBALE SCORREVOLE (TICKER SMART CON FONDO ROSSO LIVE) */}
             {announcement && announcement.trim() !== '' && (
               (() => {
                 const isLive = announcement.trim().toUpperCase().startsWith('LIVE:');
@@ -434,7 +441,6 @@ export default function ProfilePage() {
                         }
                       `}} />
 
-                      {/* Icona o Pallino Live con dimensioni bloccate per non schiacciarsi */}
                       <div className={`relative z-10 shrink-0 flex items-center justify-center shadow-[5px_0_10px_rgba(2,6,23,0.8)] ${isLive ? 'h-8 px-3 rounded-full bg-red-500/20 border border-red-500/30 gap-1.5' : 'w-8 h-8 rounded-full bg-blue-500/20'}`}>
                         {isLive ? (
                           <>
@@ -461,7 +467,6 @@ export default function ProfilePage() {
               })()
             )}
 
-            {/* BLOCCO AVATAR E NOME */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
               <div className="flex items-center gap-5 text-left">
                 
@@ -511,17 +516,33 @@ export default function ProfilePage() {
                       </span>
                       <span className={`text-sm sm:text-base font-black leading-none ${completionPct === 100 ? 'text-emerald-400' : 'text-yellow-500'}`}>{completionPct}%</span>
                   </div>
-                  <div className="w-full bg-slate-950 rounded-full h-3 sm:h-3.5 overflow-hidden border border-slate-800">
+                  <div className="w-full bg-slate-950 rounded-full h-2.5 sm:h-3 overflow-hidden border border-slate-800 mb-3.5">
                       <div 
                           className={`h-full rounded-full transition-all duration-1000 ease-out ${completionPct === 100 ? 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.3)]'}`}
                           style={{ width: `${completionPct}%` }}
                       ></div>
                   </div>
-                  {completionPct === 100 ? (
-                      <p className="text-emerald-400 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">✓ Tutto pronto per il Mondiale!</p>
-                  ) : (
-                      <p className="text-slate-500 text-[9px] sm:text-[10px] uppercase font-black tracking-widest mt-3 text-center italic">Completa tutto prima della scadenza!</p>
-                  )}
+                  
+                  <div className="flex justify-between items-center pt-2.5 border-t border-slate-800/50">
+                      <div className="flex flex-col items-center w-1/3">
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Gironi</span>
+                          <span className={`text-[10px] font-black ${completionDetails.preds === 72 ? 'text-emerald-400' : 'text-yellow-500'}`}>
+                            {completionDetails.preds}/72
+                          </span>
+                      </div>
+                      <div className="flex flex-col items-center w-1/3 border-x border-slate-800/50">
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Fase Finale</span>
+                          <span className={`text-[10px] font-black ${completionDetails.brackets === 63 ? 'text-emerald-400' : 'text-yellow-500'}`}>
+                            {completionDetails.brackets}/63
+                          </span>
+                      </div>
+                      <div className="flex flex-col items-center w-1/3">
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Bonus</span>
+                          <span className={`text-[10px] font-black ${completionDetails.bonus === 9 ? 'text-emerald-400' : 'text-yellow-500'}`}>
+                            {completionDetails.bonus}/9
+                          </span>
+                      </div>
+                  </div>
               </div>
             )}
 

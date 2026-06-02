@@ -447,20 +447,24 @@ export default function AdminPage() {
   };
 
   const getWinnerStats = () => {
-    const winners = allBrackets.filter(b => b.stage === 'WINNER');
+    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
     const total = winners.length;
     if (total === 0) return [];
     const counts: any = {};
-    winners.forEach(w => { counts[w.team_name] = (counts[w.team_name] || 0) + 1; });
+    winners.forEach(w => { 
+      const t = formatTeamName(w.team_name);
+      counts[t] = (counts[t] || 0) + 1; 
+    });
+    // Rimosso il .slice(0,5) qui! Mostriamo tutte le scelte votate.
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
   const getWinnerChoicesGroupedByTeam = () => {
-    const winners = allBrackets.filter(b => b.stage === 'WINNER');
+    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
     const grouped: Record<string, string[]> = {};
     
     winners.forEach(w => {
-      const team = w.team_name;
+      const team = formatTeamName(w.team_name);
       const p = profiles.find(prof => prof.id === w.user_id);
       const username = p ? p.username : 'Anonimo';
       if (!grouped[team]) grouped[team] = [];
@@ -559,7 +563,7 @@ export default function AdminPage() {
 
   const copyBonusReport = () => {
     const winners = getWinnerStats();
-    let text = `📊 *STATISTICHE & SENTIMENTO DEL GRUPPO* 📊\n\n`;
+    let text = `📊 *STATISTICHE* 📊\n\n`;
     
     text += `👑 *Vincitore del Mondiale (Scelte):*\n`;
     winners.forEach(w => {
@@ -943,7 +947,7 @@ export default function AdminPage() {
               <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800">
                 <p className="text-[9px] font-black text-slate-500 uppercase mb-4 border-b border-slate-800/50 pb-1 italic">Vincitore del Mondiale (Sentiment)</p>
                 <div className="space-y-2">
-                  {getWinnerStats().slice(0,5).map(w => (
+                  {getWinnerStats().map(w => (
                     <div key={w.name} className="flex justify-between items-center text-[10px] font-black uppercase italic"><span className="text-white">{w.name}</span><span className="text-cyan-500">{w.pct}%</span></div>
                   ))}
                 </div>
