@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3 } from 'lucide-react';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -67,6 +67,7 @@ export default function BracketPage() {
   const [fetching, setFetching] = useState(true);
   
   const [activeCell, setActiveCell] = useState<any>(null);
+  const [teamSearch, setTeamSearch] = useState(''); // STATO PER LA RICERCA SQUADRA
   const selectedTeamRef = useRef<any>(null);
 
   const isExpired = new Date() > WORLD_CUP_START_DATE;
@@ -83,6 +84,8 @@ export default function BracketPage() {
         }
       }, 350);
       return () => clearTimeout(timer);
+    } else {
+      setTeamSearch(''); // Reset della ricerca quando si chiude il modale
     }
   }, [activeCell]);
 
@@ -276,18 +279,42 @@ export default function BracketPage() {
           
           <div className="relative w-full max-w-xl bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
             
-            <div className="p-7 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Seleziona Squadra</h3>
-                <p className="text-slate-500 text-xs font-black uppercase mt-1 tracking-widest">
-                  {STAGES.find(s => s.id === activeCell.stageId)?.label} — POS. {activeCell.index + 1}
-                </p>
+            <div className="p-6 sm:p-7 bg-slate-950/80 border-b border-slate-800 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Seleziona Squadra</h3>
+                  <p className="text-slate-500 text-xs font-black uppercase mt-1 tracking-widest">
+                    {STAGES.find(s => s.id === activeCell.stageId)?.label} — POS. {activeCell.index + 1}
+                  </p>
+                </div>
+                <button onClick={() => setActiveCell(null)} className="p-4 bg-slate-800 rounded-full text-white active:scale-90 transition-all shadow-lg"><X size={24} strokeWidth={3}/></button>
               </div>
-              <button onClick={() => setActiveCell(null)} className="p-4 bg-slate-800 rounded-full text-white active:scale-90 transition-all shadow-lg"><X size={24} strokeWidth={3}/></button>
+              
+              {/* BARRA DI RICERCA SQUADRA */}
+              <div className="relative">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                 <input 
+                   type="text" 
+                   placeholder="Cerca squadra..." 
+                   className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-black uppercase text-white outline-none focus:border-yellow-500 transition-colors placeholder:text-slate-600" 
+                   value={teamSearch} 
+                   onChange={e => setTeamSearch(e.target.value)} 
+                 />
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-20">
                 {TOURNAMENT_GROUPS.map((group) => {
+                  
+                  // FILTRA LE SQUADRE DEL GIRONE IN BASE ALLA RICERCA
+                  const filteredTeams = group.teams.filter(t => 
+                    t.toLowerCase().includes(teamSearch.toLowerCase()) || 
+                    formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
+                  );
+
+                  // Se nessuna squadra del girone corrisponde alla ricerca, nascondi l'intero blocco del girone
+                  if (filteredTeams.length === 0) return null;
+
                   const alreadySelectedByOthers = getAlreadySelectedInStage(activeCell.stageId, activeCell.index);
                   const currentCellSelection = selections[`${activeCell.stageId}-${activeCell.index}`];
                   
@@ -300,7 +327,7 @@ export default function BracketPage() {
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {group.teams.map((t) => {
+                        {filteredTeams.map((t) => {
                           const isPickedByOther = alreadySelectedByOthers.includes(t);
                           const isCurrentSelection = currentCellSelection === t;
                           
@@ -391,6 +418,13 @@ export default function BracketPage() {
                     </div>
                   );
                 })}
+                
+                {/* MESSAGGIO NESSUN RISULTATO */}
+                {TOURNAMENT_GROUPS.every(group => 
+                   group.teams.filter(t => t.toLowerCase().includes(teamSearch.toLowerCase()) || formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())).length === 0
+                ) && (
+                  <p className="text-center text-slate-500 font-black uppercase text-xs pt-10">Nessuna squadra trovata</p>
+                )}
             </div>
           </div>
         </div>

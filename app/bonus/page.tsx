@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Award, Flame, Zap, Trophy, Trash2, 
   ShieldCheck, ChevronDown, X, Target, Goal, ArrowUpToLine, ArrowDownToLine,
@@ -64,6 +65,112 @@ const formatTeamName = (teamName: string) => {
   return teamName;
 };
 
+// FUNZIONE DI SUPPORTO PER RIMUOVERE ACCENTI E DIERESI
+const cleanString = (str: string) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
+const AutocompleteInput = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  suggestions 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  placeholder: string; 
+  suggestions: {name: string, country: string}[] 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchTerm = cleanString(value);
+
+  // Filtra ignorando completamente maiuscole ed accenti sia sul nome che sulla nazione
+  const filteredSuggestions = suggestions.filter(s => {
+    return cleanString(s.name).includes(searchTerm) || cleanString(s.country).includes(searchTerm);
+  }).filter(s => cleanString(s.name) !== searchTerm);
+
+  const hasExactMatch = suggestions.some(s => cleanString(s.name) === searchTerm);
+  const matchingPlayer = suggestions.find(s => cleanString(s.name) === searchTerm);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div className="relative flex items-center">
+        {matchingPlayer ? (
+          <img 
+            src={getFlag(matchingPlayer.country)!} 
+            className="absolute left-4 w-6 h-4 rounded-[2px] object-cover border border-slate-700 pointer-events-none" 
+            alt=""
+          />
+        ) : (
+          <User size={16} className="absolute left-4 text-slate-600 pointer-events-none" />
+        )}
+        <input 
+          type="text" 
+          placeholder={placeholder} 
+          value={value} 
+          onChange={(e) => {
+            onChange(e.target.value);
+            setIsOpen(true);
+          }} 
+          onFocus={() => setIsOpen(true)}
+          className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 pl-12 outline-none focus:border-yellow-500 font-black text-sm sm:text-base uppercase transition-all text-white placeholder:text-slate-700" 
+        />
+      </div>
+      
+      {isOpen && value.length > 0 && (
+        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
+          {filteredSuggestions.length > 0 ? (
+            filteredSuggestions.map((suggestion, index) => {
+              const flag = getFlag(suggestion.country);
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    onChange(suggestion.name);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left p-3 flex items-center gap-3 hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0"
+                >
+                  {flag ? <img src={flag} className="w-6 h-4 rounded-[2px] object-cover shadow-sm border border-slate-700 shrink-0" alt="" /> : <Shield size={16} className="text-slate-600"/>}
+                  <div className="flex flex-col">
+                     <span className="text-xs font-black uppercase text-slate-200">{suggestion.name}</span>
+                     <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">{suggestion.country}</span>
+                  </div>
+                </button>
+              )
+            })
+          ) : (
+            !hasExactMatch && (
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="w-full p-4 flex items-center gap-3 hover:bg-slate-800 transition-colors text-left"
+              >
+                <User size={16} className="text-slate-500 shrink-0"/>
+                <span className="text-xs font-black uppercase text-slate-400">Scommetti su "{value}"</span>
+              </button>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 export default function BonusPage() {
   const router = useRouter();
   
@@ -84,6 +191,10 @@ export default function BonusPage() {
   const [activeBonusField, setActiveBonusField] = useState<string | null>(null);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchSearch, setMatchSearch] = useState('');
+  
+  // STATI PORTIERI
+  const [showGkModal, setShowGkModal] = useState(false);
+  const [gkSearch, setGkSearch] = useState('');
 
   const isExpired = new Date() > LOCK_TIME;
 
@@ -231,10 +342,8 @@ export default function BonusPage() {
   return (
     <main className="min-h-[100dvh] bg-slate-950 text-white font-sans flex flex-col">
       
-      {/* HEADER FISSO IN ALTO */}
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md pt-6 pb-2 border-b border-slate-900 shadow-xl">
         <div className="max-w-md mx-auto px-4">
-          
           <div className="flex justify-between items-end mb-4">
             <h1 className="text-3xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
             <div className="flex flex-col items-end">
@@ -265,11 +374,9 @@ export default function BonusPage() {
               </button>
             ))}
           </div>
-
         </div>
       </div>
 
-      {/* CONTENUTO SCORREVOLE */}
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32">
         <form id="bonusForm" onSubmit={saveBonus} className="max-w-md mx-auto space-y-5 text-left pb-10">
           
@@ -279,17 +386,42 @@ export default function BonusPage() {
             {activeTab === 'GIOCATORI' && (
               <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
                 {[ 
-                  {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy}, 
-                  {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award}, 
-                  {id: 'best_goalkeeper', label: 'Miglior Portiere - 10 pt', icon: ShieldCheck}
+                  {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy, placeholder: "Cerca Giocatore"}, 
+                  {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award, placeholder: "Cerca Giocatore"}
                 ].map(field => (
                    <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                      <label>
                        <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-                       <input type="text" placeholder="Nome Giocatore..." value={formData[field.id]} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 outline-none focus:border-yellow-500 font-black text-sm sm:text-base uppercase transition-all text-white placeholder:text-slate-700" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} />
+                       <AutocompleteInput 
+                         value={formData[field.id]} 
+                         onChange={(val) => setFormData({ ...formData, [field.id]: val })} 
+                         placeholder={field.placeholder} 
+                         suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
+                       />
                      </label>
                    </div>
                 ))}
+
+                {/* MODALITÀ PORTIERI (Con filtro accenti integrato nella ricerca) */}
+                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.best_goalkeeper ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ShieldCheck size={16} /> Miglior Portiere - 10 pt</label>
+                   <button type="button" onClick={() => setShowGkModal(true)} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.best_goalkeeper ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                      {formData.best_goalkeeper ? (
+                         <div className="flex items-center gap-3 truncate pr-2">
+                             {WORLD_CUP_GOALKEEPERS.find(g => cleanString(g.name) === cleanString(formData.best_goalkeeper)) ? (
+                                 <img src={getFlag(WORLD_CUP_GOALKEEPERS.find(g => cleanString(g.name) === cleanString(formData.best_goalkeeper))!.country)!} className="w-6 h-4 rounded-[2px] object-cover shadow-sm border border-slate-700 shrink-0" alt=""/>
+                             ) : (
+                                 <Shield size={16} className="text-slate-500 shrink-0"/>
+                             )}
+                             <span className="truncate">{formData.best_goalkeeper}</span>
+                         </div>
+                      ) : (
+                         <span>Scegli Portiere...</span>
+                      )}
+                      <Search size={18} className={`shrink-0 ${formData.best_goalkeeper ? 'text-yellow-500' : 'text-slate-600'}`} />
+                   </button>
+                </div>
+
               </div>
             )}
 
@@ -364,6 +496,51 @@ export default function BonusPage() {
 
         </form>
       </div>
+
+      {/* MODAL PORTIERI */}
+      {showGkModal && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setShowGkModal(false)}></div>
+          <div className="relative w-full max-w-md bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+            <div className="p-6 bg-slate-950/80 border-b border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-yellow-500 text-lg font-black uppercase italic tracking-tight flex items-center gap-2"><ShieldCheck size={18}/> Miglior Portiere</h3>
+                <button onClick={() => setShowGkModal(false)} className="p-2 bg-slate-800 rounded-full text-white active:scale-90 transition-all"><X size={18}/></button>
+              </div>
+              <div className="relative">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                 <input type="text" placeholder="Cerca portiere o nazione..." className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-black uppercase text-white outline-none focus:border-yellow-500 transition-colors placeholder:text-slate-600" value={gkSearch} onChange={e => setGkSearch(e.target.value)} />
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar pb-10">
+              {gkSearch.trim() !== '' && !WORLD_CUP_GOALKEEPERS.some(g => cleanString(g.name).includes(cleanString(gkSearch)) || cleanString(g.country).includes(cleanString(gkSearch))) && (
+                  <button type="button" onClick={() => { setFormData({...formData, best_goalkeeper: gkSearch.trim()}); setShowGkModal(false); }} className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/50 hover:bg-slate-800 flex items-center gap-3 transition-all active:scale-95 mb-2">
+                      <User size={16} className="text-slate-500 shrink-0"/>
+                      <span className="font-black text-xs uppercase text-slate-300 truncate">Scommetti su "{gkSearch}"</span>
+                  </button>
+              )}
+
+              {WORLD_CUP_GOALKEEPERS.filter(g => cleanString(g.name).includes(cleanString(gkSearch)) || cleanString(g.country).includes(cleanString(gkSearch))).map((gk) => {
+                 const isSelected = cleanString(formData.best_goalkeeper) === cleanString(gk.name);
+                 const flag = getFlag(gk.country);
+                 return (
+                    <button key={`${gk.country}-${gk.name}`} onClick={() => { setFormData({...formData, best_goalkeeper: gk.name}); setShowGkModal(false); }} className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all active:scale-95 ${isSelected ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}`}>
+                        <div className="flex items-center gap-3 truncate">
+                            {flag ? <img src={flag} className="w-6 h-4 shrink-0 rounded-[3px] shadow border border-slate-800 object-cover" alt="" /> : <Shield size={16} className="text-slate-600 shrink-0"/>}
+                            <div className="flex flex-col items-start truncate">
+                               <span className={`font-black uppercase text-xs tracking-tight truncate ${isSelected ? 'text-yellow-500' : 'text-white'}`}>{gk.name}</span>
+                               <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider truncate">{gk.country}</span>
+                            </div>
+                        </div>
+                        {isSelected && <div className="bg-rose-500 rounded-full w-5 h-5 shrink-0 flex items-center justify-center text-white"><X size={12}/></div>}
+                    </button>
+                 );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL GIRONI */}
       {activeBonusField && (
