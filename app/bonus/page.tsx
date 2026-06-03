@@ -386,8 +386,8 @@ export default function BonusPage() {
             {activeTab === 'GIOCATORI' && (
               <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
                 {[ 
-                  {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy, placeholder: "Cerca Giocatore"}, 
-                  {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award, placeholder: "Cerca Giocatore"}
+                  {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy, placeholder: "Cerca Giocatore o Squadra"}, 
+                  {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award, placeholder: "Cerca Giocatore o Squadra"}
                 ].map(field => (
                    <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                      <label>
