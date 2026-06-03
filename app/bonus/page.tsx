@@ -472,7 +472,7 @@ export default function BonusPage() {
                   <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                     <label>
                       <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-                      <input type="number" placeholder="Es. 12" value={formData[field.id]} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} />
+                      <input type="number" placeholder="Digita un numero" value={formData[field.id]} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} />
                     </label>
                   </div>
                 ))}
