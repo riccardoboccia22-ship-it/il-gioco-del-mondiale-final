@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
@@ -52,16 +53,22 @@ const TOURNAMENT_GROUPS = [
 
 const flagMap: { [key: string]: string } = {
   algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
-  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba',
-  brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', 
-  "costa d'avorio": 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', bosnia: 'ba',
+  brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', 'corea sud': 'kr', 
+  "costa d'avorio": 'ci', 'costa avorio': 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw',
   ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp', 
   giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma', 
-  messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
-  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'repubblica democratica del congo': 'cd',
+  messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', 'n. zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
+  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'rep. ceca': 'cz', 'repubblica democratica del congo': 'cd', 'r.d. congo': 'cd',
   scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'stati uniti': 'us', usa: 'us',
   sudafrica: 'za', svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', 
   uruguay: 'uy', uzbekistan: 'uz',
+};
+
+const getFlag = (team: string) => {
+    if (!team) return null;
+    const code = flagMap[team.toLowerCase().trim()];
+    return code ? `https://flagcdn.com/w40/${code}.png` : null;
 };
 
 const normalizeStage = (s: string) => {
@@ -102,6 +109,112 @@ const formatMatchName = (matchString: string) => {
   formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
   formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
   return formatted;
+};
+
+const cleanString = (str: string) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
+const AutocompleteInput = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  suggestions,
+  onSelectCustom
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  placeholder: string; 
+  suggestions: {name: string, country: string}[];
+  onSelectCustom?: (item: {name: string, country: string}) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchTerm = cleanString(value);
+
+  const filteredSuggestions = suggestions.filter(s => {
+    return cleanString(s.name).includes(searchTerm) || cleanString(s.country).includes(searchTerm);
+  }).filter(s => cleanString(s.name) !== searchTerm);
+
+  const hasExactMatch = suggestions.some(s => cleanString(s.name) === searchTerm);
+  const matchingPlayer = suggestions.find(s => cleanString(s.name) === searchTerm);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div className="relative flex items-center">
+        {matchingPlayer ? (
+          <img 
+            src={getFlag(matchingPlayer.country)!} 
+            className="absolute left-4 w-6 h-4 rounded-[2px] object-cover border border-slate-700 pointer-events-none" 
+            alt=""
+          />
+        ) : (
+          <User size={16} className="absolute left-4 text-slate-600 pointer-events-none" />
+        )}
+        <input 
+          type="text" 
+          placeholder={placeholder} 
+          value={value} 
+          onChange={(e) => {
+            onChange(e.target.value);
+            setIsOpen(true);
+          }} 
+          onFocus={() => setIsOpen(true)}
+          className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 pl-12 outline-none focus:border-yellow-500 font-black text-sm sm:text-base uppercase transition-all text-white placeholder:text-slate-700" 
+        />
+      </div>
+      
+      {isOpen && value.length > 0 && (
+        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
+          {filteredSuggestions.length > 0 ? (
+            filteredSuggestions.map((suggestion, index) => {
+              const flag = getFlag(suggestion.country);
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    onChange(suggestion.name);
+                    if (onSelectCustom) onSelectCustom(suggestion);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left p-3 flex items-center gap-3 hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0"
+                >
+                  {flag ? <img src={flag} className="w-6 h-4 rounded-[2px] object-cover shadow-sm border border-slate-700 shrink-0" alt="" /> : <Shield size={16} className="text-slate-600"/>}
+                  <div className="flex flex-col">
+                     <span className="text-xs font-black uppercase text-slate-200">{suggestion.name}</span>
+                     <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">{suggestion.country}</span>
+                  </div>
+                </button>
+              )
+            })
+          ) : (
+            !hasExactMatch && (
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="w-full p-4 flex items-center gap-3 hover:bg-slate-800 transition-colors text-left"
+              >
+                <User size={16} className="text-slate-500 shrink-0"/>
+                <span className="text-xs font-black uppercase text-slate-400">Usa custom: "{value}"</span>
+              </button>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const fetchAllRecords = async (table: string) => {
@@ -309,7 +422,9 @@ export default function AdminPage() {
         const ub = userBonuses?.find(b => b.user_id === profile.id);
         if (ub && offBonuses) {
           const bMap: any = { top_scorer: 10, mvp_world_cup: 10, best_goalkeeper: 10, high_scoring_match: 5, highest_scoring_group: 5, lowest_scoring_group: 5, total_red_cards: 3, total_penalties: 3, total_own_goals: 3 };
-          Object.entries(bMap).forEach(([k, pts]: any) => { if (offBonuses[k] != null && String(offBonuses[k]).trim().toLowerCase() === String(ub[k]).trim().toLowerCase()) pBon += pts; });
+          Object.entries(bMap).forEach(([k, pts]: any) => { 
+            if (offBonuses[k] != null && ub[k] != null && cleanString(String(offBonuses[k])) === cleanString(String(ub[k]))) pBon += pts; 
+          });
         }
         
         const userTotalPoints = pG + pB + pBon;
@@ -455,7 +570,6 @@ export default function AdminPage() {
       const t = formatTeamName(w.team_name);
       counts[t] = (counts[t] || 0) + 1; 
     });
-    // Rimosso il .slice(0,5) qui! Mostriamo tutte le scelte votate.
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
   };
 
@@ -503,7 +617,7 @@ export default function AdminPage() {
     allUserBonuses.forEach(b => {
       if (b[k]) {
         const raw = b[k].trim();
-        const key = raw.toLowerCase();
+        const key = cleanString(raw);
         const p = profiles.find(prof => prof.id === b.user_id);
         const username = p ? p.username : 'Anonimo';
         if (!choices[key]) {
@@ -537,7 +651,7 @@ export default function AdminPage() {
         });
       }
       
-      const maxBracks = 63; // FISSO A 63 PER TUTTI!
+      const maxBracks = 63;
       const totalCompleted = uPreds + uBracks + uBonus;
       const totalMax = 72 + maxBracks + 9;
       
@@ -626,8 +740,8 @@ export default function AdminPage() {
        sortedGroups.forEach(g => {
           text += `\n*${g}*\n`;
           grouped[g].forEach((m: any) => {
-             text += `⚽ ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)}\n`;
-             text += `   👉 ${m.exactUsers.join(', ')}\n`;
+              text += `⚽ ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)}\n`;
+              text += `    👉 ${m.exactUsers.join(', ')}\n`;
           });
        });
     }
@@ -745,19 +859,22 @@ export default function AdminPage() {
           {openSection.marcatori && (
             <div className="p-5 bg-slate-950/30 space-y-6">
               
-              <form onSubmit={addScorer} className="flex flex-col sm:flex-row gap-3">
-                <input 
-                  type="text" 
-                  placeholder="Nome (es. K. Mbappé)" 
+              <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
+                <AutocompleteInput 
                   value={newScorerName} 
-                  onChange={(e) => setNewScorerName(e.target.value)} 
-                  className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500"
+                  onChange={(val) => setNewScorerName(val)} 
+                  placeholder="Nome (es. K. Mbappé)" 
+                  suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
+                  onSelectCustom={(item) => {
+                    const code = flagMap[item.country.toLowerCase().trim()];
+                    if (code) setNewScorerTeam(code);
+                  }}
                 />
-                <div className="flex flex-1 gap-3">
+                <div className="flex w-full sm:w-auto gap-3 shrink-0">
                   <select 
                     value={newScorerTeam} 
                     onChange={(e) => setNewScorerTeam(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500 appearance-none"
+                    className="flex-1 sm:w-40 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500 appearance-none text-center"
                   >
                     <option value="">Nazione...</option>
                     {Object.entries(flagMap)
@@ -766,11 +883,11 @@ export default function AdminPage() {
                         <option key={code + country} value={code}>{country}</option>
                     ))}
                   </select>
-                  <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-2xl text-white transition-all shadow-lg active:scale-95 shrink-0">
+                  <button onClick={(e) => addScorer(e)} className="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-2xl text-white transition-all shadow-lg active:scale-95 shrink-0">
                     <Plus size={20} />
                   </button>
                 </div>
-              </form>
+              </div>
 
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                 {topScorers.length === 0 && (
@@ -895,9 +1012,20 @@ export default function AdminPage() {
             <div className="p-5 bg-slate-950/30">
               <form onSubmit={saveBonuses} className="space-y-5">
                 <div className="grid grid-cols-1 gap-4">
-                  <input value={bonusData.mvp_world_cup} onChange={e => setBonusData({ ...bonusData, mvp_world_cup: e.target.value })} placeholder="MVP MONDIALE" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" />
-                  <input value={bonusData.top} onChange={e => setBonusData({ ...bonusData, top: e.target.value })} placeholder="CAPOCANNONIERE" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" />
-                  <input value={bonusData.best_goalkeeper} onChange={e => setBonusData({ ...bonusData, best_goalkeeper: e.target.value })} placeholder="MIGLIOR PORTIERE" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-purple-400 text-xs outline-none focus:border-purple-500" />
+                  
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Mvp del Mondiale</span>
+                    <AutocompleteInput value={bonusData.mvp_world_cup} onChange={val => setBonusData({ ...bonusData, mvp_world_cup: val })} placeholder="MVP MONDIALE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Capocannoniere</span>
+                    <AutocompleteInput value={bonusData.top} onChange={val => setBonusData({ ...bonusData, top: val })} placeholder="CAPOCANNONIERE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Miglior Portiere</span>
+                    <AutocompleteInput value={bonusData.best_goalkeeper} onChange={val => setBonusData({ ...bonusData, best_goalkeeper: val })} placeholder="MIGLIOR PORTIERE" suggestions={WORLD_CUP_GOALKEEPERS} />
+                  </div>
+
                   <select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none appearance-none"><option value="">MATCH PIÙ GOL...</option>{Object.entries(groupedMatches).map(([g, m]) => (<optgroup key={g} label={g} className="bg-slate-900">{m.map(match => <option key={match} value={match}>{formatMatchName(match)}</option>)}</optgroup>))}</select>
                   <div className="grid grid-cols-2 gap-3"><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE PIÙ GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE MENO GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                   <div className="grid grid-cols-3 gap-3"><input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" placeholder="AUTOGOL" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs text-center" /><input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" placeholder="RIGORI" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs text-center" /><input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" placeholder="ROSSI" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs text-center" /></div>
@@ -1026,7 +1154,7 @@ export default function AdminPage() {
                                 <div key={m.id} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[8px] text-slate-300 shadow-sm">
                                   <img src={`https://flagcdn.com/w20/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
                                   <span className="uppercase font-black">{formatTeamName(m.home_team)}</span>
-                                  <span className="text-emerald-400 font-black">{m.home_score_final}-{m.away_score_final}</span>
+                                  <span className="text-emerald-400 font-black">{m.home_score_final}-${m.away_score_final}</span>
                                   <span className="uppercase font-black">{formatTeamName(m.away_team)}</span>
                                   <img src={`https://flagcdn.com/w20/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
                                 </div>
