@@ -885,9 +885,10 @@ export default function AdminPage() {
       return a.team.localeCompare(b.team);
     });
 
-    let text = `🕵️‍♂️ *RADAR ANOMALIE* 🕵️‍♂️\n(Le scelte più coraggiose e folli del gruppo)\n\n`;
+    // 1️⃣ MODIFICA QUI: SOSTITUZIONE [ ...new Set(...) ] CON .filter() 
+    const phases = anomaliesList.map(a => a.phase).filter((val, idx, arr) => arr.indexOf(val) === idx);
 
-    const phases = [...new Set(anomaliesList.map(a => a.phase))];
+    let text = `🕵️‍♂️ *RADAR ANOMALIE* 🕵️‍♂️\n(Le scelte più coraggiose e folli del gruppo)\n\n`;
 
     if (phases.length === 0) {
        text += `Nessuna anomalia rilevata! Tutti noiosi... 😴\n\n`;
@@ -1010,7 +1011,8 @@ export default function AdminPage() {
     return a.team.localeCompare(b.team);
   });
   
-  const uiPhases = [...new Set(anomaliesList.map(a => a.phase))];
+  // 2️⃣ MODIFICA QUI: SOSTITUZIONE [ ...new Set(...) ] CON .filter() 
+  const uiPhases = anomaliesList.map(a => a.phase).filter((val, idx, arr) => arr.indexOf(val) === idx);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden relative">
