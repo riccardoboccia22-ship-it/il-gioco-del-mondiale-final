@@ -782,6 +782,11 @@ export default function AdminPage() {
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-500 font-black">ACCESSO NEGATO</div>;
 
+  // Calcola statistiche dei pagamenti
+  const totalUsers = profiles.length;
+  const paidUsers = profiles.filter(p => p.is_paid).length;
+  const unpaidUsers = totalUsers - paidUsers;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden relative">
       <button onClick={() => router.push('/profile')} className="absolute top-6 left-4 text-slate-500 hover:text-yellow-500 transition-colors flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest z-10">
@@ -919,44 +924,83 @@ export default function AdminPage() {
 
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({profiles.length})</h2></div>
+            <div className="flex items-center gap-3">
+              <Users className="text-emerald-500" size={24} />
+              <h2 className="text-lg font-black uppercase italic tracking-tight">
+                Iscrizioni ({totalUsers})
+              </h2>
+            </div>
             {openSection.iscrizioni ? <ChevronUp /> : <ChevronDown />}
           </button>
+          
           {openSection.iscrizioni && (
-            <div className="bg-slate-950/50 divide-y divide-slate-800/50">
-              {profiles.map(p => (
-                <div key={p.id} className="p-4 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-black text-xs uppercase truncate italic">
-                      {p.username}
-                      {p.full_name ? (
-                        <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
-                          ({p.full_name})
-                        </span>
-                      ) : (
-                        <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
-                          (Nessun Nome)
-                        </span>
-                      )}
-                      <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
-                    </p>
-                    <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
+            <div className="bg-slate-950/50 flex flex-col">
+              <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+                 <div className="flex gap-4 text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-emerald-400">💰 Pagati: {paidUsers}</span>
+                    <span className="text-orange-400">⏳ Da Pagare: {unpaidUsers}</span>
+                 </div>
+              </div>
+              <div className="divide-y divide-slate-800/50">
+                {/* Ordiniamo gli iscritti mettendo prima chi NON ha pagato, così da averli sott'occhio */}
+                {[...profiles].sort((a, b) => (a.is_paid === b.is_paid ? 0 : a.is_paid ? 1 : -1)).map(p => (
+                  <div key={p.id} className="p-4 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex items-start gap-2">
+                      <div className="mt-1">
+                        {p.is_paid ? (
+                          <span className="text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Quota pagata">💰</span>
+                        ) : (
+                          <span className="text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Da pagare">⏳</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-black text-xs uppercase truncate italic">
+                          {p.username}
+                          {p.full_name ? (
+                            <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
+                              ({p.full_name})
+                            </span>
+                          ) : (
+                            <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
+                              (Nessun Nome)
+                            </span>
+                          )}
+                          <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
+                        </p>
+                        <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 shrink-0 self-center">
+                      <div className="relative">
+                        <select 
+                          value={p.payment_method || (p.is_paid ? 'Pagato' : '')} 
+                          onChange={(e) => updatePaymentMethod(p.id, e.target.value)} 
+                          className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-orange-500 border border-orange-500/30 hover:bg-orange-500/10'}`}
+                        >
+                          <option value="">⏳ NON PAGATO</option>
+                          <option value="Pagato" hidden>💰 PAGATO ✓</option>
+                          <option value="Satispay">SATISPAY</option>
+                          <option value="PayPal">PAYPAL</option>
+                          <option value="Contanti">CONTANTI</option>
+                          <option value="Bonifico">BONIFICO</option>
+                        </select>
+                        <ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-orange-500'}`} />
+                      </div>
+                      <button 
+                        onClick={() => handleResetPassword(p.id, p.username)} 
+                        className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
+                        title="Resetta Password"
+                      >
+                        <Key size={16} />
+                      </button>
+                      <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 shrink-0 self-center">
-                    <div className="relative"><select value={p.payment_method || (p.is_paid ? 'Pagato' : '')} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-rose-500 border border-rose-500/30'}`}><option value="">NON PAGATO</option><option value="Pagato" hidden>PAGATO ✓</option><option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option></select><ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-rose-500'}`} /></div>
-                    <button 
-                      onClick={() => handleResetPassword(p.id, p.username)} 
-                      className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
-                      title="Resetta Password"
-                    >
-                      <Key size={16} />
-                    </button>
-                    <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </section>
@@ -1012,7 +1056,6 @@ export default function AdminPage() {
             <div className="p-5 bg-slate-950/30">
               <form onSubmit={saveBonuses} className="space-y-5">
                 <div className="grid grid-cols-1 gap-4">
-                  
                   <div className="space-y-1">
                     <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Mvp del Mondiale</span>
                     <AutocompleteInput value={bonusData.mvp_world_cup} onChange={val => setBonusData({ ...bonusData, mvp_world_cup: val })} placeholder="MVP MONDIALE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
