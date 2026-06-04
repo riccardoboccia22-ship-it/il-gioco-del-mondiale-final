@@ -4,8 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Shield, ChevronDown, ChevronUp, Clock, Eraser, Loader2, CheckCircle2, ListFilter, BarChart3 } from 'lucide-react';
-// IMPORTIAMO I CORIANDOLI
+import { Shield, ChevronDown, ChevronUp, Clock, Eraser, Loader2, CheckCircle2, ListFilter, BarChart3, CalendarDays, LayoutGrid } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -40,6 +39,7 @@ const tournamentGroups = [
 ];
 
 type FilterType = 'ALL' | 'TODO' | 'DONE';
+type ViewMode = 'GROUP' | 'CHRONO';
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -47,12 +47,16 @@ export default function MatchesPage() {
   const [predictions, setPredictions] = useState<any>({});
   const [savingMatches, setSavingMatches] = useState<{ [key: number]: boolean }>({});
   const [savedMatches, setSavedMatches] = useState<{ [key: number]: boolean }>({});
+  
+  // STATI PER LE VISTE
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
+  const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>({});
+  
   const [userId, setUserId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
+  const [viewMode, setViewMode] = useState<ViewMode>('GROUP');
   
   const saveTimeouts = useRef<{ [key: number]: NodeJS.Timeout }>({});
-  // Ref per evitare che i coriandoli esplodano di continuo se si modificano partite già finite
   const hasCelebrated = useRef(false);
   
   const router = useRouter();
@@ -69,13 +73,11 @@ export default function MatchesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/'); return; }
 
-      // --- BLOCCO DI CORTESIA ---
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (!profile || !profile.full_name) {
         router.push('/setup-profilo');
         return;
       }
-      // --------------------------
 
       setUserId(user.id);
 
@@ -94,7 +96,6 @@ export default function MatchesPage() {
         });
         setPredictions(predMap);
         
-        // Se l'utente ha GIÀ completato tutto caricando la pagina, disattiviamo i coriandoli
         if (filledCount >= 72) hasCelebrated.current = true;
       }
     } catch (error) {
@@ -106,6 +107,10 @@ export default function MatchesPage() {
 
   const toggleGroup = (groupName: string) => {
     setOpenGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }));
+  };
+
+  const toggleDay = (dayString: string) => {
+    setOpenDays(prev => ({ ...prev, [dayString]: !prev[dayString] }));
   };
 
   const getFlagCode = (team: string) => flagMap[team?.toLowerCase().trim()];
@@ -138,11 +143,10 @@ export default function MatchesPage() {
       setSavedMatches(prev => ({ ...prev, [matchId]: true }));
       setTimeout(() => setSavedMatches(prev => ({ ...prev, [matchId]: false })), 2500);
 
-      // CONTROLLO CORIANDOLI: Se abbiamo 72 pronostici completi!
       setPredictions((currentPreds: any) => {
         const totalFilled = Object.values(currentPreds).filter((p: any) => p.home !== '' && p.away !== '' && p.home !== undefined && p.away !== undefined).length;
         if (totalFilled >= 72 && !hasCelebrated.current) {
-          hasCelebrated.current = true; // Impedisce che esplodano di nuovo
+          hasCelebrated.current = true;
           setTimeout(() => {
             confetti({
               particleCount: 200,
@@ -182,23 +186,23 @@ export default function MatchesPage() {
     }
   };
 
-  const resetGroup = async (e: React.MouseEvent, groupMatchesArray: any[]) => {
+  const resetGroupOrDay = async (e: React.MouseEvent, matchArray: any[]) => {
     e.stopPropagation();
     if (isExpired) return;
-    if (window.confirm('Azzera i pronostici visibili in questo girone?')) {
+    if (window.confirm('Azzera i pronostici visibili in questa sezione?')) {
       try {
-        const matchIds = groupMatchesArray.map((m) => m.id);
+        const matchIds = matchArray.map((m) => m.id);
         await supabase.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
         const newPredictions = { ...predictions };
         matchIds.forEach((id) => { delete newPredictions[id]; });
         setPredictions(newPredictions);
-        // Se l'utente resetta un girone, diamogli la possibilità di rivedere i coriandoli quando lo ricompila!
         hasCelebrated.current = false;
         toast.success('Pronostici azzerati!');
       } catch (err) { toast.error("Errore reset"); }
     }
   };
 
+  // --- LOGICA VISTA GIRONI ---
   const filteredGroups = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
     tournamentGroups.forEach(g => { grouped[g.name] = []; });
@@ -212,29 +216,117 @@ export default function MatchesPage() {
 
     Object.entries(grouped).forEach(([groupName, groupMatchesArray]) => {
       if (groupMatchesArray.length === 0) return;
-
       const filteredMatches = groupMatchesArray.filter(m => {
         const pred = predictions[m.id];
         const isMatchComplete = pred && pred.home !== '' && pred.home !== undefined && pred.away !== '' && pred.away !== undefined;
-
-        if (activeFilter === 'ALL') return true;
         if (activeFilter === 'TODO') return !isMatchComplete;
         if (activeFilter === 'DONE') return isMatchComplete;
         return true;
       });
-
-      if (filteredMatches.length > 0) {
-        result[groupName] = filteredMatches;
-      }
+      if (filteredMatches.length > 0) result[groupName] = filteredMatches;
     });
 
     const resultKeys = Object.keys(result);
-    if (activeFilter === 'TODO' && resultKeys.length === 1) {
+    if (activeFilter === 'TODO' && resultKeys.length === 1 && viewMode === 'GROUP') {
         setOpenGroups(prev => ({ ...prev, [resultKeys[0]]: true }));
     }
 
     return result;
-  }, [matches, predictions, activeFilter]);
+  }, [matches, predictions, activeFilter, viewMode]);
+
+  // --- LOGICA VISTA CRONOLOGICA ---
+  const filteredChrono = useMemo(() => {
+    const groupedByDay: { [key: string]: any[] } = {};
+    
+    matches.forEach(m => {
+      // Estraiamo solo la data in formato "YYYY-MM-DD"
+      const dayString = new Date(m.match_date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+      const capitalizedDay = dayString.charAt(0).toUpperCase() + dayString.slice(1);
+      
+      if (!groupedByDay[capitalizedDay]) groupedByDay[capitalizedDay] = [];
+      groupedByDay[capitalizedDay].push(m);
+    });
+
+    const result: { [key: string]: any[] } = {};
+
+    Object.entries(groupedByDay).forEach(([dayName, dayMatchesArray]) => {
+      const filteredMatches = dayMatchesArray.filter(m => {
+        const pred = predictions[m.id];
+        const isMatchComplete = pred && pred.home !== '' && pred.home !== undefined && pred.away !== '' && pred.away !== undefined;
+        if (activeFilter === 'TODO') return !isMatchComplete;
+        if (activeFilter === 'DONE') return isMatchComplete;
+        return true;
+      });
+      if (filteredMatches.length > 0) result[dayName] = filteredMatches;
+    });
+
+    const resultKeys = Object.keys(result);
+    if (activeFilter === 'TODO' && resultKeys.length > 0 && viewMode === 'CHRONO') {
+        // Apriamo in automatico il primo giorno con partite da giocare
+        setOpenDays(prev => ({ ...prev, [resultKeys[0]]: true }));
+    }
+
+    return result;
+  }, [matches, predictions, activeFilter, viewMode]);
+
+
+  // COMPONENTE PER IL SINGOLO MATCH (Riutilizzato in entrambe le viste)
+  const MatchCard = ({ match }: { match: any }) => {
+    const hFlag = getFlagCode(match.home_team);
+    const aFlag = getFlagCode(match.away_team);
+    const isSaving = savingMatches[match.id];
+    const isSaved = savedMatches[match.id];
+
+    return (
+      <div className="bg-slate-900 border-2 border-slate-800/80 rounded-[1.5rem] p-4 sm:p-5 shadow-lg relative overflow-hidden">
+        <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-3">
+          <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-widest">{new Date(match.match_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+          <div className="flex items-center gap-2">
+             {isSaving && <Loader2 size={12} className="text-yellow-500 animate-spin" />}
+             {isSaved && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-emerald-400 uppercase"><CheckCircle2 size={12} /> Salvato</span>}
+             <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-600 ml-2">M#{match.id}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between w-full">
+          <div className="w-[30%] flex flex-col items-center gap-2">
+            {hFlag ? <img src={`https://flagcdn.com/w40/${hFlag}.png`} className="w-10 h-7 sm:w-12 sm:h-8 object-cover rounded shadow-md border border-slate-800" alt="" /> : <Shield size={20} className="text-slate-800" />}
+            <span className="font-black text-[10px] sm:text-xs uppercase text-slate-200 text-center leading-tight whitespace-normal break-words w-full italic">
+              {formatTeamName(match.home_team)}
+            </span>
+          </div>
+
+          <div className={`flex items-center gap-2 p-2 rounded-2xl border-2 transition-colors ${isSaved ? 'bg-emerald-950/30 border-emerald-900/60' : 'bg-slate-950 border-slate-800'}`}>
+            <input
+              type="tel"
+              value={predictions[match.id]?.home ?? ''}
+              disabled={isExpired}
+              placeholder="-"
+              className="w-12 h-14 sm:w-14 sm:h-16 bg-slate-800 border border-slate-700 rounded-xl text-center font-black text-yellow-500 text-2xl sm:text-3xl focus:border-yellow-500 focus:bg-slate-900 outline-none shadow-inner transition-all"
+              onChange={(e) => handleInputChange(match.id, 'home', e.target.value)}
+            />
+            <span className="text-slate-600 font-black text-lg">:</span>
+            <input
+              id={`away-input-${match.id}`}
+              type="tel"
+              value={predictions[match.id]?.away ?? ''}
+              disabled={isExpired}
+              placeholder="-"
+              className="w-12 h-14 sm:w-14 sm:h-16 bg-slate-800 border border-slate-700 rounded-xl text-center font-black text-yellow-500 text-2xl sm:text-3xl focus:border-yellow-500 focus:bg-slate-900 outline-none shadow-inner transition-all"
+              onChange={(e) => handleInputChange(match.id, 'away', e.target.value)}
+            />
+          </div>
+
+          <div className="w-[30%] flex flex-col items-center gap-2">
+            {aFlag ? <img src={`https://flagcdn.com/w40/${aFlag}.png`} className="w-10 h-7 sm:w-12 sm:h-8 object-cover rounded shadow-md border border-slate-800" alt="" /> : <Shield size={20} className="text-slate-800" />}
+            <span className="font-black text-[10px] sm:text-xs uppercase text-slate-200 text-center leading-tight whitespace-normal break-words w-full italic">
+              {formatTeamName(match.away_team)}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
@@ -242,6 +334,8 @@ export default function MatchesPage() {
       <p className="text-yellow-500 font-black uppercase text-lg animate-pulse">Preparazione Campo...</p>
     </div>
   );
+
+  const hasNoContent = viewMode === 'GROUP' ? Object.keys(filteredGroups).length === 0 : Object.keys(filteredChrono).length === 0;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-3 pb-32 font-sans overflow-x-hidden">
@@ -267,28 +361,52 @@ export default function MatchesPage() {
           </div>
         </header>
 
-        {/* BARRA DEI FILTRI */}
-        <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 mb-6 mx-auto">
-          {[
-            { id: 'ALL', label: 'Tutti' },
-            { id: 'TODO', label: 'Da Giocare' },
-            { id: 'DONE', label: 'Completati' }
-          ].map((f) => (
+        {/* CONTROLLI: VISTA & FILTRI */}
+        <div className="flex flex-col gap-3 mb-6 mx-auto">
+          
+          {/* Selettore Modalità di Visualizzazione */}
+          <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800">
             <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id as FilterType)}
-              className={`flex-1 py-3.5 sm:py-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
-                activeFilter === f.id
-                  ? 'bg-yellow-500 text-slate-950 shadow-lg'
-                  : 'text-slate-500 hover:text-white'
+              onClick={() => setViewMode('GROUP')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
+                viewMode === 'GROUP' ? 'bg-slate-800 text-yellow-500 shadow-md' : 'text-slate-500 hover:text-white'
               }`}
             >
-              {f.label}
+              <LayoutGrid size={16} /> Per Girone
             </button>
-          ))}
+            <button
+              onClick={() => setViewMode('CHRONO')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
+                viewMode === 'CHRONO' ? 'bg-slate-800 text-yellow-500 shadow-md' : 'text-slate-500 hover:text-white'
+              }`}
+            >
+              <CalendarDays size={16} /> Calendario
+            </button>
+          </div>
+
+          {/* Barra dei Filtri di stato */}
+          <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800">
+            {[
+              { id: 'ALL', label: 'Tutti' },
+              { id: 'TODO', label: 'Da Giocare' },
+              { id: 'DONE', label: 'Completati' }
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id as FilterType)}
+                className={`flex-1 py-3.5 sm:py-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
+                  activeFilter === f.id
+                    ? 'bg-yellow-500 text-slate-950 shadow-lg'
+                    : 'text-slate-500 hover:text-white'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {Object.keys(filteredGroups).length === 0 && (
+        {hasNoContent && (
             <div className="text-center py-10 opacity-50">
                 <ListFilter className="mx-auto mb-4" size={32} />
                 <p className="text-xs font-black uppercase tracking-widest">Nessun match in questa categoria</p>
@@ -296,7 +414,8 @@ export default function MatchesPage() {
         )}
 
         <div className="space-y-5">
-          {Object.entries(filteredGroups).map(([groupName, groupMatchesArray]) => {
+          {/* RENDER VISTA GIRONI */}
+          {viewMode === 'GROUP' && Object.entries(filteredGroups).map(([groupName, groupMatchesArray]) => {
             const isOpen = openGroups[groupName];
             const groupFlags = tournamentGroups.find(g => g.name === groupName)?.teams.map(getFlagCode).filter(Boolean) || [];
 
@@ -328,7 +447,7 @@ export default function MatchesPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {!isExpired && isOpen && (
-                      <div onClick={(e) => resetGroup(e, groupMatchesArray)} className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-500 hover:text-rose-500 transition-all"><Eraser size={16} /></div>
+                      <div onClick={(e) => resetGroupOrDay(e, groupMatchesArray)} className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-500 hover:text-rose-500 transition-all"><Eraser size={16} /></div>
                     )}
                     <div className="p-3 bg-slate-950 rounded-full border border-slate-800">
                       {isOpen ? <ChevronUp size={20} className="text-yellow-500" /> : <ChevronDown size={20} className="text-slate-500" />}
@@ -338,67 +457,61 @@ export default function MatchesPage() {
 
                 {isOpen && (
                   <div className="p-3 sm:p-5 bg-slate-950/50 space-y-4 border-t border-slate-800/50">
-                    {groupMatchesArray.map((match) => {
-                      const hFlag = getFlagCode(match.home_team);
-                      const aFlag = getFlagCode(match.away_team);
-                      const isSaving = savingMatches[match.id];
-                      const isSaved = savedMatches[match.id];
-
-                      return (
-                        <div key={match.id} className="bg-slate-900 border-2 border-slate-800/80 rounded-[1.5rem] p-4 sm:p-5 shadow-lg relative overflow-hidden">
-                          <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-3">
-                            <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-widest">{new Date(match.match_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                            <div className="flex items-center gap-2">
-                               {isSaving && <Loader2 size={12} className="text-yellow-500 animate-spin" />}
-                               {isSaved && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-emerald-400 uppercase"><CheckCircle2 size={12} /> Salvato</span>}
-                               <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-600 ml-2">M#{match.id}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full">
-                            <div className="w-[30%] flex flex-col items-center gap-2">
-                              {hFlag ? <img src={`https://flagcdn.com/w40/${hFlag}.png`} className="w-10 h-7 sm:w-12 sm:h-8 object-cover rounded shadow-md border border-slate-800" alt="" /> : <Shield size={20} className="text-slate-800" />}
-                              <span className="font-black text-[10px] sm:text-xs uppercase text-slate-200 text-center leading-tight whitespace-normal break-words w-full italic">
-                                {formatTeamName(match.home_team)}
-                              </span>
-                            </div>
-
-                            <div className={`flex items-center gap-2 p-2 rounded-2xl border-2 transition-colors ${isSaved ? 'bg-emerald-950/30 border-emerald-900/60' : 'bg-slate-950 border-slate-800'}`}>
-                              <input
-                                type="tel"
-                                value={predictions[match.id]?.home ?? ''}
-                                disabled={isExpired}
-                                placeholder="-"
-                                className="w-12 h-14 sm:w-14 sm:h-16 bg-slate-800 border border-slate-700 rounded-xl text-center font-black text-yellow-500 text-2xl sm:text-3xl focus:border-yellow-500 focus:bg-slate-900 outline-none shadow-inner transition-all"
-                                onChange={(e) => handleInputChange(match.id, 'home', e.target.value)}
-                              />
-                              <span className="text-slate-600 font-black text-lg">:</span>
-                              <input
-                                id={`away-input-${match.id}`}
-                                type="tel"
-                                value={predictions[match.id]?.away ?? ''}
-                                disabled={isExpired}
-                                placeholder="-"
-                                className="w-12 h-14 sm:w-14 sm:h-16 bg-slate-800 border border-slate-700 rounded-xl text-center font-black text-yellow-500 text-2xl sm:text-3xl focus:border-yellow-500 focus:bg-slate-900 outline-none shadow-inner transition-all"
-                                onChange={(e) => handleInputChange(match.id, 'away', e.target.value)}
-                              />
-                            </div>
-
-                            <div className="w-[30%] flex flex-col items-center gap-2">
-                              {aFlag ? <img src={`https://flagcdn.com/w40/${aFlag}.png`} className="w-10 h-7 sm:w-12 sm:h-8 object-cover rounded shadow-md border border-slate-800" alt="" /> : <Shield size={20} className="text-slate-800" />}
-                              <span className="font-black text-[10px] sm:text-xs uppercase text-slate-200 text-center leading-tight whitespace-normal break-words w-full italic">
-                                {formatTeamName(match.away_team)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {groupMatchesArray.map((match) => <MatchCard key={match.id} match={match} />)}
                   </div>
                 )}
               </div>
             );
           })}
+
+          {/* RENDER VISTA CRONOLOGICA */}
+          {viewMode === 'CHRONO' && Object.entries(filteredChrono).map(([dayName, dayMatchesArray]) => {
+            const isOpen = openDays[dayName];
+            
+            const totalMatches = dayMatchesArray.length;
+            let filledMatches = 0;
+            dayMatchesArray.forEach(m => {
+              const pred = predictions[m.id];
+              if (pred && pred.home !== '' && pred.home !== undefined && pred.away !== '' && pred.away !== undefined) filledMatches++;
+            });
+            const isCompleted = filledMatches === totalMatches && activeFilter !== 'TODO';
+
+            return (
+              <div key={dayName} className={`bg-slate-900 border-2 rounded-[2rem] overflow-hidden transition-all duration-300 shadow-xl ${isOpen ? 'border-yellow-500/30' : isCompleted ? 'border-emerald-500/20' : 'border-slate-800'}`}>
+                
+                <button onClick={() => toggleDay(dayName)} className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 ${isOpen ? 'bg-yellow-500 text-slate-950 border-yellow-400' : isCompleted ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30' : 'bg-slate-950 border-slate-700 text-slate-400'}`}>
+                      <CalendarDays size={24} />
+                    </div>
+                    <div className="text-left">
+                      <h2 className="font-black text-sm sm:text-base uppercase italic text-white leading-tight flex items-center gap-2">
+                          {dayName}
+                      </h2>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1 mt-1">
+                          {isCompleted && !isOpen ? <span className="text-emerald-500 flex items-center gap-1"><CheckCircle2 size={12}/> {totalMatches} Match Completi</span> : `${totalMatches} Partite`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isExpired && isOpen && (
+                      <div onClick={(e) => resetGroupOrDay(e, dayMatchesArray)} className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-500 hover:text-rose-500 transition-all"><Eraser size={16} /></div>
+                    )}
+                    <div className="p-3 bg-slate-950 rounded-full border border-slate-800">
+                      {isOpen ? <ChevronUp size={20} className="text-yellow-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+                    </div>
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="p-3 sm:p-5 bg-slate-950/50 space-y-4 border-t border-slate-800/50">
+                    {dayMatchesArray.map((match) => <MatchCard key={match.id} match={match} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
         </div>
       </div>
     </main>
