@@ -67,7 +67,7 @@ export default function BracketPage() {
   const [fetching, setFetching] = useState(true);
   
   const [activeCell, setActiveCell] = useState<any>(null);
-  const [teamSearch, setTeamSearch] = useState(''); // STATO PER LA RICERCA SQUADRA
+  const [teamSearch, setTeamSearch] = useState(''); 
   const selectedTeamRef = useRef<any>(null);
 
   const isExpired = new Date() > WORLD_CUP_START_DATE;
@@ -85,7 +85,7 @@ export default function BracketPage() {
       }, 350);
       return () => clearTimeout(timer);
     } else {
-      setTeamSearch(''); // Reset della ricerca quando si chiude il modale
+      setTeamSearch(''); 
     }
   }, [activeCell]);
 
@@ -274,12 +274,13 @@ export default function BracketPage() {
       </div>
 
       {activeCell && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0 sm:pb-10">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center px-0 sm:px-4 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
           
-          <div className="relative w-full max-w-xl bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+          <div className="relative w-full max-w-xl bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[80vh] animate-in slide-in-from-bottom duration-300">
             
-            <div className="p-6 sm:p-7 bg-slate-950/80 border-b border-slate-800 flex flex-col gap-4">
+            {/* HEADER STICKY CON RICERCA */}
+            <div className="sticky top-0 z-10 p-6 sm:p-7 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 flex flex-col gap-4 rounded-t-[2.5rem] sm:rounded-t-[2.3rem]">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Seleziona Squadra</h3>
@@ -290,7 +291,6 @@ export default function BracketPage() {
                 <button onClick={() => setActiveCell(null)} className="p-4 bg-slate-800 rounded-full text-white active:scale-90 transition-all shadow-lg"><X size={24} strokeWidth={3}/></button>
               </div>
               
-              {/* BARRA DI RICERCA SQUADRA */}
               <div className="relative">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                  <input 
@@ -303,16 +303,15 @@ export default function BracketPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-20">
+            {/* LISTA SCORREVOLE SOTTO L'HEADER */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-10">
                 {TOURNAMENT_GROUPS.map((group) => {
                   
-                  // FILTRA LE SQUADRE DEL GIRONE IN BASE ALLA RICERCA
                   const filteredTeams = group.teams.filter(t => 
                     t.toLowerCase().includes(teamSearch.toLowerCase()) || 
                     formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
                   );
 
-                  // Se nessuna squadra del girone corrisponde alla ricerca, nascondi l'intero blocco del girone
                   if (filteredTeams.length === 0) return null;
 
                   const alreadySelectedByOthers = getAlreadySelectedInStage(activeCell.stageId, activeCell.index);
@@ -331,7 +330,6 @@ export default function BracketPage() {
                           const isPickedByOther = alreadySelectedByOthers.includes(t);
                           const isCurrentSelection = currentCellSelection === t;
                           
-                          // LOGICA BADGE: cerchiamo in quali altri turni è già stata selezionata la squadra
                           const teamStageIds = Object.entries(selections)
                             .filter(([key, val]) => val === t)
                             .map(([key]) => key.split('-')[0]);
@@ -340,7 +338,6 @@ export default function BracketPage() {
                             STAGES.findIndex(s => s.id === a) - STAGES.findIndex(s => s.id === b)
                           );
 
-                          // Creiamo etichette abbreviate da mostrare
                           const stageLabels = uniqueStages.map(sId => {
                             if (sId === 'R32') return '16°';
                             if (sId === 'R16') return '8°';
@@ -387,7 +384,6 @@ export default function BracketPage() {
                                     {formatTeamName(t)}
                                   </span>
                                   
-                                  {/* RENDER DEI BADGE DEI TURNI GIA SELEZIONATI */}
                                   {stageLabels.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-0.5">
                                       {stageLabels.map(lbl => (
@@ -419,11 +415,10 @@ export default function BracketPage() {
                   );
                 })}
                 
-                {/* MESSAGGIO NESSUN RISULTATO */}
                 {TOURNAMENT_GROUPS.every(group => 
                    group.teams.filter(t => t.toLowerCase().includes(teamSearch.toLowerCase()) || formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())).length === 0
                 ) && (
-                  <p className="text-center text-slate-500 font-black uppercase text-xs pt-10">Nessuna squadra trovata</p>
+                  <p className="text-center text-slate-500 font-black uppercase text-xs pt-10 pb-10">Nessuna squadra trovata</p>
                 )}
             </div>
           </div>
