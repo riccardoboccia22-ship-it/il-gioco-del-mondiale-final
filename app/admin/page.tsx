@@ -7,7 +7,7 @@ import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield
+  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield, Download
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -770,6 +770,76 @@ export default function AdminPage() {
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
   };
 
+  // ----- NUOVA FUNZIONE SUPER-BACKUP EXCEL -----
+  const exportClassificaCSV = () => {
+    const sortedProfiles = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
+    
+    const headers = ["Username", "Nome Completo", "Punti Totali", "Stato Pagamento", "Metodo Di Pagamento"];
+    const matchHeaders = matches.map(m => `Match ${m.id} (${formatTeamName(m.home_team)}-${formatTeamName(m.away_team)})`);
+    const bracketHeaders = ["Sedicesimi", "Ottavi", "Quarti", "Semifinali", "Finaliste", "Vincitore"];
+    const bonusHeaders = ["MVP", "Capocannoniere", "Miglior Portiere", "Match + Gol", "Girone + Gol", "Girone - Gol", "Autogol", "Rigori", "Rossi"];
+
+    const allHeaders = [...headers, ...matchHeaders, ...bracketHeaders, ...bonusHeaders];
+    let csvContent = allHeaders.map(h => `"${String(h).replace(/"/g, '""')}"`).join(';') + "\n";
+
+    sortedProfiles.forEach(p => {
+      const uPreds = predictions.filter(pr => pr.user_id === p.id);
+      const uBrackets = allBrackets.filter(b => b.user_id === p.id);
+      const uBonuses = allUserBonuses.find(b => b.user_id === p.id) || {};
+
+      const matchData = matches.map(m => {
+        const pred = uPreds.find(pr => pr.match_id === m.id);
+        return pred && pred.home_score !== null ? `${pred.home_score}-${pred.away_score}` : '';
+      });
+
+      const getStageTeams = (stage: string) => uBrackets.filter(b => normalizeStage(b.stage) === stage).map(b => b.team_name).join(', ');
+      const bracketData = [
+        getStageTeams('R32'),
+        getStageTeams('R16'),
+        getStageTeams('QF'),
+        getStageTeams('SF'),
+        getStageTeams('F'),
+        getStageTeams('WINNER')
+      ];
+
+      const bonusData = [
+        uBonuses.mvp_world_cup || '',
+        uBonuses.top_scorer || '',
+        uBonuses.best_goalkeeper || '',
+        uBonuses.high_scoring_match || '',
+        uBonuses.highest_scoring_group || '',
+        uBonuses.lowest_scoring_group || '',
+        uBonuses.total_own_goals ?? '',
+        uBonuses.total_penalties ?? '',
+        uBonuses.total_red_cards ?? ''
+      ];
+
+      const row = [
+        p.username || '',
+        p.full_name || '',
+        p.points || 0,
+        p.is_paid ? 'PAGATO' : 'DA PAGARE',
+        p.payment_method || '--',
+        ...matchData,
+        ...bracketData,
+        ...bonusData
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(';');
+
+      csvContent += row + "\n";
+    });
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `backup_completo_mondiale_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Super Backup scaricato con successo! 📊');
+  };
+
   const navItems = [
     { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
     { name: 'Fase Gironi', path: '/matches', icon: <Gamepad2 size={20} strokeWidth={2.5} /> },
@@ -819,6 +889,12 @@ export default function AdminPage() {
             
             <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-yellow-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
               <MessageCircle size={14} /> Stato
+            </button>
+
+            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
+
+            <button onClick={exportClassificaCSV} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-cyan-400/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
+              <Download size={14} /> Excel
             </button>
 
             <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
