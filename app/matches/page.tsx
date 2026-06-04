@@ -168,7 +168,7 @@ export default function MatchesPage() {
     }
   };
 
-  const handleInputChange = (matchId: number, team: 'home' | 'away', value: string) => {
+  const handleInputChange = (matchId: number, team: 'home' | 'away', value: string, nextMatchId?: number) => {
     if (isExpired) return;
     const cleanValue = value.replace(/[^0-9]/g, '').slice(0, 2); 
     const updatedMatch = { ...predictions[matchId], [team]: cleanValue };
@@ -178,6 +178,13 @@ export default function MatchesPage() {
     if (team === 'home' && cleanValue !== '') {
       setTimeout(() => {
         document.getElementById(`away-input-${matchId}`)?.focus();
+      }, 10);
+    }
+    
+    // Auto-focus sulla casella home del PROSSIMO match se compiliamo la away
+    if (team === 'away' && cleanValue !== '' && nextMatchId) {
+      setTimeout(() => {
+        document.getElementById(`home-input-${nextMatchId}`)?.focus();
       }, 10);
     }
 
@@ -270,12 +277,15 @@ export default function MatchesPage() {
     return result;
   }, [matches, predictions, activeFilter, viewMode]);
 
-  // FUNZIONE DI RENDER DEL SINGOLO MATCH (Risolve il problema del focus perso)
-  const renderMatch = (match: any) => {
+  // FUNZIONE DI RENDER DEL SINGOLO MATCH
+  const renderMatch = (match: any, index: number, matchArray: any[]) => {
     const hFlag = getFlagCode(match.home_team);
     const aFlag = getFlagCode(match.away_team);
     const isSaving = savingMatches[match.id];
     const isSaved = savedMatches[match.id];
+    
+    // Identifica l'ID della partita successiva in questa lista per il salto cursore automatico
+    const nextMatchId = matchArray[index + 1]?.id;
 
     return (
       <div key={match.id} className="bg-slate-900 border-2 border-slate-800/80 rounded-[1.5rem] p-4 sm:p-5 shadow-lg relative overflow-hidden">
@@ -298,6 +308,7 @@ export default function MatchesPage() {
 
           <div className={`flex items-center gap-2 p-2 rounded-2xl border-2 transition-colors ${isSaved ? 'bg-emerald-950/30 border-emerald-900/60' : 'bg-slate-950 border-slate-800'}`}>
             <input
+              id={`home-input-${match.id}`}
               type="tel"
               value={predictions[match.id]?.home ?? ''}
               disabled={isExpired}
@@ -313,7 +324,7 @@ export default function MatchesPage() {
               disabled={isExpired}
               placeholder="-"
               className="w-12 h-14 sm:w-14 sm:h-16 bg-slate-800 border border-slate-700 rounded-xl text-center font-black text-yellow-500 text-2xl sm:text-3xl focus:border-yellow-500 focus:bg-slate-900 outline-none shadow-inner transition-all"
-              onChange={(e) => handleInputChange(match.id, 'away', e.target.value)}
+              onChange={(e) => handleInputChange(match.id, 'away', e.target.value, nextMatchId)}
             />
           </div>
 
@@ -457,7 +468,7 @@ export default function MatchesPage() {
 
                 {isOpen && (
                   <div className="p-3 sm:p-5 bg-slate-950/50 space-y-4 border-t border-slate-800/50">
-                    {groupMatchesArray.map((match) => renderMatch(match))}
+                    {groupMatchesArray.map((match, index) => renderMatch(match, index, groupMatchesArray))}
                   </div>
                 )}
               </div>
@@ -505,7 +516,7 @@ export default function MatchesPage() {
 
                 {isOpen && (
                   <div className="p-3 sm:p-5 bg-slate-950/50 space-y-4 border-t border-slate-800/50">
-                    {dayMatchesArray.map((match) => renderMatch(match))}
+                    {dayMatchesArray.map((match, index) => renderMatch(match, index, dayMatchesArray))}
                   </div>
                 )}
               </div>
