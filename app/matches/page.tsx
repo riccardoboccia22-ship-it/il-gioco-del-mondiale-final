@@ -174,8 +174,11 @@ export default function MatchesPage() {
     const updatedMatch = { ...predictions[matchId], [team]: cleanValue };
     setPredictions((prev: any) => ({ ...prev, [matchId]: updatedMatch }));
 
+    // Auto-focus sulla casella away se compiliamo la home
     if (team === 'home' && cleanValue !== '') {
-      document.getElementById(`away-input-${matchId}`)?.focus();
+      setTimeout(() => {
+        document.getElementById(`away-input-${matchId}`)?.focus();
+      }, 10);
     }
 
     if (saveTimeouts.current[matchId]) clearTimeout(saveTimeouts.current[matchId]);
@@ -239,7 +242,6 @@ export default function MatchesPage() {
     const groupedByDay: { [key: string]: any[] } = {};
     
     matches.forEach(m => {
-      // Estraiamo solo la data in formato "YYYY-MM-DD"
       const dayString = new Date(m.match_date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
       const capitalizedDay = dayString.charAt(0).toUpperCase() + dayString.slice(1);
       
@@ -262,23 +264,21 @@ export default function MatchesPage() {
 
     const resultKeys = Object.keys(result);
     if (activeFilter === 'TODO' && resultKeys.length > 0 && viewMode === 'CHRONO') {
-        // Apriamo in automatico il primo giorno con partite da giocare
         setOpenDays(prev => ({ ...prev, [resultKeys[0]]: true }));
     }
 
     return result;
   }, [matches, predictions, activeFilter, viewMode]);
 
-
-  // COMPONENTE PER IL SINGOLO MATCH (Riutilizzato in entrambe le viste)
-  const MatchCard = ({ match }: { match: any }) => {
+  // FUNZIONE DI RENDER DEL SINGOLO MATCH (Risolve il problema del focus perso)
+  const renderMatch = (match: any) => {
     const hFlag = getFlagCode(match.home_team);
     const aFlag = getFlagCode(match.away_team);
     const isSaving = savingMatches[match.id];
     const isSaved = savedMatches[match.id];
 
     return (
-      <div className="bg-slate-900 border-2 border-slate-800/80 rounded-[1.5rem] p-4 sm:p-5 shadow-lg relative overflow-hidden">
+      <div key={match.id} className="bg-slate-900 border-2 border-slate-800/80 rounded-[1.5rem] p-4 sm:p-5 shadow-lg relative overflow-hidden">
         <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-3">
           <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-widest">{new Date(match.match_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
           <div className="flex items-center gap-2">
@@ -457,7 +457,7 @@ export default function MatchesPage() {
 
                 {isOpen && (
                   <div className="p-3 sm:p-5 bg-slate-950/50 space-y-4 border-t border-slate-800/50">
-                    {groupMatchesArray.map((match) => <MatchCard key={match.id} match={match} />)}
+                    {groupMatchesArray.map((match) => renderMatch(match))}
                   </div>
                 )}
               </div>
@@ -505,7 +505,7 @@ export default function MatchesPage() {
 
                 {isOpen && (
                   <div className="p-3 sm:p-5 bg-slate-950/50 space-y-4 border-t border-slate-800/50">
-                    {dayMatchesArray.map((match) => <MatchCard key={match.id} match={match} />)}
+                    {dayMatchesArray.map((match) => renderMatch(match))}
                   </div>
                 )}
               </div>
