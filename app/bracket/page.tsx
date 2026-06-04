@@ -277,10 +277,8 @@ export default function BracketPage() {
         <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center px-0 sm:px-4 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
           
-          {/* h-[85dvh] garantisce che il modale non superi l'85% dell'altezza DINAMICA (che si rimpicciolisce quando si apre la tastiera) */}
           <div className="relative w-full max-w-xl bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl flex flex-col h-[85dvh] sm:h-auto sm:max-h-[80dvh] animate-in slide-in-from-bottom duration-300">
             
-            {/* shrink-0 impedisce che l'intestazione venga compressa, resta fissa in alto */}
             <div className="shrink-0 p-6 sm:p-7 bg-slate-950 border-b border-slate-800 flex flex-col gap-4 rounded-t-[2.5rem] sm:rounded-t-[2.3rem] z-20">
               <div className="flex items-center justify-between">
                 <div>
@@ -295,6 +293,7 @@ export default function BracketPage() {
               <div className="relative">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                  <input 
+                   autoFocus
                    type="text" 
                    placeholder="Cerca squadra..." 
                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-black uppercase text-white outline-none focus:border-yellow-500 transition-colors placeholder:text-slate-600" 
@@ -304,7 +303,6 @@ export default function BracketPage() {
               </div>
             </div>
 
-            {/* flex-1 overflow-y-auto permette a questo div di prendere tutto lo spazio rimasto sotto e creare lo scroll */}
             <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-24 overscroll-contain">
                 {TOURNAMENT_GROUPS.map((group) => {
                   
