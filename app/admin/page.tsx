@@ -52,23 +52,43 @@ const TOURNAMENT_GROUPS = [
 ];
 
 const flagMap: { [key: string]: string } = {
-  algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
+  algeria: 'dz', 'arabia saudita': 'sa', 'arabia s.': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
   belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', bosnia: 'ba',
   brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', 'corea sud': 'kr', 
-  "costa d'avorio": 'ci', 'costa avorio': 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw',
+  "costa d'avorio": 'ci', 'costa avorio': 'ci', 'c. avorio': 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw',
   ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp', 
   giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma', 
   messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', 'n. zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
-  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'rep. ceca': 'cz', 'repubblica democratica del congo': 'cd', 'r.d. congo': 'cd',
+  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'rep. ceca': 'cz', 'repubblica democratica del congo': 'cd', 'r.d. congo': 'cd', congo: 'cd',
   scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'stati uniti': 'us', usa: 'us',
   sudafrica: 'za', svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', 
   uruguay: 'uy', uzbekistan: 'uz',
+};
+
+// Nuovo dizionario EMOJI nativo per i messaggi WhatsApp
+const flagEmojiMap: { [key: string]: string } = {
+  algeria: '🇩🇿', 'arabia saudita': '🇸🇦', 'arabia s.': '🇸🇦', argentina: '🇦🇷', australia: '🇦🇺', austria: '🇦🇹',
+  belgio: '🇧🇪', 'bosnia ed erzegovina': '🇧🇦', 'bosnia erzegovina': '🇧🇦', bosnia: '🇧🇦',
+  brasile: '🇧🇷', canada: '🇨🇦', 'capo verde': '🇨🇻', colombia: '🇨🇴', 'corea del sud': '🇰🇷', 'corea sud': '🇰🇷', 
+  "costa d'avorio": '🇨🇮', 'costa avorio': '🇨🇮', 'c. avorio': '🇨🇮', croazia: '🇭🇷', curaçao: '🇨🇼', curacao: '🇨🇼',
+  ecuador: '🇪🇨', egitto: '🇪🇬', francia: '🇫🇷', germania: '🇩🇪', ghana: '🇬🇭', giappone: '🇯🇵', 
+  giordania: '🇯🇴', haiti: '🇭🇹', inghilterra: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', iran: '🇮🇷', iraq: '🇮🇶', marocco: '🇲🇦', 
+  messico: '🇲🇽', norvegia: '🇳🇴', 'nuova zelanda': '🇳🇿', 'n. zelanda': '🇳🇿', olanda: '🇳🇱', panama: '🇵🇦', paraguay: '🇵🇾',
+  portogallo: '🇵🇹', qatar: '🇶🇦', 'repubblica ceca': '🇨🇿', 'rep. ceca': '🇨🇿', 'repubblica democratica del congo': '🇨🇩', 'r.d. congo': '🇨🇩', congo: '🇨🇩',
+  scozia: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', senegal: '🇸🇳', spagna: '🇪🇸', 'stati uniti': '🇺🇸', usa: '🇺🇸',
+  sudafrica: '🇿🇦', svezia: '🇸🇪', svizzera: '🇨🇭', tunisia: '🇹🇳', turchia: '🇹🇷', 
+  uruguay: '🇺🇾', uzbekistan: '🇺🇿',
 };
 
 const getFlag = (team: string) => {
     if (!team) return null;
     const code = flagMap[team.toLowerCase().trim()];
     return code ? `https://flagcdn.com/w40/${code}.png` : null;
+};
+
+const getEmoji = (team: string) => {
+    if (!team) return '';
+    return flagEmojiMap[team.toLowerCase().trim()] || '';
 };
 
 const normalizeStage = (s: string) => {
@@ -661,6 +681,90 @@ export default function AdminPage() {
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
+  // --- LOGICA RADAR ANOMALIE CON LISTE AGGIORNATE ---
+  const getAnomalies = () => {
+    const TOP_TEAMS = ['Argentina', 'Belgio', 'Brasile', 'Francia', 'Germania', 'Inghilterra', 'Olanda', 'Portogallo', 'Spagna'];
+    const MID_TEAMS = ['Austria', 'Colombia', "Costa d'Avorio", 'Croazia', 'Egitto', 'Giappone', 'Marocco', 'Messico', 'Norvegia', 'Senegal', 'Svizzera', 'Turchia', 'Uruguay', 'USA', 'Stati Uniti'];
+    const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea del Sud', 'Ecuador', 'Iran', 'Iraq', 'Nuova Zelanda', 'Panama', 'Paraguay', 'Repubblica Ceca', 'Scozia', 'Svezia', 'Sudafrica', 'Tunisia'];
+    const SUPER_LOW_TEAMS = ['Arabia Saudita', 'Bosnia ed Erzegovina', 'Bosnia', 'Capo Verde', 'Repubblica Democratica del Congo', 'R.D. Congo', 'Curaçao', 'Curacao', 'Ghana', 'Giordania', 'Haiti', 'Qatar', 'Uzbekistan', 'Congo'];
+
+    let anomalies: { user: string, type: string, team: string, msg: string }[] = [];
+
+    profiles.forEach(p => {
+      const uBrackets = allBrackets.filter(b => b.user_id === p.id);
+      if (uBrackets.length === 0) return;
+
+      const r32 = uBrackets.filter(b => b.stage === 'R32').map(b => formatTeamName(b.team_name).toLowerCase());
+      const r16 = uBrackets.filter(b => b.stage === 'R16').map(b => formatTeamName(b.team_name).toLowerCase());
+      const qf = uBrackets.filter(b => b.stage === 'QF').map(b => formatTeamName(b.team_name).toLowerCase());
+      const sf = uBrackets.filter(b => ['SF', 'F', 'WINNER'].includes(b.stage)).map(b => formatTeamName(b.team_name).toLowerCase());
+
+      // 1. FLOP COLOSSALE: Top Team non arriva ai Quarti
+      if (qf.length >= 8) {
+        TOP_TEAMS.forEach(t => {
+          const teamF = formatTeamName(t).toLowerCase();
+          if (!qf.includes(teamF)) {
+             anomalies.push({ user: p.username, type: 'FLOP', team: formatTeamName(t), msg: 'Fuori prima dei Quarti 😱' });
+          }
+        });
+      }
+
+      // 2. FLOP: Mid Team esce ai gironi
+      if (r32.length >= 32) {
+        MID_TEAMS.forEach(t => {
+          if (t === 'Stati Uniti') return; 
+          const teamF = formatTeamName(t).toLowerCase();
+          if (!r32.includes(teamF)) {
+             anomalies.push({ user: p.username, type: 'FLOP', team: formatTeamName(t), msg: 'Fuori ai Gironi 📉' });
+          }
+        });
+      }
+
+      // 3. FAVOLE ESTREME (Super Low passa i gironi)
+      r32.forEach(deepTeam => {
+        if(!deepTeam) return;
+        const isSuperLow = SUPER_LOW_TEAMS.some(t => formatTeamName(t).toLowerCase() === deepTeam);
+        if (isSuperLow) {
+           const originalTeam = formatTeamName(TEAMS_2026.find(t => formatTeamName(t).toLowerCase() === deepTeam) || deepTeam);
+           const msg = r16.includes(deepTeam) ? 'Agli Ottavi o oltre!! 🤯' : 'Supera i Gironi! 🦄';
+           if (!anomalies.some(a => a.user === p.username && a.team.toLowerCase() === originalTeam.toLowerCase() && a.type === 'FAVOLA')) {
+              anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg });
+           }
+        }
+      });
+
+      // 4. SORPRESA (Low Team ai quarti)
+      qf.forEach(deepTeam => {
+         if(!deepTeam) return;
+         const isLow = LOW_TEAMS.some(t => formatTeamName(t).toLowerCase() === deepTeam);
+         if (isLow) {
+            const originalTeam = formatTeamName(TEAMS_2026.find(t => formatTeamName(t).toLowerCase() === deepTeam) || deepTeam);
+            if (!anomalies.some(a => a.user === p.username && a.team.toLowerCase() === originalTeam.toLowerCase() && a.type === 'FAVOLA')) {
+               anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Ai Quarti o oltre! 🚀' });
+            }
+         }
+      });
+      
+      // Bonus: Low o Super Low in Semifinale
+      sf.forEach(deepTeam => {
+         if(!deepTeam) return;
+         const isSuperLow = SUPER_LOW_TEAMS.some(t => formatTeamName(t).toLowerCase() === deepTeam);
+         const isLow = LOW_TEAMS.some(t => formatTeamName(t).toLowerCase() === deepTeam);
+         if (isSuperLow || isLow) {
+            const originalTeam = formatTeamName(TEAMS_2026.find(t => formatTeamName(t).toLowerCase() === deepTeam) || deepTeam);
+            const existing = anomalies.find(a => a.user === p.username && a.team.toLowerCase() === originalTeam.toLowerCase() && a.type === 'FAVOLA');
+            if (existing) {
+               existing.msg = 'In Semifinale o Finale!!! 🏆🦄';
+            } else {
+               anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale o Finale!!! 🏆🦄' });
+            }
+         }
+      });
+    });
+
+    return anomalies;
+  };
+
   const copyClassificaReport = () => {
     const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
     let text = `🏆 *CLASSIFICA MONDIALE 2026* 🏆\n\n`;
@@ -681,7 +785,7 @@ export default function AdminPage() {
     
     text += `👑 *Vincitore del Mondiale (Scelte):*\n`;
     winners.forEach(w => {
-      text += `- ${w.name}: ${w.pct}%\n`;
+      text += `- ${getEmoji(w.name)} ${w.name}: ${w.pct}%\n`;
     });
     text += `\n`;
     
@@ -699,7 +803,9 @@ export default function AdminPage() {
       if (details.length > 0) {
         text += `*${f.l}:*\n`;
         details.forEach(d => {
-           text += `- ${formatMatchName(d.originalName)} (${d.count} voti)\n`;
+           // Aggiungiamo l'emoji solo se è un nome di una squadra singola
+           const emj = f.k !== 'high_scoring_match' && !f.k.includes('group') ? `${getEmoji(d.originalName)} ` : '';
+           text += `- ${emj}${formatMatchName(d.originalName)} (${d.count} voti)\n`;
         });
         text += `\n`;
       }
@@ -740,7 +846,7 @@ export default function AdminPage() {
        sortedGroups.forEach(g => {
           text += `\n*${g}*\n`;
           grouped[g].forEach((m: any) => {
-              text += `⚽ ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)}\n`;
+              text += `⚽ ${getEmoji(m.home_team)} ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)} ${getEmoji(m.away_team)}\n`;
               text += `    👉 ${m.exactUsers.join(', ')}\n`;
           });
        });
@@ -770,7 +876,52 @@ export default function AdminPage() {
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
   };
 
-  // ----- NUOVA FUNZIONE SUPER-BACKUP EXCEL -----
+  const copyRadarReport = () => {
+    const rawAnomalies = getAnomalies();
+    
+    const groupedAnomaliesObj = rawAnomalies.reduce((acc, ano) => {
+      const key = `${ano.type}-${ano.team}-${ano.msg}`;
+      if (!acc[key]) {
+        acc[key] = { type: ano.type, team: ano.team, msg: ano.msg, users: [ano.user] };
+      } else {
+        acc[key].users.push(ano.user);
+      }
+      return acc;
+    }, {} as Record<string, { type: string, team: string, msg: string, users: string[] }>);
+    
+    const anomaliesList = Object.values(groupedAnomaliesObj).sort((a, b) => {
+      if (a.type !== b.type) return a.type.localeCompare(b.type); 
+      return a.team.localeCompare(b.team);
+    });
+
+    let text = `🕵️‍♂️ *RADAR ANOMALIE* 🕵️‍♂️\n(Le scelte più coraggiose e folli)\n\n`;
+    
+    const flops = anomaliesList.filter(a => a.type === 'FLOP');
+    const favole = anomaliesList.filter(a => a.type === 'FAVOLA');
+
+    if (flops.length > 0) {
+      text += `📉 *I FLOP:*\n`;
+      flops.forEach(f => {
+         text += `• ${getEmoji(f.team)} ${f.team} (${f.msg}):\n  ↳ ${f.users.join(', ')}\n`;
+      });
+      text += `\n`;
+    }
+
+    if (favole.length > 0) {
+      text += `🦄 *LE FAVOLE:*\n`;
+      favole.forEach(f => {
+         text += `• ${getEmoji(f.team)} ${f.team} (${f.msg}):\n  ↳ ${f.users.join(', ')}\n`;
+      });
+      text += `\n`;
+    }
+
+    if(anomaliesList.length === 0) text += `Nessuna anomalia rilevata! Tutti noiosi... 😴\n\n`;
+
+    text += `👉 www.iltuopronostico.it`;
+    navigator.clipboard.writeText(text);
+    toast.success('Radar copiato per WhatsApp! 🕵️‍♂️', { icon: '📋' });
+  };
+
   const exportClassificaCSV = () => {
     const sortedProfiles = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
     
@@ -852,10 +1003,25 @@ export default function AdminPage() {
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse">CARICAMENTO...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-rose-500 font-black">ACCESSO NEGATO</div>;
 
-  // Calcola statistiche dei pagamenti
   const totalUsers = profiles.length;
   const paidUsers = profiles.filter(p => p.is_paid).length;
   const unpaidUsers = totalUsers - paidUsers;
+
+  const rawAnomalies = getAnomalies();
+  const groupedAnomaliesObj = rawAnomalies.reduce((acc, ano) => {
+    const key = `${ano.type}-${ano.team}-${ano.msg}`;
+    if (!acc[key]) {
+      acc[key] = { type: ano.type, team: ano.team, msg: ano.msg, users: [ano.user] };
+    } else {
+      acc[key].users.push(ano.user);
+    }
+    return acc;
+  }, {} as Record<string, { type: string, team: string, msg: string, users: string[] }>);
+  
+  const anomaliesList = Object.values(groupedAnomaliesObj).sort((a, b) => {
+    if (a.type !== b.type) return a.type.localeCompare(b.type); 
+    return a.team.localeCompare(b.team);
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden relative">
@@ -866,40 +1032,36 @@ export default function AdminPage() {
       <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
         
-        <div className="w-full max-w-2xl bg-slate-900/80 p-3 sm:p-2.5 rounded-3xl border border-slate-800 shadow-xl">
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 sm:gap-0">
+        <div className="w-full max-w-2xl bg-slate-900/80 p-3 sm:p-2.5 rounded-3xl border border-slate-800 shadow-xl overflow-x-auto custom-scrollbar">
+          <div className="flex items-center gap-2 min-w-max pb-1">
             
-            <button onClick={copyClassificaReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-emerald-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
+            <button onClick={copyClassificaReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 border border-slate-800 hover:bg-emerald-500/10 transition-colors rounded-xl whitespace-nowrap">
               <MessageCircle size={14} /> Classifica
             </button>
             
-            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
-            
-            <button onClick={copyBonusReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-purple-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-purple-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
+            <button onClick={copyBonusReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-purple-500 bg-slate-950 border border-slate-800 hover:bg-purple-500/10 transition-colors rounded-xl whitespace-nowrap">
               <MessageCircle size={14} /> Statistiche
             </button>
             
-            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
-            
-            <button onClick={copyCecchiniReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-orange-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-orange-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
+            <button onClick={copyCecchiniReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-orange-500 bg-slate-950 border border-slate-800 hover:bg-orange-500/10 transition-colors rounded-xl whitespace-nowrap">
               <MessageCircle size={14} /> Cecchini
             </button>
-
-            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
             
-            <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-yellow-500/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
+            <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-slate-800 hover:bg-yellow-500/10 transition-colors rounded-xl whitespace-nowrap">
               <MessageCircle size={14} /> Stato
             </button>
 
-            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
-
-            <button onClick={exportClassificaCSV} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 sm:bg-transparent border border-slate-800 sm:border-0 hover:bg-cyan-400/10 transition-colors rounded-xl sm:rounded-full whitespace-nowrap">
-              <Download size={14} /> Excel
+            <button onClick={copyRadarReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-pink-500 bg-slate-950 border border-slate-800 hover:bg-pink-500/10 transition-colors rounded-xl whitespace-nowrap">
+              <MessageCircle size={14} /> Radar
             </button>
 
-            <div className="hidden sm:block w-px h-5 bg-slate-800 mx-1"></div>
+            <div className="w-px h-5 bg-slate-800 mx-1"></div>
+
+            <button onClick={exportClassificaCSV} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl whitespace-nowrap">
+              <Download size={14} /> Excel
+            </button>
             
-            <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2.5 mt-1 sm:mt-0 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 sm:bg-transparent border border-blue-500/30 sm:border-0 hover:bg-blue-500/20 transition-colors rounded-xl sm:rounded-full whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
             </button>
           
@@ -1018,7 +1180,6 @@ export default function AdminPage() {
                  </div>
               </div>
               <div className="divide-y divide-slate-800/50">
-                {/* Ordiniamo gli iscritti mettendo prima chi NON ha pagato, così da averli sott'occhio */}
                 {[...profiles].sort((a, b) => (a.is_paid === b.is_paid ? 0 : a.is_paid ? 1 : -1)).map(p => (
                   <div key={p.id} className="p-4 flex items-center justify-between gap-2">
                     <div className="min-w-0 flex items-start gap-2">
@@ -1285,6 +1446,34 @@ export default function AdminPage() {
                     }) : (
                       <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun risultato</div>
                     )}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60 sm:col-span-2">
+                  <div className="flex justify-between items-center border-b border-slate-800/50 pb-2 mb-3 shrink-0">
+                    <p className="text-[9px] font-black text-rose-400 uppercase italic">Radar Anomalie 🕵️‍♂️ (Flop & Favole)</p>
+                  </div>
+                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                     {anomaliesList.length > 0 ? anomaliesList.map((ano, i) => {
+                        const flagCode = flagMap[ano.team.toLowerCase().trim()];
+                        return (
+                          <div key={i} className="flex justify-between items-center border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
+                            <div className="flex items-center gap-2">
+                               <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${ano.type === 'FLOP' ? 'bg-rose-500/20 text-rose-500' : 'bg-emerald-500/20 text-emerald-500'}`}>{ano.type}</span>
+                               <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm ml-1">
+                                  {flagCode ? <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" /> : <Shield size={10} className="text-slate-600"/>}
+                                  <span className="text-[9px] font-black uppercase italic text-slate-300">{formatTeamName(ano.team)}</span>
+                               </div>
+                            </div>
+                            <div className="flex flex-col items-end pl-2 max-w-[50%] text-right">
+                               <span className="text-[10px] font-black uppercase italic text-white leading-snug">{ano.users.join(', ')}</span>
+                               <span className="text-[7px] text-slate-500 uppercase font-bold mt-1 tracking-widest">{ano.msg}</span>
+                            </div>
+                          </div>
+                        )
+                     }) : (
+                        <div className="text-[10px] font-black uppercase italic text-slate-600">Nessuna anomalia rilevata</div>
+                     )}
                   </div>
                 </div>
 
