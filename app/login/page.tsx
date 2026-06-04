@@ -126,7 +126,7 @@ function AuthForm() {
         <form onSubmit={handleAuth} className="space-y-4">
           <input 
             type="text" 
-            placeholder="USERNAME" 
+            placeholder="NICKNAME" 
             className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl focus:border-yellow-500 outline-none text-white font-black text-xs uppercase transition-colors"
             value={username} 
             onChange={(e) => setUsername(e.target.value)} 
