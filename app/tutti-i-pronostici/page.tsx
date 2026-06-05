@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame,
-  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock
+  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -193,17 +193,36 @@ const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, 
 const STAGE_CAPACITY: { [key: string]: number } = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
 
 const flagMap: { [key: string]: string } = {
-  algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
-  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', brasile: 'br',
-  canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', "costa d'avorio": 'ci',
-  croazia: 'hr', curaçao: 'cw', curacao: 'cw', ecuador: 'ec', egitto: 'eg', francia: 'fr',
-  germania: 'de', ghana: 'gh', giappone: 'jp', giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng',
-  iran: 'ir', iraq: 'iq', marocco: 'ma', messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz',
-  olanda: 'nl', panama: 'pa', paraguay: 'py', portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz',
-  'repubblica democratica del congo': 'cd', congo: 'cd', scozia: 'gb-sct', senegal: 'sn',
-  spagna: 'es', 'stati uniti': 'us', usa: 'us', sudafrica: 'za', svezia: 'se', svizzera: 'ch',
-  tunisia: 'tn', turchia: 'tr', uruguay: 'uy', uzbekistan: 'uz',
+  algeria: 'dz', 'arabia saudita': 'sa', 'arabia s.': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', bosnia: 'ba',
+  brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', 'corea sud': 'kr', 
+  "costa d'avorio": 'ci', 'costa avorio': 'ci', 'c. avorio': 'ci', croazia: 'hr', curaçao: 'cw', curacao: 'cw',
+  ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp', 
+  giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma', 
+  messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', 'n. zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
+  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'rep. ceca': 'cz', 'repubblica democratica del congo': 'cd', 'r.d. congo': 'cd', congo: 'cd',
+  scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'stati uniti': 'us', usa: 'us',
+  sudafrica: 'za', svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', 
+  uruguay: 'uy', uzbekistan: 'uz',
 };
+
+const TEAMS_2026 = [
+  'Algeria', 'Arabia Saudita', 'Argentina', 'Australia', 'Austria', 'Belgio',
+  'Bosnia ed Erzegovina', 'Brasile', 'Canada', 'Capo Verde', 'Colombia',
+  'Corea del Sud', "Costa d'avorio", 'Croazia', 'Curaçao', 'Ecuador', 'Egitto',
+  'Francia', 'Germania', 'Ghana', 'Giappone', 'Giordania', 'Haiti', 'Inghilterra',
+  'Iran', 'Iraq', 'Marocco', 'Messico', 'Norvegia', 'Nuova Zelanda', 'Olanda',
+  'Panama', 'Paraguay', 'Portogallo', 'Qatar', 'Repubblica Ceca',
+  'Repubblica Democratica del Congo', 'Scozia', 'Senegal', 'Spagna',
+  'Stati Uniti', 'Sudafrica', 'Svezia', 'Svizzera', 'Tunisia', 'Turchia',
+  'Uruguay', 'Uzbekistan'
+];
+
+const TOP_TEAMS = ['Argentina', 'Belgio', 'Brasile', 'Francia', 'Germania', 'Inghilterra', 'Olanda', 'Portogallo', 'Spagna'];
+const MID_TEAMS = ['Austria', 'Colombia', "Costa d'Avorio", 'Croazia', 'Egitto', 'Giappone', 'Marocco', 'Messico', 'Norvegia', 'Senegal', 'Svizzera', 'Turchia', 'Uruguay', 'USA', 'Stati Uniti'];
+const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea del Sud', 'Ecuador', 'Iran', 'Iraq', 'Nuova Zelanda', 'Panama', 'Paraguay', 'Repubblica Ceca', 'Scozia', 'Svezia', 'Sudafrica', 'Tunisia'];
+const SUPER_LOW_TEAMS = ['Arabia Saudita', 'Bosnia ed Erzegovina', 'Bosnia', 'Capo Verde', 'Repubblica Democratica del Congo', 'R.D. Congo', 'Curaçao', 'Curacao', 'Congo', 'Ghana', 'Giordania', 'Haiti', 'Qatar', 'Uzbekistan'];
+
 
 const normalizeStage = (s: string) => {
   const u = s?.toUpperCase().trim() || '';
@@ -218,13 +237,21 @@ const normalizeStage = (s: string) => {
 
 const formatTeamName = (name: string) => {
   if (!name) return '';
-  if (name.trim().toLowerCase() === 'repubblica democratica del congo') return 'R. D. Congo';
+  const n = name.trim().toLowerCase();
+  if (n === 'repubblica democratica del congo' || n === 'r.d. congo' || n === 'congo') return 'R. D. Congo';
+  if (n === 'stati uniti' || n === 'usa') return 'USA';
+  if (n === 'bosnia ed erzegovina' || n === 'bosnia erzegovina' || n === 'bosnia') return 'Bosnia';
+  if (n === 'nuova zelanda' || n === 'n. zelanda') return 'N. Zelanda';
+  if (n === 'arabia saudita' || n === 'arabia s.') return 'Arabia S.';
+  if (n === 'repubblica ceca' || n === 'rep. ceca') return 'Rep. Ceca';
+  if (n === "costa d'avorio" || n === 'c. avorio') return 'C. Avorio';
+  if (n === 'corea del sud' || n === 'corea sud') return 'Corea Sud';
   return name;
 };
 
 export default function TuttiPronosticiPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS'>('GIRONI');
+  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
   const [data, setData] = useState<any>({
     profiles: [],
     matches: [],
@@ -320,6 +347,106 @@ export default function TuttiPronosticiPage() {
     return { pts: 0, color: 'text-rose-500', label: 'ZERO' };
   };
 
+  // ----- FUNZIONI PER IL TAB STATS -----
+  const getTopExactMatches = () => {
+    return [...data.profiles]
+      .filter((p: any) => p.exact_matches > 0)
+      .sort((a, b) => (b.exact_matches || 0) - (a.exact_matches || 0));
+  };
+
+  const getWinnerStats = () => {
+    const allBrackets = Object.values(data.bracketMap).flat() as any[];
+    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
+    const total = winners.length;
+    if (total === 0) return [];
+    
+    const counts: any = {};
+    winners.forEach(w => {
+      const t = formatTeamName(w.team_name);
+      if (!counts[t]) counts[t] = { count: 0, users: [] };
+      counts[t].count += 1;
+      
+      const p = data.profiles.find((prof: any) => prof.id === w.user_id);
+      if (p) counts[t].users.push(p.username);
+    });
+    
+    return Object.entries(counts)
+      .map(([team, info]: any) => ({ 
+        team, 
+        count: info.count, 
+        pct: Math.round((info.count / total) * 100),
+        users: info.users
+      }))
+      .sort((a, b) => b.count - a.count || a.team.localeCompare(b.team));
+  };
+
+  const getAnomalies = () => {
+    const allTeams = [...TOP_TEAMS, ...MID_TEAMS, ...LOW_TEAMS, ...SUPER_LOW_TEAMS];
+    let anomalies: { user: string, type: string, team: string, msg: string, phase: string, phaseWeight: number }[] = [];
+
+    data.profiles.forEach((p: any) => {
+      const uBrackets = data.bracketMap[p.id] || [];
+      if (uBrackets.length === 0) return;
+
+      const r32 = uBrackets.filter((b: any) => b.stage === 'R32').map((b: any) => formatTeamName(b.team_name).toLowerCase());
+      const r16 = uBrackets.filter((b: any) => b.stage === 'R16').map((b: any) => formatTeamName(b.team_name).toLowerCase());
+      const qf = uBrackets.filter((b: any) => b.stage === 'QF').map((b: any) => formatTeamName(b.team_name).toLowerCase());
+      const sf = uBrackets.filter((b: any) => ['SF', 'F', 'WINNER'].includes(b.stage)).map((b: any) => formatTeamName(b.team_name).toLowerCase());
+
+      const hasR32 = r32.length >= 32;
+      const hasQF = qf.length >= 8;
+
+      allTeams.forEach(t => {
+          const teamF = formatTeamName(t).toLowerCase();
+          const originalTeam = formatTeamName(t);
+
+          const inR32 = r32.includes(teamF);
+          const inR16 = r16.includes(teamF);
+          const inQF = qf.includes(teamF);
+          const inSF = sf.includes(teamF);
+
+          if (TOP_TEAMS.includes(t)) {
+              if (hasR32 && !inR32) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'FASE A GIRONI', phaseWeight: 1 });
+              else if (hasQF && !inQF) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori prima dei Quarti 😱', phase: 'SEDICESIMI / OTTAVI', phaseWeight: 2 });
+          }
+
+          if (MID_TEAMS.includes(t)) {
+              if (t === 'Stati Uniti') return; 
+              if (hasR32 && !inR32) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'FASE A GIRONI', phaseWeight: 1 });
+          }
+
+          if (SUPER_LOW_TEAMS.includes(t)) {
+              if (t === 'Curacao' || t === 'Congo' || t === 'Bosnia') return;
+              if (inSF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale o oltre! 🏆🦄', phase: 'SEMIFINALI / FINALI', phaseWeight: 4 });
+              else if (inQF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🚀', phase: 'QUARTI DI FINALE', phaseWeight: 3 });
+              else if (inR16) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Arriva agli Ottavi! 🤯', phase: 'SEDICESIMI / OTTAVI', phaseWeight: 2 });
+              else if (inR32) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Supera i Gironi! 🍷', phase: 'FASE A GIRONI', phaseWeight: 1 });
+          }
+
+          if (LOW_TEAMS.includes(t)) {
+              if (inSF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale o oltre! 🏆🦄', phase: 'SEMIFINALI / FINALI', phaseWeight: 4 });
+              else if (inQF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🚀', phase: 'QUARTI DI FINALE', phaseWeight: 3 });
+          }
+      });
+    });
+
+    const groupedAnomaliesObj = anomalies.reduce((acc, ano) => {
+      const key = `${ano.phaseWeight}-${ano.type}-${ano.team}-${ano.msg}`;
+      if (!acc[key]) {
+        acc[key] = { phase: ano.phase, phaseWeight: ano.phaseWeight, type: ano.type, team: ano.team, msg: ano.msg, users: [ano.user] };
+      } else {
+        acc[key].users.push(ano.user);
+      }
+      return acc;
+    }, {} as Record<string, { phase: string, phaseWeight: number, type: string, team: string, msg: string, users: string[] }>);
+    
+    return Object.values(groupedAnomaliesObj).sort((a, b) => {
+      if (a.phaseWeight !== b.phaseWeight) return a.phaseWeight - b.phaseWeight;
+      if (a.type !== b.type) return a.type.localeCompare(b.type); 
+      return a.team.localeCompare(b.team);
+    });
+  };
+
   if (loading)
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
@@ -346,22 +473,28 @@ export default function TuttiPronosticiPage() {
     );
   }
 
+  const anomaliesList = activeTab === 'STATS' ? getAnomalies() : [];
+  const uiPhases = activeTab === 'STATS' ? anomaliesList.map(a => a.phase).filter((val, idx, arr) => arr.indexOf(val) === idx) : [];
+  const topCecchini = activeTab === 'STATS' ? getTopExactMatches() : [];
+  const winnerStats = activeTab === 'STATS' ? getWinnerStats() : [];
+
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans">
       <header className="text-center mb-8 pt-4">
         <h1 className="text-4xl font-black text-yellow-500 uppercase italic">
           Scouting Globale
         </h1>
-        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mt-6 max-w-sm mx-auto">
+        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mt-6 max-w-[400px] mx-auto overflow-x-auto custom-scrollbar">
           {[
             { id: 'GIRONI', icon: <LayoutGrid size={14} /> },
             { id: 'BRACKET', icon: <Trophy size={14} /> },
             { id: 'BONUS', icon: <Star size={14} /> },
+            { id: 'STATS', icon: <Activity size={14} /> },
           ].map((tab: any) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl text-[10px] font-black transition-all whitespace-nowrap min-w-max ${
                 activeTab === tab.id
                   ? 'bg-yellow-500 text-slate-950 shadow-lg'
                   : 'text-slate-500 hover:text-white'
@@ -375,7 +508,7 @@ export default function TuttiPronosticiPage() {
 
       <div className="max-w-2xl mx-auto space-y-4">
         
-        {/* --- GIRONI (VELOCITÀ LUMINOSA) --- */}
+        {/* --- GIRONI --- */}
         {activeTab === 'GIRONI' &&
           data.matches.map((match: any) => {
             const homeFlag = getFlagUrl(match.home_team);
@@ -441,7 +574,6 @@ export default function TuttiPronosticiPage() {
                         <div key={user.id} className={`flex justify-between items-center px-4 py-2.5 bg-slate-900/50 rounded-2xl border transition-all ${info.pts > 0 ? 'border-emerald-500/20' : 'border-slate-800/50'}`}>
                           <div className="flex items-center gap-3 min-w-0">
                             
-                            {/* MODIFICA IMMAGINE AVATAR */}
                             <div className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[10px] shadow-inner bg-gradient-to-br overflow-hidden ${userAvatar.color}`}>
                               {userAvatar.flagCode ? (
                                  <img src={`https://flagcdn.com/w80/${userAvatar.flagCode}.png`} alt={userAvatar.name} className="w-full h-full object-cover" />
@@ -498,7 +630,6 @@ export default function TuttiPronosticiPage() {
                 <button onClick={() => setExpandedBracketUser(isExpanded ? null : user.id)} className="w-full p-6 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     
-                    {/* MODIFICA IMMAGINE AVATAR */}
                     <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-inner bg-gradient-to-br overflow-hidden ${userAvatar.color}`}>
                       {userAvatar.flagCode ? (
                          <img src={`https://flagcdn.com/w80/${userAvatar.flagCode}.png`} alt={userAvatar.name} className="w-full h-full object-cover" />
@@ -571,7 +702,6 @@ export default function TuttiPronosticiPage() {
                 <button onClick={() => setExpandedBonusUser(isExpanded ? null : user.id)} className="w-full p-6 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     
-                    {/* MODIFICA IMMAGINE AVATAR */}
                     <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-lg shadow-inner bg-gradient-to-br overflow-hidden ${userAvatar.color}`}>
                       {userAvatar.flagCode ? (
                          <img src={`https://flagcdn.com/w80/${userAvatar.flagCode}.png`} alt={userAvatar.name} className="w-full h-full object-cover" />
@@ -615,6 +745,95 @@ export default function TuttiPronosticiPage() {
               </div>
             );
           })}
+
+        {/* --- NUOVO TAB STATISTICHE --- */}
+        {activeTab === 'STATS' && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+            
+            <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-5 shadow-2xl">
+              <h2 className="text-sm font-black text-yellow-500 uppercase italic tracking-tight mb-4 flex items-center gap-2 border-b border-slate-800/50 pb-2">
+                <Trophy size={16} /> Scelte Vincitore
+              </h2>
+              <div className="space-y-3">
+                {winnerStats.length > 0 ? winnerStats.map((w: any) => (
+                  <div key={w.team} className="flex flex-col border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
+                     <div className="flex justify-between items-center text-xs font-black uppercase italic mb-1.5">
+                       <div className="flex items-center gap-2">
+                          {getFlagUrl(w.team) ? <img src={getFlagUrl(w.team)!} className="w-5 h-auto rounded-sm border border-slate-700" alt="" /> : <Shield size={14} className="text-slate-600"/>}
+                          <span className="text-white">{w.team}</span>
+                       </div>
+                       <span className="text-cyan-500">{w.pct}% <span className="text-[9px] text-slate-500 ml-1">({w.count} voti)</span></span>
+                     </div>
+                     <p className="text-[9px] text-slate-400 leading-tight">
+                        <span className="text-slate-600">Scelto da:</span> {w.users.join(', ')}
+                     </p>
+                  </div>
+                )) : (
+                  <p className="text-xs text-slate-500 font-bold uppercase italic text-center py-4">Nessun dato disponibile</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-5 shadow-2xl">
+              <h2 className="text-sm font-black text-emerald-500 uppercase italic tracking-tight mb-4 flex items-center gap-2 border-b border-slate-800/50 pb-2">
+                <Target size={16} /> Cecchini (Risultati Esatti)
+              </h2>
+              <div className="space-y-2">
+                {topCecchini.length > 0 ? topCecchini.map((p: any) => (
+                  <div key={p.id} className="flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <span className="text-xs font-black uppercase italic text-white truncate pr-2">{p.username}</span>
+                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-inner shrink-0">
+                      {p.exact_matches} presi
+                    </span>
+                  </div>
+                )) : (
+                  <p className="text-xs text-slate-500 font-bold uppercase italic text-center py-4">Ancora nessun cecchino</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-5 shadow-2xl">
+              <h2 className="text-sm font-black text-rose-500 uppercase italic tracking-tight mb-4 flex items-center gap-2 border-b border-slate-800/50 pb-2">
+                <Search size={16} /> Radar Anomalie 🕵️‍♂️
+              </h2>
+              <div className="space-y-5">
+                {uiPhases.length > 0 ? uiPhases.map((phase) => {
+                  const phaseAnos = anomaliesList.filter(a => a.phase === phase);
+                  return (
+                    <div key={phase} className="space-y-3">
+                      <h4 className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 w-max shadow-inner">{phase}</h4>
+                      {phaseAnos.map((ano, i) => {
+                        const isFlop = ano.type === 'FLOP';
+                        return (
+                          <div key={i} className={`flex flex-col p-3 rounded-2xl border ${isFlop ? 'bg-rose-950/20 border-rose-900/30' : 'bg-indigo-950/20 border-indigo-900/30'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                               <div className="flex items-center gap-2">
+                                  <span className="text-lg">{isFlop ? '📉' : '🦄'}</span>
+                                  <div className="flex flex-col">
+                                    <span className="text-[11px] font-black uppercase italic text-white">{ano.team}</span>
+                                    <span className={`text-[9px] font-black uppercase tracking-wider ${isFlop ? 'text-rose-400' : 'text-indigo-400'}`}>{ano.msg}</span>
+                                  </div>
+                               </div>
+                            </div>
+                            <div className="pt-2 border-t border-slate-800/50">
+                               <p className="text-[10px] text-slate-300 font-bold leading-relaxed">
+                                  <span className="text-slate-500 mr-1 uppercase text-[8px] tracking-widest">Colpevoli:</span> 
+                                  {ano.users.join(', ')}
+                               </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }) : (
+                  <p className="text-xs text-slate-500 font-bold uppercase italic text-center py-4">Nessuna anomalia rilevata! Tutti noiosi... 😴</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
     </main>
   );
