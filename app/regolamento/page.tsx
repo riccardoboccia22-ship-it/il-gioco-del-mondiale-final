@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   Gift,
   Medal,
-  Zap,
   LayoutGrid
 } from 'lucide-react';
 import Link from 'next/link';
@@ -174,7 +173,7 @@ export default function RegolamentoPage() {
             <h2 className="text-xl font-black uppercase italic tracking-tight">4. Premi e Categorie</h2>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            Il montepremi verrà diviso su 9 piazzamenti. Nessun giocatore può accumulare più di un premio (Regola Anti-Ingordigia).
+            Il montepremi verrà diviso su ben 10 piazzamenti. Nessun giocatore può accumulare più di un premio (Regola Anti-Ingordigia).
           </p>
 
           <div className="space-y-4">
@@ -188,6 +187,7 @@ export default function RegolamentoPage() {
                 <li>🥈 <strong>2° Classificato:</strong> Vice-campione.</li>
                 <li>🥉 <strong>3° Classificato:</strong> Terzo gradino del podio.</li>
                 <li>🪵 <strong>4° Classificato:</strong> Premio "Medaglia di Legno".</li>
+                <li>🎖️ <strong>5° Classificato:</strong> Ultimo premio di consolazione.</li>
               </ul>
             </div>
 
@@ -221,7 +221,7 @@ export default function RegolamentoPage() {
                 Nessun giocatore può vincere più di un premio. Se un giocatore si qualifica per due o più premi, gli verrà assegnato quello di <strong>maggior valore/prestigio</strong>, e l'altro premio scivolerà automaticamente al giocatore successivo in classifica.
               </p>
               <p className="text-[10px] text-rose-200/80 leading-relaxed font-bold uppercase tracking-wider">
-                Gerarchia: Podio Generale ➔ Premi per Fase ➔ Premi di Specialità ➔ Zero Assoluto.
+                Gerarchia: Podio Generale (Top 5) ➔ Premi per Fase ➔ Premi di Specialità ➔ Zero Assoluto.
               </p>
             </div>
           </div>
