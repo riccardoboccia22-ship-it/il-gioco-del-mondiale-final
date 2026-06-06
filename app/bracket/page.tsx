@@ -230,9 +230,13 @@ export default function BracketPage() {
                   <div key={i} className="relative h-full">
                     <button
                       disabled={isExpired}
-                      onClick={() => setActiveCell({stageId: stage.id, index: i})}
+                      onClick={() => {
+                        if (isExpired) return;
+                        setActiveCell({stageId: stage.id, index: i});
+                      }}
                       className={`w-full h-full bg-slate-900 border-2 rounded-2xl py-3 pl-2 pr-10 sm:p-4 sm:pr-14 flex items-center gap-1.5 sm:gap-3 transition-all text-left
-                        ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}`}
+                        ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600'}
+                        ${isExpired ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <span className={`text-[9px] sm:text-[11px] font-black w-3 sm:w-4 text-center shrink-0 ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
                         {cellNumber}
@@ -273,7 +277,7 @@ export default function BracketPage() {
         ))}
       </div>
 
-      {activeCell && (
+      {activeCell && !isExpired && (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center px-0 sm:px-4 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
           

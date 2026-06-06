@@ -11,7 +11,8 @@ import {
   ChevronUp, 
   ChevronDown, 
   Minus,
-  Loader2
+  Loader2,
+  Target
 } from 'lucide-react';
 
 const AVATARS = [
@@ -371,6 +372,12 @@ export default function LeaderboardPage() {
                       <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>
                         {player.username}
                       </p>
+                      {/* AGGIUNTA DEI RISULTATI ESATTI SOTTO IL NOME */}
+                      {(player.exact_matches || 0) > 0 && (
+                        <p className="text-[9px] font-bold text-slate-500 mt-1 flex items-center gap-1">
+                          <Target size={10} className="text-emerald-500" /> {player.exact_matches} esatt{player.exact_matches === 1 ? 'o' : 'i'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-const LOCK_TIME = new Date('2026-06-11T20:00:00+02:00');
+// CORRETTO: 21:00 invece di 20:00
+const LOCK_TIME = new Date('2026-06-11T21:00:00+02:00');
 
 const TOURNAMENT_GROUPS = [
   { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
@@ -73,12 +74,14 @@ const AutocompleteInput = ({
   value, 
   onChange, 
   placeholder, 
-  suggestions 
+  suggestions,
+  disabled 
 }: { 
   value: string; 
   onChange: (val: string) => void; 
   placeholder: string; 
-  suggestions: {name: string, country: string}[] 
+  suggestions: {name: string, country: string}[];
+  disabled?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -96,8 +99,6 @@ const AutocompleteInput = ({
 
   const searchTerm = cleanString(value);
 
-  // Filtriamo i suggerimenti: togliamo solo quello che corrisponde "esattamente"
-  // per poi renderizzare il pulsante Scommetti fisso come fallback finale.
   const filteredSuggestions = suggestions.filter(s => {
     return cleanString(s.name).includes(searchTerm) || cleanString(s.country).includes(searchTerm);
   }).filter(s => cleanString(s.name) !== searchTerm);
@@ -118,27 +119,28 @@ const AutocompleteInput = ({
         {matchingPlayer ? (
           <img 
             src={getFlag(matchingPlayer.country)!} 
-            className="absolute left-4 w-6 h-4 rounded-[2px] object-cover border border-slate-700 pointer-events-none" 
+            className={`absolute left-4 w-6 h-4 rounded-[2px] object-cover border border-slate-700 pointer-events-none ${disabled ? 'opacity-50' : ''}`} 
             alt=""
           />
         ) : (
-          <User size={16} className="absolute left-4 text-slate-600 pointer-events-none" />
+          <User size={16} className={`absolute left-4 pointer-events-none ${disabled ? 'text-slate-700' : 'text-slate-600'}`} />
         )}
         <input 
           ref={inputRef}
           type="text" 
+          disabled={disabled}
           placeholder={placeholder} 
           value={value} 
           onChange={(e) => {
             onChange(e.target.value);
             setIsOpen(true);
           }} 
-          onFocus={() => setIsOpen(true)}
-          className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 pl-12 outline-none focus:border-yellow-500 font-black text-sm sm:text-base uppercase transition-all text-white placeholder:text-slate-700" 
+          onFocus={() => { if (!disabled) setIsOpen(true); }}
+          className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 pl-12 outline-none focus:border-yellow-500 font-black text-sm sm:text-base uppercase transition-all text-white placeholder:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed" 
         />
       </div>
       
-      {isOpen && value.length > 0 && (
+      {isOpen && value.length > 0 && !disabled && (
         <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
           {filteredSuggestions.map((suggestion, index) => {
             const flag = getFlag(suggestion.country);
@@ -158,7 +160,6 @@ const AutocompleteInput = ({
             )
           })}
           
-          {/* L'opzione 'Custom/Scommetti' rimane sempre alla fine come salvagente. Cliccandolo il menu e la tastiera spariranno. */}
           <button
             type="button"
             onClick={() => handleSelect(value)}
@@ -195,10 +196,6 @@ export default function BonusPage() {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchSearch, setMatchSearch] = useState('');
   
-  // STATI PORTIERI
-  const [showGkModal, setShowGkModal] = useState(false);
-  const [gkSearch, setGkSearch] = useState('');
-
   const isExpired = new Date() > LOCK_TIME;
 
   useEffect(() => {
@@ -269,7 +266,7 @@ export default function BonusPage() {
 
   const saveBonus = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isExpired) return toast.error('Tempo scaduto!');
+    if (isExpired) return toast.error('Le giocate sono chiuse!');
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Effettua il login'); setLoading(false); return; }
@@ -306,6 +303,7 @@ export default function BonusPage() {
   };
 
   const handleGroupSelect = (groupName: string) => {
+    if (isExpired) return;
     if (activeBonusField) {
       const isCurrentlySelected = formData[activeBonusField] === groupName;
       setFormData((prev: any) => ({ ...prev, [activeBonusField]: isCurrentlySelected ? '' : groupName }));
@@ -314,12 +312,14 @@ export default function BonusPage() {
   };
 
   const handleMatchSelect = (matchString: string) => {
+    if (isExpired) return;
     const isCurrentlySelected = formData.high_scoring_match === matchString;
     setFormData((prev: any) => ({ ...prev, high_scoring_match: isCurrentlySelected ? '' : matchString }));
     setShowMatchModal(false);
   };
 
   const clearForm = () => {
+    if (isExpired) return;
     if (window.confirm("Sei sicuro di voler resettare tutti i tuoi bonus? Non verrà salvato finché non premi il tasto Salva.")) {
       setFormData({
         total_red_cards: '', top_scorer: '', high_scoring_match: '', total_penalties: '',
@@ -400,6 +400,7 @@ export default function BonusPage() {
                          onChange={(val) => setFormData({ ...formData, [field.id]: val })} 
                          placeholder={field.placeholder} 
                          suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
+                         disabled={isExpired}
                        />
                      </label>
                    </div>
@@ -412,6 +413,7 @@ export default function BonusPage() {
                          onChange={(val) => setFormData({ ...formData, best_goalkeeper: val })} 
                          placeholder="Cerca portiere..." 
                          suggestions={WORLD_CUP_GOALKEEPERS} 
+                         disabled={isExpired}
                     />
                 </div>
 
@@ -424,21 +426,21 @@ export default function BonusPage() {
                 
                 <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.highest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                    <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 pt</label>
-                   <button type="button" onClick={() => setActiveBonusField('highest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.highest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                   <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('highest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.highest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
                       {formData.highest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.highest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
                    </button>
                 </div>
 
                 <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.lowest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                    <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 pt</label>
-                   <button type="button" onClick={() => setActiveBonusField('lowest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.lowest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                   <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('lowest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.lowest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
                       {formData.lowest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.lowest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
                    </button>
                 </div>
 
                 <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.high_scoring_match ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                    <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol - 5 pt</label>
-                   <button type="button" onClick={() => setShowMatchModal(true)} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all hover:border-yellow-500 ${formData.high_scoring_match ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'}`}>
+                   <button type="button" disabled={isExpired} onClick={() => !isExpired && setShowMatchModal(true)} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.high_scoring_match ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
                       {formData.high_scoring_match ? (
                          <div className="flex items-center gap-2 truncate pr-2 w-[90%]">
                              {getFlag(formData.high_scoring_match.split(' - ')[0]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[0])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
@@ -465,7 +467,14 @@ export default function BonusPage() {
                   <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                     <label>
                       <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-                      <input type="number" placeholder="Digita un numero" value={formData[field.id]} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800" onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} />
+                      <input 
+                        type="number" 
+                        placeholder="Digita un numero" 
+                        value={formData[field.id]} 
+                        disabled={isExpired}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed" 
+                        onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} 
+                      />
                     </label>
                   </div>
                 ))}
@@ -478,8 +487,8 @@ export default function BonusPage() {
             <button type="button" onClick={clearForm} disabled={isExpired || completedCount === 0} className="p-5 bg-slate-900 border border-slate-800 text-rose-500 rounded-[2rem] hover:bg-rose-500/10 hover:border-rose-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none">
               <Trash2 size={20} />
             </button>
-            <button type="button" onClick={() => saveBonus()} disabled={loading || isExpired} className={`flex-1 font-black py-5 rounded-[2rem] uppercase tracking-widest transition-all text-sm flex items-center justify-center gap-2 ${hasUnsavedChanges ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-yellow-500 text-slate-950 shadow-xl'} disabled:opacity-50 disabled:pointer-events-none`}>
-                {loading ? <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div> : hasUnsavedChanges ? <><CheckCircle2 size={18}/> Salva Modifiche</> : 'Pronostici Salvati'}
+            <button type="button" onClick={() => saveBonus()} disabled={loading || isExpired} className={`flex-1 font-black py-5 rounded-[2rem] uppercase tracking-widest transition-all text-sm flex items-center justify-center gap-2 ${isExpired ? 'bg-slate-900 text-slate-700 border border-slate-800' : hasUnsavedChanges ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-yellow-500 text-slate-950 shadow-xl'} disabled:opacity-50 disabled:pointer-events-none`}>
+                {loading ? <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div> : isExpired ? '🔒 Pronostici Chiusi' : hasUnsavedChanges ? <><CheckCircle2 size={18}/> Salva Modifiche</> : 'Pronostici Salvati'}
             </button>
           </div>
           
@@ -491,7 +500,7 @@ export default function BonusPage() {
       </div>
 
       {/* MODAL GIRONI */}
-      {activeBonusField && (
+      {activeBonusField && !isExpired && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveBonusField(null)}></div>
           <div className="relative w-full max-w-md bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
@@ -520,7 +529,7 @@ export default function BonusPage() {
       )}
 
       {/* MODAL MATCH (Ricerca e Selezione) */}
-      {showMatchModal && (
+      {showMatchModal && !isExpired && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setShowMatchModal(false)}></div>
           <div className="relative w-full max-w-md bg-slate-900 border-t-2 border-yellow-500/40 rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300">
