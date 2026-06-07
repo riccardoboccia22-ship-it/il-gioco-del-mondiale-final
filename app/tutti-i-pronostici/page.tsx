@@ -217,7 +217,6 @@ export default function TuttiPronosticiPage() {
     return Object.entries(agg).sort((a, b) => b[1].length - a[1].length);
   };
 
-  // NUOVA FUNZIONE: GESTISCE L'ORDINAMENTO NUMERICO PER I BONUS SPECIFICI
   const getAggregatedBonusPicks = (bonusKey: string, isNumeric: boolean = false) => {
     const agg: Record<string, string[]> = {};
     data.profiles.forEach((p: any) => {
@@ -230,9 +229,9 @@ export default function TuttiPronosticiPage() {
       if (a[0] === 'Nessuna Scelta') return 1;
       if (b[0] === 'Nessuna Scelta') return -1;
       if (isNumeric) {
-        return Number(b[0]) - Number(a[0]); // Ordine decrescente dal più grande
+        return Number(b[0]) - Number(a[0]);
       }
-      return b[1].length - a[1].length; // Ordine di popolarità
+      return b[1].length - a[1].length;
     });
   };
   
@@ -469,7 +468,7 @@ export default function TuttiPronosticiPage() {
                     <CalendarDays size={16}/> {dayName}
                     <div className="flex-1 h-px bg-slate-800/50"></div>
                   </h2>
-                  {matchesArray.map(m => renderMatchCard(m))}
+                  {matchesArray.map((m: any) => renderMatchCard(m))}
                 </div>
              ))}
 
@@ -485,7 +484,7 @@ export default function TuttiPronosticiPage() {
                       <LayoutGrid size={16}/> {group.name}
                       <div className="flex-1 h-px bg-slate-800/50"></div>
                     </h2>
-                    {groupMatches.map(m => renderMatchCard(m))}
+                    {groupMatches.map((m: any) => renderMatchCard(m))}
                   </div>
                 );
              })}
@@ -602,7 +601,7 @@ export default function TuttiPronosticiPage() {
                           const f = player ? getFlagUrl(player.country) : null;
                           flagElement = f ? <img src={f} className="w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0" alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
                         } 
-                        else if (bonus.type === 'MATCH' && ans.includes(' - ')) {
+                        else if (bonus.type === 'MATCH' && ans.includes('-')) {
                           const [t1, t2] = ans.split(/\s*-\s*/);
                           const f1 = getFlagUrl(t1);
                           const f2 = getFlagUrl(t2);
