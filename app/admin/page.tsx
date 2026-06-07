@@ -65,29 +65,10 @@ const flagMap: { [key: string]: string } = {
   uruguay: 'uy', uzbekistan: 'uz',
 };
 
-const flagEmojiMap: { [key: string]: string } = {
-  algeria: '🇩🇿', 'arabia saudita': '🇸🇦', 'arabia s.': '🇸🇦', argentina: '🇦🇷', australia: '🇦🇺', austria: '🇦🇹',
-  belgio: '🇧🇪', 'bosnia ed erzegovina': '🇧🇦', 'bosnia erzegovina': '🇧🇦', bosnia: '🇧🇦',
-  brasile: '🇧🇷', canada: '🇨🇦', 'capo verde': '🇨🇻', colombia: '🇨🇴', 'corea del sud': '🇰🇷', 'corea sud': '🇰🇷', 
-  "costa d'avorio": '🇨🇮', 'costa avorio': '🇨🇮', 'c. avorio': '🇨🇮', croazia: '🇭🇷', curaçao: '🇨🇼', curacao: '🇨🇼',
-  ecuador: '🇪🇨', egitto: '🇪🇬', francia: '🇫🇷', germania: '🇩🇪', ghana: '🇬🇭', giappone: '🇯🇵', 
-  giordania: '🇯🇴', haiti: '🇭🇹', inghilterra: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', iran: '🇮🇷', iraq: '🇮🇶', marocco: '🇲🇦', 
-  messico: '🇲🇽', norvegia: '🇳🇴', 'nuova zelanda': '🇳🇿', 'n. zelanda': '🇳🇿', olanda: '🇳🇱', panama: '🇵🇦', paraguay: '🇵🇾',
-  portogallo: '🇵🇹', qatar: '🇶🇦', 'repubblica ceca': '🇨🇿', 'rep. ceca': '🇨🇿', 'repubblica democratica del congo': '🇨🇩', 'r.d. congo': '🇨🇩', congo: '🇨🇩',
-  scozia: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', senegal: '🇸🇳', spagna: '🇪🇸', 'stati uniti': '🇺🇸', usa: '🇺🇸',
-  sudafrica: '🇿🇦', svezia: '🇸🇪', svizzera: '🇨🇭', tunisia: '🇹🇳', turchia: '🇹🇷', 
-  uruguay: '🇺🇾', uzbekistan: '🇺🇿',
-};
-
 const getFlag = (team: string) => {
     if (!team) return null;
     const code = flagMap[team.toLowerCase().trim()];
     return code ? `https://flagcdn.com/w40/${code}.png` : null;
-};
-
-const getEmoji = (team: string) => {
-    if (!team) return '';
-    return flagEmojiMap[team.toLowerCase().trim()] || '';
 };
 
 const normalizeStage = (s: string) => {
@@ -255,7 +236,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: false, marcatori: false });
+  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: true, marcatori: false });
   const [matches, setMatches] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
@@ -580,77 +561,6 @@ export default function AdminPage() {
     }
   };
 
-  const getWinnerStats = () => {
-    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
-    const total = winners.length;
-    if (total === 0) return [];
-    const counts: any = {};
-    winners.forEach(w => { 
-      const t = formatTeamName(w.team_name);
-      counts[t] = (counts[t] || 0) + 1; 
-    });
-    return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, pct: Math.round((Number(count) / total) * 100) }));
-  };
-
-  const getWinnerChoicesGroupedByTeam = () => {
-    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
-    const grouped: Record<string, string[]> = {};
-    
-    winners.forEach(w => {
-      const team = formatTeamName(w.team_name);
-      const p = profiles.find(prof => prof.id === w.user_id);
-      const username = p ? p.username : 'Anonimo';
-      if (!grouped[team]) grouped[team] = [];
-      grouped[team].push(username);
-    });
-
-    return Object.entries(grouped)
-      .map(([team, users]) => ({ team, users, count: users.length }))
-      .sort((a, b) => b.count - a.count || a.team.localeCompare(b.team));
-  };
-
-  const getTopExactMatches = () => {
-    return [...profiles]
-      .filter(p => p.exact_matches > 0)
-      .sort((a, b) => (b.exact_matches || 0) - (a.exact_matches || 0));
-  };
-
-  const getUserExactMatches = (userId: string) => {
-    const uPreds = predictions.filter(p => p.user_id === userId);
-    const exacts: any[] = [];
-    uPreds.forEach(pred => {
-      const m = matches.find(m => m.id === pred.match_id && m.is_finished);
-      if (m) {
-        const ph = Number(pred.home_score), pa = Number(pred.away_score);
-        const mh = Number(m.home_score_final), ma = Number(m.away_score_final);
-        if (ph === mh && pa === ma) {
-          exacts.push(m);
-        }
-      }
-    });
-    return exacts;
-  };
-
-  const getBonusDetails = (k: string) => {
-    const choices: Record<string, { originalName: string; count: number; users: string[] }> = {};
-    allUserBonuses.forEach(b => {
-      if (b[k]) {
-        const raw = b[k].trim();
-        const key = cleanString(raw);
-        const p = profiles.find(prof => prof.id === b.user_id);
-        const username = p ? p.username : 'Anonimo';
-        if (!choices[key]) {
-          choices[key] = { originalName: raw, count: 0, users: [] };
-        }
-        choices[key].count += 1;
-        if (!choices[key].users.includes(username)) {
-          choices[key].users.push(username);
-        }
-      }
-    });
-    return Object.values(choices).sort((a, b) => b.count - a.count);
-  };
-
   const getCompletionStats = () => {
     return profiles.map(p => {
       const uPreds = predictions.filter(pred => 
@@ -680,82 +590,6 @@ export default function AdminPage() {
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
-  // --- LOGICA RADAR ANOMALIE SUDDIVISA PER FASI CRONOLOGICHE ---
-  const getAnomalies = () => {
-    const TOP_TEAMS = ['Argentina', 'Belgio', 'Brasile', 'Francia', 'Germania', 'Inghilterra', 'Olanda', 'Portogallo', 'Spagna'];
-    const MID_TEAMS = ['Austria', 'Colombia', "Costa d'Avorio", 'Croazia', 'Egitto', 'Giappone', 'Marocco', 'Messico', 'Norvegia', 'Senegal', 'Svizzera', 'Turchia', 'Uruguay', 'USA', 'Stati Uniti'];
-    const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea del Sud', 'Ecuador', 'Iran', 'Iraq', 'Nuova Zelanda', 'Panama', 'Paraguay', 'Repubblica Ceca', 'Scozia', 'Svezia', 'Sudafrica', 'Tunisia'];
-    const SUPER_LOW_TEAMS = ['Arabia Saudita', 'Bosnia ed Erzegovina', 'Bosnia', 'Capo Verde', 'Repubblica Democratica del Congo', 'R.D. Congo', 'Curaçao', 'Curacao', 'Congo', 'Ghana', 'Giordania', 'Haiti', 'Qatar', 'Uzbekistan'];
-
-    const allTeams = [...TOP_TEAMS, ...MID_TEAMS, ...LOW_TEAMS, ...SUPER_LOW_TEAMS];
-    let anomalies: { user: string, type: string, team: string, msg: string, phase: string, phaseWeight: number }[] = [];
-
-    profiles.forEach(p => {
-      const uBrackets = allBrackets.filter(b => b.user_id === p.id);
-      if (uBrackets.length === 0) return;
-
-      const r32 = uBrackets.filter(b => b.stage === 'R32').map(b => formatTeamName(b.team_name).toLowerCase());
-      const r16 = uBrackets.filter(b => b.stage === 'R16').map(b => formatTeamName(b.team_name).toLowerCase());
-      const qf = uBrackets.filter(b => b.stage === 'QF').map(b => formatTeamName(b.team_name).toLowerCase());
-      const sf = uBrackets.filter(b => ['SF', 'F', 'WINNER'].includes(b.stage)).map(b => formatTeamName(b.team_name).toLowerCase());
-
-      const hasR32 = r32.length >= 32;
-      const hasQF = qf.length >= 8;
-
-      allTeams.forEach(t => {
-          const teamF = formatTeamName(t).toLowerCase();
-          const originalTeam = formatTeamName(t);
-
-          const inR32 = r32.includes(teamF);
-          const inR16 = r16.includes(teamF);
-          const inQF = qf.includes(teamF);
-          const inSF = sf.includes(teamF);
-
-          // TOP TEAMS
-          if (TOP_TEAMS.includes(t)) {
-              if (hasR32 && !inR32) {
-                  anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'FASE A GIRONI', phaseWeight: 1 });
-              } else if (hasQF && !inQF) {
-                  anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori prima dei Quarti 😱', phase: 'SEDICESIMI / OTTAVI', phaseWeight: 2 });
-              }
-          }
-
-          // MID TEAMS
-          if (MID_TEAMS.includes(t)) {
-              if (t === 'Stati Uniti') return; 
-              if (hasR32 && !inR32) {
-                  anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'FASE A GIRONI', phaseWeight: 1 });
-              }
-          }
-
-          // SUPER LOW TEAMS
-          if (SUPER_LOW_TEAMS.includes(t)) {
-              if (t === 'Curacao' || t === 'Congo' || t === 'Bosnia') return; // Evita doppioni
-              if (inSF) {
-                  anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale o oltre! 🏆🦄', phase: 'SEMIFINALI / FINALI', phaseWeight: 4 });
-              } else if (inQF) {
-                  anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🚀', phase: 'QUARTI DI FINALE', phaseWeight: 3 });
-              } else if (inR16) {
-                  anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Arriva agli Ottavi! 🤯', phase: 'SEDICESIMI / OTTAVI', phaseWeight: 2 });
-              } else if (inR32) {
-                  anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Supera i Gironi! 🍷', phase: 'FASE A GIRONI', phaseWeight: 1 });
-              }
-          }
-
-          // LOW TEAMS
-          if (LOW_TEAMS.includes(t)) {
-              if (inSF) {
-                  anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale o oltre! 🏆🦄', phase: 'SEMIFINALI / FINALI', phaseWeight: 4 });
-              } else if (inQF) {
-                  anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🚀', phase: 'QUARTI DI FINALE', phaseWeight: 3 });
-              }
-          }
-      });
-    });
-
-    return anomalies;
-  };
-
   const copyClassificaReport = () => {
     const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
     let text = `🏆 *CLASSIFICA MONDIALE 2026* 🏆\n\n`;
@@ -768,84 +602,6 @@ export default function AdminPage() {
 
     navigator.clipboard.writeText(text);
     toast.success('Classifica copiata per WhatsApp! 📱', { icon: '💬' });
-  };
-
-  const copyBonusReport = () => {
-    const winners = getWinnerStats();
-    let text = `📊 *STATISTICHE* 📊\n\n`;
-    
-    text += `👑 *Vincitore del Mondiale (Scelte):*\n`;
-    winners.forEach(w => {
-      text += `- ${getEmoji(w.name)} ${w.name}: ${w.pct}%\n`;
-    });
-    text += `\n`;
-    
-    const fields = [
-      { l: '✨ MVP', k: 'mvp_world_cup' },
-      { l: '⚽ Capocannoniere', k: 'top_scorer' },
-      { l: '🧤 Miglior Portiere', k: 'best_goalkeeper' },
-      { l: '🔥 Match più Gol', k: 'high_scoring_match' },
-      { l: '📈 Girone più Gol', k: 'highest_scoring_group' },
-      { l: '📉 Girone meno Gol', k: 'lowest_scoring_group' }
-    ];
-    
-    fields.forEach(f => {
-      const details = getBonusDetails(f.k);
-      if (details.length > 0) {
-        text += `*${f.l}:*\n`;
-        details.forEach(d => {
-           const emj = f.k !== 'high_scoring_match' && !f.k.includes('group') ? `${getEmoji(d.originalName)} ` : '';
-           text += `- ${emj}${formatMatchName(d.originalName)} (${d.count} voti)\n`;
-        });
-        text += `\n`;
-      }
-    });
-
-    text += `👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
-
-    navigator.clipboard.writeText(text);
-    toast.success('Statistiche copiate per WhatsApp! 📱', { icon: '💬' });
-  };
-
-  const copyCecchiniReport = () => {
-    let text = `🎯 *REPORT CECCHINI (RISULTATI ESATTI)* 🎯\n`;
-    const matchesWithExact = matches.filter(m => m.is_finished).map(m => {
-       const exactUsers = profiles.filter(p => {
-          const uPred = predictions.find(pred => pred.user_id === p.id && pred.match_id === m.id);
-          if(!uPred) return false;
-          return Number(uPred.home_score) === Number(m.home_score_final) && Number(uPred.away_score) === Number(m.away_score_final);
-       }).map(p => p.username);
-       return { ...m, exactUsers, group: TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === formatMatchName(m.home_team).toLowerCase()))?.name || 'Fase Finale' };
-    }).filter(m => m.exactUsers.length > 0);
-
-    if(matchesWithExact.length === 0) {
-       text += `\nAncora nessun risultato esatto!\n`;
-    } else {
-       const grouped: any = {};
-       matchesWithExact.forEach(m => {
-          if(!grouped[m.group]) grouped[m.group] = [];
-          grouped[m.group].push(m);
-       });
-       
-       const sortedGroups = Object.keys(grouped).sort((a, b) => {
-          if(a.includes('Gruppo') && b.includes('Gruppo')) return a.localeCompare(b);
-          if(a.includes('Gruppo')) return -1;
-          return 1;
-       });
-
-       sortedGroups.forEach(g => {
-          text += `\n*${g}*\n`;
-          grouped[g].forEach((m: any) => {
-              text += `⚽ ${getEmoji(m.home_team)} ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)} ${getEmoji(m.away_team)}\n`;
-              text += `    👉 ${m.exactUsers.join(', ')}\n`;
-          });
-       });
-    }
-
-    text += `\n👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
-
-    navigator.clipboard.writeText(text);
-    toast.success('Report Cecchini copiato! 🎯', { icon: '🎯' });
   };
 
   const copyCompletionReport = () => {
@@ -864,49 +620,6 @@ export default function AdminPage() {
     text += `👉 Entra per completare: www.iltuopronostico.it`;
     navigator.clipboard.writeText(text);
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
-  };
-
-  const copyRadarReport = () => {
-    const rawAnomalies = getAnomalies();
-    
-    const groupedAnomaliesObj = rawAnomalies.reduce((acc, ano) => {
-      const key = `${ano.phaseWeight}-${ano.type}-${ano.team}-${ano.msg}`;
-      if (!acc[key]) {
-        acc[key] = { phase: ano.phase, phaseWeight: ano.phaseWeight, type: ano.type, team: ano.team, msg: ano.msg, users: [ano.user] };
-      } else {
-        acc[key].users.push(ano.user);
-      }
-      return acc;
-    }, {} as Record<string, { phase: string, phaseWeight: number, type: string, team: string, msg: string, users: string[] }>);
-    
-    const anomaliesList = Object.values(groupedAnomaliesObj).sort((a, b) => {
-      if (a.phaseWeight !== b.phaseWeight) return a.phaseWeight - b.phaseWeight;
-      if (a.type !== b.type) return a.type.localeCompare(b.type); 
-      return a.team.localeCompare(b.team);
-    });
-
-    // 1️⃣ MODIFICA QUI: SOSTITUZIONE [ ...new Set(...) ] CON .filter() 
-    const phases = anomaliesList.map(a => a.phase).filter((val, idx, arr) => arr.indexOf(val) === idx);
-
-    let text = `🕵️‍♂️ *RADAR ANOMALIE* 🕵️‍♂️\n(Le scelte più coraggiose e folli del gruppo)\n\n`;
-
-    if (phases.length === 0) {
-       text += `Nessuna anomalia rilevata! Tutti noiosi... 😴\n\n`;
-    } else {
-       phases.forEach(phase => {
-          text += `*--- ${phase} ---*\n`;
-          const phaseAnos = anomaliesList.filter(a => a.phase === phase);
-          phaseAnos.forEach(ano => {
-             const icon = ano.type === 'FLOP' ? '📉' : '🦄';
-             text += `${icon} ${getEmoji(ano.team)} ${ano.team} (${ano.msg}):\n  ↳ ${ano.users.join(', ')}\n`;
-          });
-          text += `\n`;
-       });
-    }
-
-    text += `👉 www.iltuopronostico.it`;
-    navigator.clipboard.writeText(text);
-    toast.success('Radar copiato per WhatsApp! 🕵️‍♂️', { icon: '📋' });
   };
 
   const exportClassificaCSV = () => {
@@ -994,26 +707,6 @@ export default function AdminPage() {
   const paidUsers = profiles.filter(p => p.is_paid).length;
   const unpaidUsers = totalUsers - paidUsers;
 
-  const rawAnomalies = getAnomalies();
-  const groupedAnomaliesObj = rawAnomalies.reduce((acc, ano) => {
-    const key = `${ano.phaseWeight}-${ano.type}-${ano.team}-${ano.msg}`;
-    if (!acc[key]) {
-      acc[key] = { phase: ano.phase, phaseWeight: ano.phaseWeight, type: ano.type, team: ano.team, msg: ano.msg, users: [ano.user] };
-    } else {
-      acc[key].users.push(ano.user);
-    }
-    return acc;
-  }, {} as Record<string, { phase: string, phaseWeight: number, type: string, team: string, msg: string, users: string[] }>);
-  
-  const anomaliesList = Object.values(groupedAnomaliesObj).sort((a, b) => {
-    if (a.phaseWeight !== b.phaseWeight) return a.phaseWeight - b.phaseWeight;
-    if (a.type !== b.type) return a.type.localeCompare(b.type); 
-    return a.team.localeCompare(b.team);
-  });
-  
-  // 2️⃣ MODIFICA QUI: SOSTITUZIONE [ ...new Set(...) ] CON .filter() 
-  const uiPhases = anomaliesList.map(a => a.phase).filter((val, idx, arr) => arr.indexOf(val) === idx);
-
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden relative">
       <button onClick={() => router.push('/profile')} className="absolute top-6 left-4 text-slate-500 hover:text-yellow-500 transition-colors flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest z-10">
@@ -1030,20 +723,8 @@ export default function AdminPage() {
               <MessageCircle size={14} /> Classifica
             </button>
             
-            <button onClick={copyBonusReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-purple-500 bg-slate-950 border border-slate-800 hover:bg-purple-500/10 transition-colors rounded-xl whitespace-nowrap">
-              <MessageCircle size={14} /> Statistiche
-            </button>
-            
-            <button onClick={copyCecchiniReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-orange-500 bg-slate-950 border border-slate-800 hover:bg-orange-500/10 transition-colors rounded-xl whitespace-nowrap">
-              <MessageCircle size={14} /> Cecchini
-            </button>
-            
             <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-slate-800 hover:bg-yellow-500/10 transition-colors rounded-xl whitespace-nowrap">
               <MessageCircle size={14} /> Stato
-            </button>
-
-            <button onClick={copyRadarReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-pink-500 bg-slate-950 border border-slate-800 hover:bg-pink-500/10 transition-colors rounded-xl whitespace-nowrap">
-              <MessageCircle size={14} /> Radar
             </button>
 
             <div className="w-px h-5 bg-slate-800 mx-1"></div>
@@ -1343,169 +1024,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800">
-                <p className="text-[9px] font-black text-slate-500 uppercase mb-4 border-b border-slate-800/50 pb-1 italic">Vincitore del Mondiale (Sentiment)</p>
-                <div className="space-y-2">
-                  {getWinnerStats().map(w => (
-                    <div key={w.name} className="flex justify-between items-center text-[10px] font-black uppercase italic"><span className="text-white">{w.name}</span><span className="text-cyan-500">{w.pct}%</span></div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60 mt-0">
-                <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Bonus Numerici (Rossi - Rigori - Autogol)</p>
-                <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar">
-                  {profiles.filter(p => allUserBonuses.some(b => b.user_id === p.id && (b.total_red_cards != null || b.total_penalties != null || b.total_own_goals != null))).length > 0 ? (
-                    profiles.map(p => {
-                      const uBonus = allUserBonuses.find(b => b.user_id === p.id);
-                      if (!uBonus || (uBonus.total_red_cards == null && uBonus.total_penalties == null && uBonus.total_own_goals == null)) return null;
-                      return (
-                        <div key={p.id} className="flex justify-between items-center border-b border-slate-800/30 pb-2 last:border-0 last:pb-0">
-                          <span className="text-[10px] font-black uppercase italic text-white truncate pr-2">{p.username}</span>
-                          <div className="flex gap-2 text-[9px] font-black uppercase tracking-wider text-cyan-400">
-                            <span className="bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm" title="Cartellini Rossi">🟥 {uBonus.total_red_cards ?? '-'}</span>
-                            <span className="bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm" title="Calci di Rigore">⚽ {uBonus.total_penalties ?? '-'}</span>
-                            <span className="bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm" title="Autogol">🤦 {uBonus.total_own_goals ?? '-'}</span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun dato inserito</div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
-                  <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Scelte Vincitore (Per Squadra)</p>
-                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    {getWinnerChoicesGroupedByTeam().length > 0 ? getWinnerChoicesGroupedByTeam().map((item, idx) => {
-                      const flagCode = flagMap[item.team?.toLowerCase().trim()];
-                      return (
-                        <div key={`${item.team}-${idx}`} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
-                          <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
-                            <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800 shadow-sm">
-                              {flagCode ? (
-                                <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-4 h-2.5 object-cover rounded-sm" alt="" />
-                              ) : (
-                                <div className="w-4 h-2.5 bg-slate-800 rounded-sm"></div>
-                              )}
-                              <span className="text-[9px] font-black uppercase italic text-yellow-500">{formatTeamName(item.team)}</span>
-                            </div>
-                            <span className="text-cyan-500 font-mono shrink-0">{item.count} {item.count === 1 ? 'voto' : 'voti'}</span>
-                          </div>
-                          <p className="text-[8px] text-slate-500 tracking-tight font-medium leading-tight">
-                            Scelto da: <span className="text-slate-400 font-semibold">{item.users.join(', ')}</span>
-                          </p>
-                        </div>
-                      );
-                    }) : (
-                      <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun tabellone compilato</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
-                  <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Cecchini (Ris. Esatti)</p>
-                  <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    {getTopExactMatches().length > 0 ? getTopExactMatches().map(p => {
-                      const exactsList = getUserExactMatches(p.id);
-                      return (
-                        <div key={p.username} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
-                          <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
-                            <span className="truncate pr-2 text-white">{p.username}</span>
-                            <span className="text-emerald-500 font-mono shrink-0">{p.exact_matches || 0} presi</span>
-                          </div>
-                          
-                          {exactsList.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-0.5">
-                              {exactsList.map((m: any) => (
-                                <div key={m.id} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[8px] text-slate-300 shadow-sm">
-                                  <img src={`https://flagcdn.com/w20/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
-                                  <span className="uppercase font-black">{formatTeamName(m.home_team)}</span>
-                                  <span className="text-emerald-400 font-black">{m.home_score_final}-${m.away_score_final}</span>
-                                  <span className="uppercase font-black">{formatTeamName(m.away_team)}</span>
-                                  <img src={`https://flagcdn.com/w20/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }) : (
-                      <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun risultato</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-[400px] sm:col-span-2">
-                  <p className="text-[9px] font-black text-rose-400 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">Radar Anomalie 🕵️‍♂️ (Flop & Favole)</p>
-                  <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                     {uiPhases.length > 0 ? uiPhases.map((phase) => {
-                        const phaseAnos = anomaliesList.filter(a => a.phase === phase);
-                        return (
-                          <div key={phase} className="space-y-2">
-                            <h4 className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2 border-b border-slate-800/50 pb-1">{phase}</h4>
-                            {phaseAnos.map((ano, i) => {
-                              const flagCode = flagMap[ano.team.toLowerCase().trim()];
-                              return (
-                                <div key={i} className="flex justify-between items-center border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0 pl-1">
-                                  <div className="flex items-center gap-2">
-                                     <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${ano.type === 'FLOP' ? 'bg-rose-500/20 text-rose-500' : 'bg-emerald-500/20 text-emerald-500'}`}>{ano.type}</span>
-                                     <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 px-2 py-1 rounded-md border border-slate-800 shadow-sm ml-1">
-                                        {flagCode ? <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-3 h-2 object-cover rounded-sm" alt="" /> : <Shield size={10} className="text-slate-600"/>}
-                                        <span className="text-[9px] font-black uppercase italic text-slate-300">{formatTeamName(ano.team)}</span>
-                                     </div>
-                                  </div>
-                                  <div className="flex flex-col items-end pl-2 max-w-[50%] text-right">
-                                     <span className="text-[10px] font-black uppercase italic text-white leading-snug">{ano.users.join(', ')}</span>
-                                     <span className="text-[7px] text-slate-500 uppercase font-bold mt-1 tracking-widest">{ano.msg}</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                     }) : (
-                        <div className="text-[10px] font-black uppercase italic text-slate-600">Nessuna anomalia rilevata</div>
-                     )}
-                  </div>
-                </div>
-
-                {[ 
-                  { label: 'MVP Mondiale', key: 'mvp_world_cup' }, 
-                  { label: 'Capocannoniere', key: 'top_scorer' }, 
-                  { label: 'Miglior Portiere', key: 'best_goalkeeper' }, 
-                  { label: 'Match + Gol', key: 'high_scoring_match' },
-                  { label: 'Girone + Gol', key: 'highest_scoring_group' },
-                  { label: 'Girone - Gol', key: 'lowest_scoring_group' } 
-                ].map((s) => {
-                  const details = getBonusDetails(s.key);
-                  return (
-                    <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col max-h-60">
-                      <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0">{s.label}</p>
-                      <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                        {details.length > 0 ? details.map((item: any) => (
-                          <div key={item.originalName} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
-                              <span className="truncate pr-2 text-white">{formatMatchName(item.originalName)}</span>
-                              <span className="text-cyan-500 font-mono shrink-0">{item.count} {item.count === 1 ? 'voto' : 'voti'}</span>
-                            </div>
-                            <p className="text-[8px] text-slate-500 tracking-tight font-medium leading-tight">
-                              Scelto da: <span className="text-slate-400 font-semibold">{item.users.join(', ')}</span>
-                            </p>
-                          </div>
-                        )) : (
-                          <div className="text-[10px] font-black uppercase italic text-slate-600">Nessun voto inserito</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-              </div>
             </div>
           )}
         </section>
