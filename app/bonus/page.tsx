@@ -415,14 +415,40 @@ export default function BonusPage() {
               <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.highest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                  <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 pt</label>
                  <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('highest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.highest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
-                    {formData.highest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.highest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
+                    {formData.highest_scoring_group ? (
+                       <div className="flex items-center gap-3 truncate pr-2 w-[90%]">
+                           <span className="truncate shrink-0">{formData.highest_scoring_group}</span>
+                           <div className="flex items-center gap-1 shrink-0">
+                               {TOURNAMENT_GROUPS.find(g => g.name === formData.highest_scoring_group)?.teams.map((t, i) => {
+                                   const f = getFlag(t);
+                                   return f ? <img key={i} src={f} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700" alt=""/> : <Shield key={i} size={14} className="text-slate-600"/>;
+                               })}
+                           </div>
+                       </div>
+                    ) : (
+                       <span>Scegli il Girone...</span>
+                    )}
+                    <ChevronDown size={18} className={formData.highest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
                  </button>
               </div>
 
               <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.lowest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
                  <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 pt</label>
                  <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('lowest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.lowest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
-                    {formData.lowest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.lowest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
+                    {formData.lowest_scoring_group ? (
+                       <div className="flex items-center gap-3 truncate pr-2 w-[90%]">
+                           <span className="truncate shrink-0">{formData.lowest_scoring_group}</span>
+                           <div className="flex items-center gap-1 shrink-0">
+                               {TOURNAMENT_GROUPS.find(g => g.name === formData.lowest_scoring_group)?.teams.map((t, i) => {
+                                   const f = getFlag(t);
+                                   return f ? <img key={i} src={f} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700" alt=""/> : <Shield key={i} size={14} className="text-slate-600"/>;
+                               })}
+                           </div>
+                       </div>
+                    ) : (
+                       <span>Scegli il Girone...</span>
+                    )}
+                    <ChevronDown size={18} className={formData.lowest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
                  </button>
               </div>
 
