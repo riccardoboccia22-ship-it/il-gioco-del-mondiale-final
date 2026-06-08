@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-// CORRETTO: 21:00 invece di 20:00
 const LOCK_TIME = new Date('2026-06-11T21:00:00+02:00');
 
 const TOURNAMENT_GROUPS = [
@@ -190,8 +189,7 @@ export default function BonusPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   
-  // TABS e MODALS
-  const [activeTab, setActiveTab] = useState<'GIOCATORI' | 'SQUADRE' | 'STATISTICHE'>('GIOCATORI');
+  // MODALS
   const [activeBonusField, setActiveBonusField] = useState<string | null>(null);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchSearch, setMatchSearch] = useState('');
@@ -264,9 +262,25 @@ export default function BonusPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges, isExpired]);
 
+  const calculateProgress = () => {
+    let count = 0;
+    Object.values(formData).forEach(val => {
+      if (val !== null && val !== '') count++;
+    });
+    return count;
+  };
+
   const saveBonus = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isExpired) return toast.error('Le giocate sono chiuse!');
+    
+    // Controllo completamento
+    const completedCount = calculateProgress();
+    if (completedCount < 9) {
+      const confirmSave = window.confirm(`⚠️ ATTENZIONE!\nHai compilato solo ${completedCount} bonus su 9.\n\nSei sicuro di voler salvare ora? Puoi comunque completare gli altri in un secondo momento.`);
+      if (!confirmSave) return;
+    }
+
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error('Effettua il login'); setLoading(false); return; }
@@ -329,14 +343,6 @@ export default function BonusPage() {
     }
   };
 
-  const calculateProgress = () => {
-    let count = 0;
-    Object.values(formData).forEach(val => {
-      if (val !== null && val !== '') count++;
-    });
-    return count;
-  };
-
   const completedCount = calculateProgress();
   const progressPct = Math.round((completedCount / 9) * 100);
 
@@ -345,9 +351,9 @@ export default function BonusPage() {
   return (
     <main className="min-h-[100dvh] bg-slate-950 text-white font-sans flex flex-col">
       
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md pt-6 pb-2 border-b border-slate-900 shadow-xl">
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md pt-6 pb-4 border-b border-slate-900 shadow-xl">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-between items-end mb-4">
+          <div className="flex justify-between items-end mb-2">
             <h1 className="text-3xl font-black text-yellow-500 uppercase italic tracking-tighter">Bonus</h1>
             <div className="flex flex-col items-end">
                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">{completedCount}/9 Completati</span>
@@ -356,139 +362,123 @@ export default function BonusPage() {
                </div>
             </div>
           </div>
-
-          <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800">
-            {[
-              { id: 'GIOCATORI', icon: <User size={14} /> },
-              { id: 'SQUADRE', icon: <Shield size={14} /> },
-              { id: 'STATISTICHE', icon: <BarChart3 size={14} /> },
-            ].map((tab: any) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-yellow-500 text-slate-950 shadow-lg'
-                    : 'text-slate-500 hover:text-white'
-                }`}
-              >
-                {tab.icon} {tab.id}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32">
-        <form id="bonusForm" onSubmit={saveBonus} className="max-w-md mx-auto space-y-5 text-left pb-10">
+        <form id="bonusForm" onSubmit={saveBonus} className="max-w-md mx-auto space-y-8 text-left pb-10">
           
-          <div className={`space-y-4 ${isExpired ? 'opacity-60 pointer-events-none' : ''}`}>
+          <div className={`${isExpired ? 'opacity-60 pointer-events-none' : ''}`}>
             
-            {/* TABS 1: GIOCATORI */}
-            {activeTab === 'GIOCATORI' && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                {[ 
-                  {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy, placeholder: "Cerca Giocatore o Squadra"}, 
-                  {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award, placeholder: "Cerca Giocatore o Squadra"}
-                ].map(field => (
-                   <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
-                     <label>
-                       <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-                       <AutocompleteInput 
-                         value={formData[field.id]} 
-                         onChange={(val) => setFormData({ ...formData, [field.id]: val })} 
-                         placeholder={field.placeholder} 
-                         suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
-                         disabled={isExpired}
-                       />
-                     </label>
-                   </div>
-                ))}
+            {/* --- SEZIONE 1: GIOCATORI --- */}
+            <div className="space-y-4 mb-10">
+              <h2 className="text-lg font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-slate-800/50">
+                <User size={18} className="text-blue-500"/> Giocatori
+              </h2>
 
-                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.best_goalkeeper ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
-                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ShieldCheck size={16} /> Miglior Portiere - 10 pt</label>
-                   <AutocompleteInput 
-                         value={formData.best_goalkeeper} 
-                         onChange={(val) => setFormData({ ...formData, best_goalkeeper: val })} 
-                         placeholder="Cerca portiere..." 
-                         suggestions={WORLD_CUP_GOALKEEPERS} 
-                         disabled={isExpired}
+              {[ 
+                {id: 'mvp_world_cup', label: 'MVP Mondiale - 10 pt', icon: Trophy, placeholder: "Cerca Giocatore o Squadra"}, 
+                {id: 'top_scorer', label: 'Capocannoniere - 10 pt', icon: Award, placeholder: "Cerca Giocatore o Squadra"}
+              ].map(field => (
+                 <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                   <label>
+                     <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
+                     <AutocompleteInput 
+                       value={formData[field.id]} 
+                       onChange={(val) => setFormData({ ...formData, [field.id]: val })} 
+                       placeholder={field.placeholder} 
+                       suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
+                       disabled={isExpired}
+                     />
+                   </label>
+                 </div>
+              ))}
+
+              <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.best_goalkeeper ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                 <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ShieldCheck size={16} /> Miglior Portiere - 10 pt</label>
+                 <AutocompleteInput 
+                       value={formData.best_goalkeeper} 
+                       onChange={(val) => setFormData({ ...formData, best_goalkeeper: val })} 
+                       placeholder="Cerca portiere..." 
+                       suggestions={WORLD_CUP_GOALKEEPERS} 
+                       disabled={isExpired}
+                  />
+              </div>
+            </div>
+
+            {/* --- SEZIONE 2: SQUADRE E GIRONI --- */}
+            <div className="space-y-4 mb-10">
+              <h2 className="text-lg font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-slate-800/50">
+                <Shield size={18} className="text-emerald-500"/> Squadre e Gironi
+              </h2>
+              
+              <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.highest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                 <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 pt</label>
+                 <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('highest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.highest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
+                    {formData.highest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.highest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
+                 </button>
+              </div>
+
+              <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.lowest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                 <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 pt</label>
+                 <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('lowest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.lowest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
+                    {formData.lowest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.lowest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
+                 </button>
+              </div>
+
+              <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.high_scoring_match ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                 <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol - 5 pt</label>
+                 <button type="button" disabled={isExpired} onClick={() => !isExpired && setShowMatchModal(true)} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.high_scoring_match ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
+                    {formData.high_scoring_match ? (
+                       <div className="flex items-center gap-2 truncate pr-2 w-[90%]">
+                           {getFlag(formData.high_scoring_match.split(' - ')[0]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[0])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
+                           <span className="truncate">{formatTeamName(formData.high_scoring_match.split(' - ')[0])} - {formatTeamName(formData.high_scoring_match.split(' - ')[1])}</span>
+                           {getFlag(formData.high_scoring_match.split(' - ')[1]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[1])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
+                       </div>
+                    ) : (
+                       <span>Scegli la Partita...</span>
+                    )}
+                    <Search size={18} className={`shrink-0 ${formData.high_scoring_match ? 'text-yellow-500' : 'text-slate-600'}`} />
+                 </button>
+              </div>
+            </div>
+
+            {/* --- SEZIONE 3: STATISTICHE --- */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-slate-800/50">
+                <BarChart3 size={18} className="text-purple-400"/> Statistiche (Numeri)
+              </h2>
+
+              {[ 
+                {id: 'total_own_goals', label: 'Totale Autogol - 3 pt', icon: Target}, 
+                {id: 'total_penalties', label: 'Totale Rigori - 3 pt', icon: Goal}, 
+                {id: 'total_red_cards', label: 'Totale Rossi - 3 pt', icon: Zap}
+              ].map(field => (
+                <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
+                  <label>
+                    <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
+                    <input 
+                      type="number" 
+                      placeholder="Digita un numero" 
+                      value={formData[field.id]} 
+                      disabled={isExpired}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed" 
+                      onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} 
                     />
+                  </label>
                 </div>
-
-              </div>
-            )}
-
-            {/* TABS 2: SQUADRE */}
-            {activeTab === 'SQUADRE' && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                
-                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.highest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
-                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowUpToLine size={16} /> Girone con più gol - 5 pt</label>
-                   <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('highest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.highest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
-                      {formData.highest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.highest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
-                   </button>
-                </div>
-
-                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.lowest_scoring_group ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
-                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><ArrowDownToLine size={16} /> Girone con meno gol - 5 pt</label>
-                   <button type="button" disabled={isExpired} onClick={() => !isExpired && setActiveBonusField('lowest_scoring_group')} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.lowest_scoring_group ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
-                      {formData.lowest_scoring_group || 'Scegli il Girone...'} <ChevronDown size={18} className={formData.lowest_scoring_group ? 'text-yellow-500' : 'text-slate-600'} />
-                   </button>
-                </div>
-
-                <div className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData.high_scoring_match ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
-                   <label className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><Flame size={16} /> Partita con più gol - 5 pt</label>
-                   <button type="button" disabled={isExpired} onClick={() => !isExpired && setShowMatchModal(true)} className={`w-full bg-slate-950 border rounded-2xl p-4 text-left font-black text-sm sm:text-base uppercase flex justify-between items-center transition-all ${!isExpired && 'hover:border-yellow-500'} ${formData.high_scoring_match ? 'border-yellow-500 text-white' : 'border-slate-800 text-slate-500'} ${isExpired ? 'cursor-not-allowed opacity-50' : ''}`}>
-                      {formData.high_scoring_match ? (
-                         <div className="flex items-center gap-2 truncate pr-2 w-[90%]">
-                             {getFlag(formData.high_scoring_match.split(' - ')[0]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[0])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
-                             <span className="truncate">{formatTeamName(formData.high_scoring_match.split(' - ')[0])} - {formatTeamName(formData.high_scoring_match.split(' - ')[1])}</span>
-                             {getFlag(formData.high_scoring_match.split(' - ')[1]) && <img src={getFlag(formData.high_scoring_match.split(' - ')[1])!} className="w-5 h-3.5 rounded-[2px] object-cover border border-slate-700 shrink-0" alt=""/>}
-                         </div>
-                      ) : (
-                         <span>Scegli la Partita...</span>
-                      )}
-                      <Search size={18} className={`shrink-0 ${formData.high_scoring_match ? 'text-yellow-500' : 'text-slate-600'}`} />
-                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* TABS 3: STATISTICHE (Numerici) */}
-            {activeTab === 'STATISTICHE' && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                {[ 
-                  {id: 'total_own_goals', label: 'Totale Autogol - 3 pt', icon: Target}, 
-                  {id: 'total_penalties', label: 'Totale Rigori - 3 pt', icon: Goal}, 
-                  {id: 'total_red_cards', label: 'Totale Rossi - 3 pt', icon: Zap}
-                ].map(field => (
-                  <div key={field.id} className={`bg-slate-900 p-5 rounded-[2rem] border transition-all ${formData[field.id] ? 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]' : 'border-slate-800'}`}>
-                    <label>
-                      <span className="text-[10px] sm:text-xs font-black text-yellow-500 uppercase mb-3 tracking-wider flex items-center gap-2"><field.icon size={16} /> {field.label}</span>
-                      <input 
-                        type="number" 
-                        placeholder="Digita un numero" 
-                        value={formData[field.id]} 
-                        disabled={isExpired}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 font-black text-xl text-yellow-500 transition-all focus:border-yellow-500 outline-none placeholder:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed" 
-                        onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} 
-                      />
-                    </label>
-                  </div>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
 
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={clearForm} disabled={isExpired || completedCount === 0} className="p-5 bg-slate-900 border border-slate-800 text-rose-500 rounded-[2rem] hover:bg-rose-500/10 hover:border-rose-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none">
+          {/* PULSANTI DI SALVATAGGIO */}
+          <div className="sticky bottom-6 z-30 flex gap-2 pt-6 pb-2">
+            <button type="button" onClick={clearForm} disabled={isExpired || completedCount === 0} className="p-5 bg-slate-900 border border-slate-800 text-rose-500 rounded-[2rem] hover:bg-rose-500/10 hover:border-rose-500/30 transition-all shadow-xl disabled:opacity-50 disabled:pointer-events-none">
               <Trash2 size={20} />
             </button>
-            <button type="button" onClick={() => saveBonus()} disabled={loading || isExpired} className={`flex-1 font-black py-5 rounded-[2rem] uppercase tracking-widest transition-all text-sm flex items-center justify-center gap-2 ${isExpired ? 'bg-slate-900 text-slate-700 border border-slate-800' : hasUnsavedChanges ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-yellow-500 text-slate-950 shadow-xl'} disabled:opacity-50 disabled:pointer-events-none`}>
-                {loading ? <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div> : isExpired ? '🔒 Pronostici Chiusi' : hasUnsavedChanges ? <><CheckCircle2 size={18}/> Salva Modifiche</> : 'Pronostici Salvati'}
+            <button type="button" onClick={() => saveBonus()} disabled={loading || isExpired} className={`flex-1 font-black py-5 rounded-[2rem] uppercase tracking-widest transition-all text-sm flex items-center justify-center gap-2 shadow-2xl ${isExpired ? 'bg-slate-900 text-slate-700 border border-slate-800' : hasUnsavedChanges ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse' : 'bg-yellow-500 text-slate-950'} disabled:opacity-50 disabled:pointer-events-none`}>
+                {loading ? <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div> : isExpired ? '🔒 Pronostici Chiusi' : hasUnsavedChanges ? <><CheckCircle2 size={18}/> Salva {completedCount}/9</> : 'Pronostici Salvati'}
             </button>
           </div>
           
