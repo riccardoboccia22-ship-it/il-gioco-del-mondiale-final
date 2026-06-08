@@ -9,7 +9,7 @@ import {
   Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users
 } from 'lucide-react';
 
-const WORLD_CUP_START_DATE = new Date('2025-06-11T21:00:00+02:00');
+const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
 const STAGE_CAPACITY: { [key: string]: number } = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
