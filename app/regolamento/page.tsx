@@ -173,7 +173,7 @@ export default function RegolamentoPage() {
             <h2 className="text-xl font-black uppercase italic tracking-tight">4. Premi e Categorie</h2>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            Il montepremi verrà diviso su ben 10 piazzamenti. Nessun giocatore può accumulare più di un premio (Regola Anti-Ingordigia).
+            Il montepremi verrà diviso su ben 10 piazzamenti. Nessun giocatore può accumulare più di un premio.
           </p>
 
           <div className="space-y-4">
@@ -216,7 +216,7 @@ export default function RegolamentoPage() {
 
             {/* Regola Anti-Ingordigia */}
             <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl mt-4 text-center">
-              <h4 className="text-[10px] font-black uppercase text-rose-500 tracking-widest mb-1">⚠️ Regola Anti-Ingordigia e Gerarchia</h4>
+              <h4 className="text-[10px] font-black uppercase text-rose-500 tracking-widest mb-1">⚠️ATTENZIONE⚠️</h4>
               <p className="text-[10px] text-rose-200/80 leading-relaxed italic mb-2">
                 Nessun giocatore può vincere più di un premio. Se un giocatore si qualifica per due o più premi, gli verrà assegnato quello di <strong>maggior valore/prestigio</strong>, e l'altro premio scivolerà automaticamente al giocatore successivo in classifica.
               </p>
