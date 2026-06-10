@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search, Star } from 'lucide-react';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search, Star, Zap, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -166,11 +166,88 @@ export default function BracketPage() {
     } catch (error: any) { toast.error(error.message); } finally { setLoading(false); }
   };
 
+  const getPrevStageId = (currentId: string) => {
+    const idx = STAGES.findIndex(s => s.id === currentId);
+    return idx > 0 ? STAGES[idx - 1].id : null;
+  };
+
+  const getTeamsInStage = (stageId: string | null) => {
+    if (!stageId) return [];
+    return Object.entries(selections)
+      .filter(([k, v]) => k.startsWith(`${stageId}-`) && v)
+      .map(([k, v]) => v as string);
+  };
+
+  const renderTeamButton = (t: string, currentStageTeams: string[]) => {
+    const isSelectedInStage = currentStageTeams.includes(t);
+    const isCurrentCellTeam = selections[`${activeCell.stageId}-${activeCell.index}`] === t;
+    const isDisabled = isSelectedInStage && !isCurrentCellTeam;
+
+    const teamStages = Object.entries(selections)
+       .filter(([k, v]) => v === t)
+       .map(([k]) => k.split('-')[0]);
+    
+    const uniqueStages = Array.from(new Set(teamStages));
+    const stageOrder = ['R32', 'R16', 'QF', 'SF', 'F', 'WINNER'];
+    uniqueStages.sort((a, b) => stageOrder.indexOf(a) - stageOrder.indexOf(b));
+
+    const stageLabels: Record<string, string> = { R32: '16°', R16: '8°', QF: '4°', SF: 'SF', F: 'F', WINNER: '🏆' };
+
+    return (
+      <button
+        key={t}
+        onClick={() => handleSelect(activeCell.stageId, activeCell.index, t)}
+        disabled={isDisabled}
+        className={`flex flex-col p-3 rounded-2xl border-2 transition-all group ${
+          isCurrentCellTeam 
+            ? 'bg-yellow-500/10 border-yellow-500 shadow-md' 
+            : isDisabled
+              ? 'bg-slate-950 border-slate-800 opacity-40 cursor-not-allowed'
+              : 'bg-slate-950 border-slate-800 active:border-yellow-500 hover:border-slate-700 shadow-md'
+        }`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img 
+              src={getFileFlag(t)!} 
+              className={`w-7 h-5 sm:w-9 sm:h-6 object-cover rounded shadow-lg border border-slate-800 transition-colors ${!isDisabled ? 'group-hover:border-slate-600' : ''}`} 
+              alt="" 
+            />
+            <span className={`text-[11px] sm:text-[12px] font-black uppercase italic truncate ${isCurrentCellTeam ? 'text-yellow-500' : 'text-white'}`}>
+              {formatTeamName(t)}
+            </span>
+          </div>
+          
+          {isCurrentCellTeam && (
+            <span className="text-[8px] font-black bg-yellow-500 text-slate-950 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-0.5 shadow-sm shrink-0">
+              <CheckCircle2 size={10}/> Tua Scelta
+            </span>
+          )}
+          {isDisabled && (
+            <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">
+              Già Scelta
+            </span>
+          )}
+        </div>
+        
+        {uniqueStages.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2 pl-9 sm:pl-12 w-full justify-start">
+            {uniqueStages.map(s => (
+              <span key={s} className="bg-slate-800/80 border border-slate-700 text-slate-300 text-[8px] px-1.5 py-0.5 rounded font-black tracking-widest shadow-sm">
+                {stageLabels[s]}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+    );
+  };
+
   if (fetching) return <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4"><div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div><div className="text-yellow-500 font-black animate-pulse uppercase tracking-widest text-xs">Caricamento Tabellone...</div></div>;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-48 font-sans">
-      <header className="text-center mb-10 pt-4 flex flex-col items-center">
+      <header className="text-center mb-6 pt-4 flex flex-col items-center">
         <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
         <p className="text-slate-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.4em] mt-3 italic">
           {isExpired ? '🔒 Pronostici Conclusi' : 'Dalla fase a eliminazione al Titolo'}
@@ -186,6 +263,15 @@ export default function BracketPage() {
       </header>
 
       <div className={`max-w-4xl mx-auto space-y-12 ${isExpired ? 'opacity-70 pointer-events-none' : ''}`}>
+        
+        {/* INFO BOX (Regole di Inserimento) */}
+        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 -mt-2 mb-10 shadow-lg">
+          <Info className="text-yellow-500 shrink-0 mt-0.5" size={18} />
+          <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
+            <strong className="text-slate-200 font-black">L'ORDINE NON CONTA.</strong> Questa non è la griglia degli accoppiamenti esatti, ma solo la lista delle squadre che accederanno al turno. Ogni squadra qualificata ed indovinata riceverà i relativi punti.
+          </p>
+        </div>
+
         {STAGES.map((stage) => (
           <section key={stage.id} className="relative">
             <div className="flex flex-col mb-6">
@@ -274,6 +360,37 @@ export default function BracketPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-24 overscroll-contain">
+                
+                {/* BLOCCO SPECIALE: Squadre qualificate dal turno precedente */}
+                {(() => {
+                  const prevStageId = getPrevStageId(activeCell.stageId);
+                  if (!prevStageId) return null;
+                  
+                  const prevStageTeams = getTeamsInStage(prevStageId);
+                  const filteredPrevTeams = prevStageTeams.filter(t => 
+                    t.toLowerCase().includes(teamSearch.toLowerCase()) || 
+                    formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
+                  );
+
+                  if (filteredPrevTeams.length === 0) return null;
+
+                  const currentStageTeams = getTeamsInStage(activeCell.stageId);
+
+                  return (
+                    <div className="space-y-4 mb-10">
+                      <div className="flex items-center gap-3 px-2">
+                        <Zap size={16} className="text-emerald-500" />
+                        <span className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">Qualificate dal turno precedente</span>
+                        <div className="flex-1 h-px bg-emerald-500/30"></div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                         {filteredPrevTeams.map(t => renderTeamButton(t, currentStageTeams))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* BLOCCO NORMALE: Tutti i Gironi */}
                 {TOURNAMENT_GROUPS.map((group) => {
                   const filteredTeams = group.teams.filter(t => 
                     t.toLowerCase().includes(teamSearch.toLowerCase()) || 
@@ -281,26 +398,17 @@ export default function BracketPage() {
                   );
                   if (filteredTeams.length === 0) return null;
                   
+                  const currentStageTeams = getTeamsInStage(activeCell.stageId);
+
                   return (
                     <div key={group.name} className="space-y-4">
                       <div className="flex items-center gap-3 px-2">
-                        <Trophy size={16} className="text-yellow-500" />
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{group.name}</span>
+                        <Trophy size={16} className="text-yellow-500/50" />
+                        <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">{group.name}</span>
                         <div className="flex-1 h-px bg-slate-800/50"></div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {filteredTeams.map((t) => (
-                           <button
-                             key={t}
-                             onClick={() => handleSelect(activeCell.stageId, activeCell.index, t)}
-                             className="flex items-center justify-between p-3 rounded-2xl border-2 border-slate-800 bg-slate-950 active:border-yellow-500 hover:border-slate-700 shadow-md transition-all group"
-                           >
-                             <div className="flex items-center gap-3">
-                               <img src={getFileFlag(t)!} className="w-9 h-6 object-cover rounded shadow-lg border border-slate-800 group-hover:border-slate-600 transition-colors" alt="" />
-                               <span className="text-[12px] font-black uppercase italic text-white">{formatTeamName(t)}</span>
-                             </div>
-                           </button>
-                        ))}
+                        {filteredTeams.map((t) => renderTeamButton(t, currentStageTeams))}
                       </div>
                     </div>
                   );
