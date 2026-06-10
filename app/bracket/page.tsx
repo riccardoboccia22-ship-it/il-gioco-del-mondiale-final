@@ -19,6 +19,26 @@ const STAGES = [
   { id: 'WINNER', label: 'Vincitore Mondiale', count: 1, pts: 20 },
 ];
 
+// Tabellone completo dei Sedicesimi di Finale (R32) con i 16 accoppiamenti definiti
+const R32_LABELS: (string | null)[] = [
+  "1ª Gruppo C", "2ª Gruppo F",         // Match 1
+  "1ª Gruppo F", "2ª Gruppo C",         // Match 2
+  "1ª Gruppo H", "2ª Gruppo J",         // Match 3
+  "1ª Gruppo J", "2ª Gruppo H",         // Match 4
+  "2ª Gruppo A", "2ª Gruppo B",         // Match 5
+  "2ª Gruppo D", "2ª Gruppo G",         // Match 6
+  "2ª Gruppo E", "2ª Gruppo I",         // Match 7
+  "2ª Gruppo K", "2ª Gruppo L",         // Match 8
+  "1ª Gruppo A", "3ª Gruppo C/E/F/H/I", // Match 9
+  "1ª Gruppo B", "3ª Gruppo E/F/G/I/J", // Match 10
+  "1ª Gruppo D", "3ª Gruppo B/E/F/I/J", // Match 11
+  "1ª Gruppo E", "3ª Gruppo A/B/C/D/F", // Match 12
+  "1ª Gruppo G", "3ª Gruppo A/E/H/I/J", // Match 13
+  "1ª Gruppo I", "3ª Gruppo C/D/F/G/H", // Match 14
+  "1ª Gruppo K", "3ª Gruppo D/E/I/J/L", // Match 15
+  "1ª Gruppo L", "3ª Gruppo E/H/I/J/K"  // Match 16
+];
+
 const TOURNAMENT_GROUPS = [
   { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea del Sud', 'Repubblica Ceca'] },
   { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia ed Erzegovina'] }, 
@@ -194,12 +214,8 @@ export default function BracketPage() {
   if (fetching) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-yellow-500 font-black animate-pulse italic uppercase text-sm">Disegno Tabellone...</div>;
 
   const previousStageTeams = getPreviousStageTeams();
-  const filteredPrevTeams = previousStageTeams.filter(t => 
-    t.toLowerCase().includes(teamSearch.toLowerCase()) || 
-    formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
-  );
-  const currentStageObj = activeCell ? STAGES.find(s => s.id === activeCell.stageId) : null;
-  const prevStageObj = activeCell ? STAGES[STAGES.findIndex(s => s.id === activeCell.stageId) - 1] : null;
+  const currentIdx = activeCell ? STAGES.findIndex(s => s.id === activeCell.stageId) : -1;
+  const prevStageObj = currentIdx > 0 ? STAGES[currentIdx - 1] : null;
 
   // Componente riutilizzabile per il bottone della squadra nella modale
   const renderTeamButton = (t: string) => {
@@ -231,6 +247,8 @@ export default function BracketPage() {
       buttonStyle = "bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]";
     } else if (isPickedByOther) {
       buttonStyle = "opacity-40 border-dashed border-slate-700 grayscale hover:opacity-100 hover:grayscale-0 transition-all";
+    } else if (prevStageObj && !previousStageTeams.includes(t)) {
+      buttonStyle = "opacity-20 bg-slate-950/40 border-slate-900 grayscale";
     }
 
     return (
@@ -258,8 +276,11 @@ export default function BracketPage() {
           <img src={getFileFlag(t)!} className="w-9 h-auto rounded shadow-lg border border-slate-800 shrink-0" alt="" />
           
           <div className="flex flex-col items-start gap-1 w-full">
-            <span className={`text-[12px] sm:text-[13px] font-black uppercase italic tracking-tight leading-none ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
+            <span className={`text-[12px] sm:text-[13px] font-black uppercase italic tracking-tight leading-none flex items-center gap-1.5 ${isCurrentSelection ? 'text-yellow-500' : 'text-white'}`}>
               {formatTeamName(t)}
+              {prevStageObj && previousStageTeams.includes(t) && !isCurrentSelection && (
+                <Star size={10} className="text-yellow-500 fill-yellow-500 shrink-0" />
+              )}
             </span>
             
             {stageLabels.length > 0 && (
@@ -358,9 +379,18 @@ export default function BracketPage() {
                         )}
                       </div>
                       
-                      <span className="text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight flex-1 break-words">
-                        {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
-                      </span>
+                      <div className="flex flex-col flex-1 min-w-0 justify-center">
+                        <span className="text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight break-words">
+                          {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
+                        </span>
+                        
+                        {/* Sottotitolo accoppiamento per i Sedicesimi (R32) */}
+                        {stage.id === 'R32' && R32_LABELS[i] && (
+                          <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-wider mt-0.5 block ${currentSelection ? 'text-slate-500' : 'text-blue-400/80'}`}>
+                            {R32_LABELS[i]}
+                          </span>
+                        )}
+                      </div>
                     </button>
 
                     {currentSelection && !isExpired && (
@@ -368,7 +398,7 @@ export default function BracketPage() {
                         onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
                         className="absolute right-0 top-0 bottom-0 px-3 sm:px-4 text-rose-500 hover:text-rose-400 active:scale-90 transition-all z-20 flex items-center justify-center"
                       >
-                        <X size={18} strokeWidth={3} className="sm:w-5 sm:h-5" />
+                        <X size={18} strokeWidth={4} className="sm:w-5 sm:h-5" />
                       </button>
                     )}
                     
@@ -396,7 +426,11 @@ export default function BracketPage() {
                 <div>
                   <h3 className="text-yellow-500 text-xl font-black uppercase italic tracking-tight">Seleziona Squadra</h3>
                   <p className="text-slate-500 text-xs font-black uppercase mt-1 tracking-widest">
-                    {currentStageObj?.label} — POS. {activeCell.index + 1}
+                    {STAGES.find(s => s.id === activeCell.stageId)?.label} — POS. {activeCell.index + 1}
+                    {/* Promemoria accoppiamento nel titolo della modale dei Sedicesimi */}
+                    {activeCell.stageId === 'R32' && R32_LABELS[activeCell.index] && (
+                      <span className="text-blue-400 font-black ml-1.5">({R32_LABELS[activeCell.index]})</span>
+                    )}
                   </p>
                 </div>
                 <button onClick={() => setActiveCell(null)} className="p-4 bg-slate-800 rounded-full text-white active:scale-90 transition-all shadow-lg"><X size={24} strokeWidth={3}/></button>
@@ -404,8 +438,8 @@ export default function BracketPage() {
               
               <div className="relative">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                 {/* RIMOSSO AUTOFOCUS PER EVITARE APERTURA TASTIERA SU MOBILE */}
                  <input 
-                   autoFocus
                    type="text" 
                    placeholder="Cerca squadra..." 
                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs font-black uppercase text-white outline-none focus:border-yellow-500 transition-colors placeholder:text-slate-600 caret-transparent" 
@@ -415,51 +449,42 @@ export default function BracketPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 bg-slate-900 custom-scrollbar pb-24 overscroll-contain">
-                
-                {/* SEZIONE 1: SQUADRE QUALIFICATE DAL TURNO PRECEDENTE (SE ESISTE) */}
-                {prevStageObj && filteredPrevTeams.length > 0 && (
-                  <div className="space-y-4 mb-8 bg-slate-950/40 p-4 border border-yellow-500/10 rounded-[1.5rem] shadow-inner">
-                    <div className="flex items-center gap-3 px-1">
-                      <Star size={14} className="text-yellow-500 fill-yellow-500" />
-                      <span className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Qualificate da turno precedente ({prevStageObj.label})</span>
-                      <div className="flex-1 h-[1px] bg-gradient-to-r from-yellow-500/20 to-transparent"></div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {filteredPrevTeams.map((t) => renderTeamButton(t))}
-                    </div>
-                  </div>
-                )}
+            <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-24 overscroll-contain">
+                {TOURNAMENT_GROUPS.map((group) => {
+                  const filteredTeams = group.teams.filter(t => 
+                    t.toLowerCase().includes(teamSearch.toLowerCase()) || 
+                    formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
+                  );
 
-                {/* SEZIONE 2: GRUPPI TORNEO STANDARD */}
-                <div className="space-y-8">
-                  {TOURNAMENT_GROUPS.map((group) => {
-                    const filteredTeams = group.teams.filter(t => 
-                      t.toLowerCase().includes(teamSearch.toLowerCase()) || 
-                      formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
-                    );
+                  if (filteredTeams.length === 0) return null;
 
-                    if (filteredTeams.length === 0) return null;
-
-                    return (
-                      <div key={group.name} className="space-y-4">
-                        <div className="flex items-center gap-3 px-2">
-                          <Trophy size={16} className="text-slate-700" />
-                          <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{group.name}</span>
-                          <div className="flex-1 h-px bg-slate-800/50"></div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {filteredTeams.map((t) => renderTeamButton(t))}
-                        </div>
+                  // Algoritmo di ordinamento: Mantiene la divisione per gironi, ma fa fluttuare in alto al girone le squadre scelte nella fase precedente
+                  const sortedTeams = [...filteredTeams].sort((a, b) => {
+                    const aIsPrev = previousStageTeams.includes(a);
+                    const bIsPrev = previousStageTeams.includes(b);
+                    if (aIsPrev && !bIsPrev) return -1;
+                    if (!aIsPrev && bIsPrev) return 1;
+                    return 0;
+                  });
+                  
+                  return (
+                    <div key={group.name} className="space-y-4">
+                      <div className="flex items-center gap-3 px-2">
+                        <Trophy size={16} className="text-slate-700" />
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{group.name}</span>
+                        <div className="flex-1 h-px bg-slate-800/50"></div>
                       </div>
-                    );
-                  })}
-                </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {sortedTeams.map((t) => renderTeamButton(t))}
+                      </div>
+                    </div>
+                  );
+                })}
                 
                 {TOURNAMENT_GROUPS.every(group => 
                    group.teams.filter(t => t.toLowerCase().includes(teamSearch.toLowerCase()) || formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())).length === 0
-                ) && filteredPrevTeams.length === 0 && (
+                ) && (
                   <p className="text-center text-slate-500 font-black uppercase text-xs pt-10 pb-10">Nessuna squadra trovata</p>
                 )}
             </div>
