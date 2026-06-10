@@ -65,10 +65,29 @@ const flagMap: { [key: string]: string } = {
   uruguay: 'uy', uzbekistan: 'uz',
 };
 
+const flagEmojiMap: { [key: string]: string } = {
+  algeria: '🇩🇿', 'arabia saudita': '🇸🇦', 'arabia s.': '🇸🇦', argentina: '🇦🇷', australia: '🇦🇺', austria: '🇦🇹',
+  belgio: '🇧🇪', 'bosnia ed erzegovina': '🇧🇦', 'bosnia erzegovina': '🇧🇦', bosnia: '🇧🇦',
+  brasile: '🇧🇷', canada: '🇨🇦', 'capo verde': '🇨🇻', colombia: '🇨🇴', 'corea del sud': '🇰🇷', 'corea sud': '🇰🇷', 
+  "costa d'avorio": '🇨🇮', 'costa avorio': '🇨🇮', 'c. avorio': '🇨🇮', croazia: '🇭🇷', curaçao: '🇨🇼', curacao: '🇨🇼',
+  ecuador: '🇪🇨', egitto: '🇪🇬', francia: '🇫🇷', germania: '🇩🇪', ghana: '🇬🇭', giappone: '🇯🇵', 
+  giordania: '🇯🇴', haiti: '🇭🇹', inghilterra: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', iran: '🇮🇷', iraq: '🇮🇶', marocco: '🇲🇦', 
+  messico: '🇲🇽', norvegia: '🇳🇴', 'nuova zelanda': '🇳🇿', 'n. zelanda': '🇳🇿', olanda: '🇳🇱', panama: '🇵🇦', paraguay: '🇵🇾',
+  portogallo: '🇵🇹', qatar: '🇶🇦', 'repubblica ceca': '🇨🇿', 'rep. ceca': '🇨🇿', 'repubblica democratica del congo': '🇨🇩', 'r.d. congo': '🇨🇩', congo: '🇨🇩',
+  scozia: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', senegal: '🇸🇳', spagna: '🇪🇸', 'stati uniti': '🇺🇸', usa: '🇺🇸',
+  sudafrica: '🇿🇦', svezia: '🇸🇪', svizzera: '🇨🇭', tunisia: '🇹🇳', turchia: '🇹🇷', 
+  uruguay: '🇺🇾', uzbekistan: '🇺🇿',
+};
+
 const getFlag = (team: string) => {
     if (!team) return null;
     const code = flagMap[team.toLowerCase().trim()];
     return code ? `https://flagcdn.com/w40/${code}.png` : null;
+};
+
+const getEmoji = (team: string) => {
+    if (!team) return '';
+    return flagEmojiMap[team.toLowerCase().trim()] || '';
 };
 
 const normalizeStage = (s: string) => {
@@ -561,6 +580,38 @@ export default function AdminPage() {
     }
   };
 
+  const getWinnerStats = () => {
+    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
+    const total = winners.length;
+    if (total === 0) return [];
+    const counts: any = {};
+    winners.forEach(w => { 
+      const t = formatTeamName(w.team_name);
+      counts[t] = (counts[t] || 0) + 1; 
+    });
+    return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, count, pct: Math.round((Number(count) / total) * 100) }));
+  };
+
+  const getBonusDetails = (k: string) => {
+    const choices: Record<string, { originalName: string; count: number; users: string[] }> = {};
+    allUserBonuses.forEach(b => {
+      if (b[k]) {
+        const raw = String(b[k]).trim();
+        const key = cleanString(raw);
+        const p = profiles.find(prof => prof.id === b.user_id);
+        const username = p ? p.username : 'Anonimo';
+        if (!choices[key]) {
+          choices[key] = { originalName: raw, count: 0, users: [] };
+        }
+        choices[key].count += 1;
+        if (!choices[key].users.includes(username)) {
+          choices[key].users.push(username);
+        }
+      }
+    });
+    return Object.values(choices).sort((a, b) => b.count - a.count);
+  };
+
   const getCompletionStats = () => {
     return profiles.map(p => {
       const uPreds = predictions.filter(pred => 
@@ -620,6 +671,88 @@ export default function AdminPage() {
     text += `👉 Entra per completare: www.iltuopronostico.it`;
     navigator.clipboard.writeText(text);
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
+  };
+
+  const copyWinnerReport = () => {
+    const winners = getWinnerStats();
+    let text = `🏆 *CHI VINCERÀ IL MONDIALE?* 🏆\n(Le scelte del gruppo)\n\n`;
+    winners.forEach(w => {
+      text += `${getEmoji(w.name)} *${w.name}:* ${w.pct}% (${w.count} voti)\n`;
+    });
+    text += `\n👉 Scopri chi ha votato chi:\nwww.iltuopronostico.it`;
+    navigator.clipboard.writeText(text);
+    toast.success('Statistiche Vincitore copiate! 🏆', { icon: '💬' });
+  };
+
+  const copyCecchiniReport = () => {
+    let text = `🎯 *REPORT CECCHINI (RISULTATI ESATTI)* 🎯\n`;
+    const matchesWithExact = matches.filter(m => m.is_finished).map(m => {
+       const exactUsers = profiles.filter(p => {
+          const uPred = predictions.find(pred => pred.user_id === p.id && pred.match_id === m.id);
+          if(!uPred) return false;
+          return Number(uPred.home_score) === Number(m.home_score_final) && Number(uPred.away_score) === Number(m.away_score_final);
+       }).map(p => p.username);
+       return { ...m, exactUsers, group: TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === formatMatchName(m.home_team).toLowerCase()))?.name || 'Fase Finale' };
+    }).filter(m => m.exactUsers.length > 0);
+
+    if(matchesWithExact.length === 0) {
+       text += `\nAncora nessun risultato esatto!\n`;
+    } else {
+       const grouped: any = {};
+       matchesWithExact.forEach(m => {
+          if(!grouped[m.group]) grouped[m.group] = [];
+          grouped[m.group].push(m);
+       });
+       
+       const sortedGroups = Object.keys(grouped).sort((a, b) => {
+          if(a.includes('Gruppo') && b.includes('Gruppo')) return a.localeCompare(b);
+          if(a.includes('Gruppo')) return -1;
+          return 1;
+       });
+
+       sortedGroups.forEach(g => {
+          text += `\n*${g}*\n`;
+          grouped[g].forEach((m: any) => {
+              text += `⚽ ${getEmoji(m.home_team)} ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)} ${getEmoji(m.away_team)}\n`;
+              text += `   👉 ${m.exactUsers.join(', ')}\n`;
+          });
+       });
+    }
+
+    text += `\n👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Report Cecchini copiato! 🎯', { icon: '🎯' });
+  };
+
+  const copyBonusReport = () => {
+    let text = `📊 *LE PREVISIONI BONUS DEL GRUPPO* 📊\n\n`;
+    
+    const fields = [
+      { l: '✨ MVP MONDIALE', k: 'mvp_world_cup' },
+      { l: '⚽ CAPOCANNONIERE', k: 'top_scorer' },
+      { l: '🧤 MIGLIOR PORTIERE', k: 'best_goalkeeper' },
+      { l: '🔥 MATCH CON PIÙ GOL', k: 'high_scoring_match' },
+      { l: '📈 GIRONE CON PIÙ GOL', k: 'highest_scoring_group' },
+      { l: '📉 GIRONE CON MENO GOL', k: 'lowest_scoring_group' }
+    ];
+    
+    fields.forEach(f => {
+      const details = getBonusDetails(f.k);
+      if (details.length > 0) {
+        text += `*${f.l}:*\n`;
+        details.forEach(d => {
+           const emj = f.k !== 'high_scoring_match' && !f.k.includes('group') ? `${getEmoji(d.originalName)} ` : '';
+           text += `- ${emj}${formatMatchName(d.originalName)} (${d.count} voti)\n`;
+        });
+        text += `\n`;
+      }
+    });
+
+    text += `👉 Entra nell'app per vedere i dettagli:\nwww.iltuopronostico.it`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Statistiche Bonus copiate! 📊', { icon: '💬' });
   };
 
   const exportClassificaCSV = () => {
@@ -716,27 +849,31 @@ export default function AdminPage() {
       <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
         
-        <div className="w-full max-w-2xl bg-slate-900/80 p-3 sm:p-2.5 rounded-3xl border border-slate-800 shadow-xl overflow-x-auto custom-scrollbar">
-          <div className="flex items-center gap-2 min-w-max pb-1">
-            
-            <button onClick={copyClassificaReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 border border-slate-800 hover:bg-emerald-500/10 transition-colors rounded-xl whitespace-nowrap">
+        <div className="w-full max-w-2xl bg-slate-900/80 p-4 rounded-3xl border border-slate-800 shadow-xl">
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={copyClassificaReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 border border-slate-800 hover:bg-emerald-500/10 transition-colors rounded-xl">
               <MessageCircle size={14} /> Classifica
             </button>
-            
-            <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-slate-800 hover:bg-yellow-500/10 transition-colors rounded-xl whitespace-nowrap">
+            <button onClick={copyCompletionReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-slate-800 hover:bg-yellow-500/10 transition-colors rounded-xl">
               <MessageCircle size={14} /> Stato
             </button>
-
-            <div className="w-px h-5 bg-slate-800 mx-1"></div>
-
-            <button onClick={exportClassificaCSV} className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl whitespace-nowrap">
+            <button onClick={copyWinnerReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-400 bg-slate-950 border border-slate-800 hover:bg-blue-400/10 transition-colors rounded-xl">
+              <MessageCircle size={14} /> Vincitore
+            </button>
+            <button onClick={copyCecchiniReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-rose-400 bg-slate-950 border border-slate-800 hover:bg-rose-400/10 transition-colors rounded-xl">
+              <MessageCircle size={14} /> Cecchini
+            </button>
+            <button onClick={copyBonusReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-purple-400 bg-slate-950 border border-slate-800 hover:bg-purple-400/10 transition-colors rounded-xl">
+              <MessageCircle size={14} /> Dati Bonus
+            </button>
+            <button onClick={exportClassificaCSV} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl">
               <Download size={14} /> Excel
             </button>
-            
-            <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl whitespace-nowrap ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
-            </button>
-          
+            <div className="col-span-2">
+                <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
+                </button>
+            </div>
           </div>
         </div>
       </header>
