@@ -180,7 +180,7 @@ export default function BracketPage() {
 
   const renderTeamButton = (t: string, currentStageTeams: string[]) => {
     const isSelectedInStage = currentStageTeams.includes(t);
-    const isCurrentCellTeam = selections[`${activeCell.stageId}-${activeCell.index}`] === t;
+    const isCurrentCellTeam = selections[`${activeCell?.stageId}-${activeCell?.index}`] === t;
     const isDisabled = isSelectedInStage && !isCurrentCellTeam;
 
     const teamStages = Object.entries(selections)
@@ -361,58 +361,95 @@ export default function BracketPage() {
 
             <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-24 overscroll-contain">
                 
-                {/* BLOCCO SPECIALE: Squadre qualificate dal turno precedente */}
                 {(() => {
                   const prevStageId = getPrevStageId(activeCell.stageId);
-                  if (!prevStageId) return null;
-                  
-                  const prevStageTeams = getTeamsInStage(prevStageId);
-                  const filteredPrevTeams = prevStageTeams.filter(t => 
-                    t.toLowerCase().includes(teamSearch.toLowerCase()) || 
-                    formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
-                  );
-
-                  if (filteredPrevTeams.length === 0) return null;
-
                   const currentStageTeams = getTeamsInStage(activeCell.stageId);
+                  const currentCellTeam = selections[`${activeCell.stageId}-${activeCell.index}`];
+
+                  const isTeamDisabled = (t: string) => currentStageTeams.includes(t) && t !== currentCellTeam;
+                  const matchSearch = (t: string) => t.toLowerCase().includes(teamSearch.toLowerCase()) || formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase());
+
+                  // 1. SQUADRE QUALIFICATE DAL TURNO PRECEDENTE
+                  const prevStageTeamsList = prevStageId ? getTeamsInStage(prevStageId) : [];
+                  const filteredPrevTeams = prevStageTeamsList.filter(t => matchSearch(t));
+                  
+                  const prevGroups = TOURNAMENT_GROUPS.map(g => ({
+                      name: g.name,
+                      teams: g.teams.filter(t => filteredPrevTeams.includes(t))
+                  })).filter(g => g.teams.length > 0);
+
+                  // 2. TUTTE LE SQUADRE (Gironi Nomi)
+                  const availableGroups = TOURNAMENT_GROUPS.map(g => ({
+                    name: g.name,
+                    teams: g.teams.filter(t => matchSearch(t))
+                  })).filter(g => g.teams.length > 0);
 
                   return (
-                    <div className="space-y-4 mb-10">
-                      <div className="flex items-center gap-3 px-2">
-                        <Zap size={16} className="text-emerald-500" />
-                        <span className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">Qualificate dal turno precedente</span>
-                        <div className="flex-1 h-px bg-emerald-500/30"></div>
+                    <>
+                      {/* 1. QUALIFICATE DAL TURNO PRECEDENTE (Divise per girone) */}
+                      {prevGroups.length > 0 && (
+                         <div className="space-y-5 mb-10">
+                            <div className="flex items-center gap-3 px-2">
+                              <Zap size={16} className="text-emerald-500" />
+                              <span className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">Qualificate dal turno precedente</span>
+                              <div className="flex-1 h-px bg-emerald-500/30"></div>
+                            </div>
+                            
+                            <div className="space-y-6">
+                                {prevGroups.map(group => {
+                                    const sortedPrevTeams = [...group.teams].sort((a, b) => {
+                                      const aDis = isTeamDisabled(a);
+                                      const bDis = isTeamDisabled(b);
+                                      if (aDis && !bDis) return 1;
+                                      if (!aDis && bDis) return -1;
+                                      return 0;
+                                    });
+
+                                    return (
+                                       <div key={`prev-${group.name}`} className="space-y-3 pl-1">
+                                          <div className="flex items-center gap-2 px-2">
+                                             <Trophy size={12} className="text-emerald-500/50" />
+                                             <span className="text-[10px] font-black text-emerald-500/70 uppercase tracking-[0.2em]">{group.name}</span>
+                                          </div>
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                             {sortedPrevTeams.map(t => renderTeamButton(t, currentStageTeams))}
+                                          </div>
+                                       </div>
+                                    )
+                                })}
+                            </div>
+                         </div>
+                      )}
+
+                      {/* 2. TUTTI I GIRONI */}
+                      <div className="space-y-8">
+                        {availableGroups.map((group) => {
+                          const sortedTeams = [...group.teams].sort((a, b) => {
+                            const aDis = isTeamDisabled(a);
+                            const bDis = isTeamDisabled(b);
+                            if (aDis && !bDis) return 1;
+                            if (!aDis && bDis) return -1;
+                            return 0;
+                          });
+
+                          return (
+                            <div key={group.name} className="space-y-4">
+                              <div className="flex items-center gap-3 px-2">
+                                <Trophy size={16} className="text-yellow-500/50" />
+                                <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">{group.name}</span>
+                                <div className="flex-1 h-px bg-slate-800/50"></div>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {sortedTeams.map((t) => renderTeamButton(t, currentStageTeams))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                         {filteredPrevTeams.map(t => renderTeamButton(t, currentStageTeams))}
-                      </div>
-                    </div>
+                    </>
                   );
                 })()}
 
-                {/* BLOCCO NORMALE: Tutti i Gironi */}
-                {TOURNAMENT_GROUPS.map((group) => {
-                  const filteredTeams = group.teams.filter(t => 
-                    t.toLowerCase().includes(teamSearch.toLowerCase()) || 
-                    formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase())
-                  );
-                  if (filteredTeams.length === 0) return null;
-                  
-                  const currentStageTeams = getTeamsInStage(activeCell.stageId);
-
-                  return (
-                    <div key={group.name} className="space-y-4">
-                      <div className="flex items-center gap-3 px-2">
-                        <Trophy size={16} className="text-yellow-500/50" />
-                        <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">{group.name}</span>
-                        <div className="flex-1 h-px bg-slate-800/50"></div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {filteredTeams.map((t) => renderTeamButton(t, currentStageTeams))}
-                      </div>
-                    </div>
-                  );
-                })}
             </div>
           </div>
         </div>
