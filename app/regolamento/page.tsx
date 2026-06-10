@@ -187,7 +187,7 @@ export default function RegolamentoPage() {
                 <li>🥈 <strong>2° Classificato:</strong> Vice-campione.</li>
                 <li>🥉 <strong>3° Classificato:</strong> Terzo gradino del podio.</li>
                 <li>🪵 <strong>4° Classificato:</strong> Premio "Medaglia di Legno".</li>
-                <li>🎖️ <strong>5° Classificato:</strong> Ultimo premio di consolazione.</li>
+                <li>🎖️ <strong>5° Classificato:</strong> Quinto posto in classifica generale.</li>
               </ul>
             </div>
 
@@ -198,7 +198,7 @@ export default function RegolamentoPage() {
               </h3>
               <ul className="space-y-3 text-[11px] text-slate-300 font-medium">
                 <li>🏟️ <strong>Il Re dei Gironi:</strong> Miglior punteggio calcolato unicamente sulle 72 partite dei gironi.</li>
-                <li>⚡ <strong>Il Mago dei Playoff:</strong> Miglior punteggio calcolato unicamente dal tabellone (ottavi-finale).</li>
+                <li>⚡ <strong>Il Mago dei Playoff:</strong> Miglior punteggio calcolato sul tabellone (dai sedicesimi alla finale, incluso il bonus Campione).</li>
                 <li>🔮 <strong>L'Oracolo dei Bonus:</strong> Miglior punteggio ottenuto unicamente con le 9 risposte bonus.</li>
               </ul>
             </div>
@@ -216,9 +216,9 @@ export default function RegolamentoPage() {
 
             {/* Regola Anti-Ingordigia */}
             <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl mt-4 text-center">
-              <h4 className="text-[10px] font-black uppercase text-rose-500 tracking-widest mb-1">⚠️ATTENZIONE⚠️</h4>
+              <h4 className="text-[10px] font-black uppercase text-rose-500 tracking-widest mb-1">⚠️Attenzione⚠️</h4>
               <p className="text-[10px] text-rose-200/80 leading-relaxed italic mb-2">
-                Nessun giocatore può vincere più di un premio. Se un giocatore si qualifica per due o più premi, gli verrà assegnato quello di <strong>maggior valore/prestigio</strong>, e l'altro premio scivolerà automaticamente al giocatore successivo in classifica.
+                Nessun giocatore può vincere due premi. Se un giocatore si qualifica per due o più premi, gli verrà assegnato quello di <strong>maggior valore/prestigio</strong>, e l'altro premio scivolerà automaticamente al giocatore successivo in classifica.
               </p>
               <p className="text-[10px] text-rose-200/80 leading-relaxed font-bold uppercase tracking-wider">
                 Gerarchia: Podio Generale (Top 5) ➔ Premi per Fase ➔ Premi di Specialità ➔ Zero Assoluto.
@@ -259,7 +259,7 @@ export default function RegolamentoPage() {
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">3</div>
               <div>
                 <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Qualità del Tabellone</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Si confrontano i punti fatti nelle singole fasi. Ordine: Sedicesimi → Ottavi → Quarti → Semifinali → Finaliste → Campione Mondiale.</p>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Punti fatti nelle fases più avanzate (Sedicesimi, Ottavi, Quarti, Semifinale, Finale).</p>
               </div>
             </div>
 
