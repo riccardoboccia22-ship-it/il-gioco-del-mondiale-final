@@ -466,12 +466,13 @@ export default function AdminPage() {
         if (b.points !== a.points) return b.points - a.points; 
         if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
         if (b.points_bonus !== a.points_bonus) return b.points_bonus - a.points_bonus; 
-        if (b.pts_winner !== a.pts_winner) return b.pts_winner - a.pts_winner;
-        if (b.pts_f !== a.pts_f) return b.pts_f - a.pts_f; 
-        if (b.pts_sf !== a.pts_sf) return b.pts_sf - a.pts_sf; 
-        if (b.pts_qf !== a.pts_qf) return b.pts_qf - a.pts_qf;
-        if (b.pts_r16 !== a.pts_r16) return b.pts_r16 - a.pts_r16; 
+        // MODIFICA ALGORITMO: Invertito ordine fasi tabellone (dai Sedicesimi a salire)
         if (b.pts_r32 !== a.pts_r32) return b.pts_r32 - a.pts_r32;
+        if (b.pts_r16 !== a.pts_r16) return b.pts_r16 - a.pts_r16; 
+        if (b.pts_qf !== a.pts_qf) return b.pts_qf - a.pts_qf;
+        if (b.pts_sf !== a.pts_sf) return b.pts_sf - a.pts_sf; 
+        if (b.pts_f !== a.pts_f) return b.pts_f - a.pts_f; 
+        if (b.pts_winner !== a.pts_winner) return b.pts_winner - a.pts_winner;
         return (a.username || '').localeCompare(b.username || '');
       });
 
@@ -729,12 +730,12 @@ export default function AdminPage() {
     let text = `📊 *LE PREVISIONI BONUS DEL GRUPPO* 📊\n\n`;
     
     const fields = [
-      { l: '✨ MVP MONDIALE', k: 'mvp_world_cup' },
-      { l: '⚽ CAPOCANNONIERE', k: 'top_scorer' },
-      { l: '🧤 MIGLIOR PORTIERE', k: 'best_goalkeeper' },
-      { l: '🔥 MATCH CON PIÙ GOL', k: 'high_scoring_match' },
-      { l: '📈 GIRONE CON PIÙ GOL', k: 'highest_scoring_group' },
-      { l: '📉 GIRONE CON MENO GOL', k: 'lowest_scoring_group' }
+      { l: '✨ MVP MONDIALE', k: 'mvp_world_cup', type: 'PLAYER' },
+      { l: '⚽ CAPOCANNONIERE', k: 'top_scorer', type: 'PLAYER' },
+      { l: '🧤 MIGLIOR PORTIERE', k: 'best_goalkeeper', type: 'PLAYER' },
+      { l: '🔥 MATCH CON PIÙ GOL', k: 'high_scoring_match', type: 'MATCH' },
+      { l: '📈 GIRONE CON PIÙ GOL', k: 'highest_scoring_group', type: 'GROUP' },
+      { l: '📉 GIRONE CON MENO GOL', k: 'lowest_scoring_group', type: 'GROUP' }
     ];
     
     fields.forEach(f => {
@@ -742,8 +743,27 @@ export default function AdminPage() {
       if (details.length > 0) {
         text += `*${f.l}:*\n`;
         details.forEach(d => {
-           const emj = f.k !== 'high_scoring_match' && !f.k.includes('group') ? `${getEmoji(d.originalName)} ` : '';
-           text += `- ${emj}${formatMatchName(d.originalName)} (${d.count} voti)\n`;
+           let emj = '';
+           let displayName = formatMatchName(d.originalName);
+
+           if (f.type === 'PLAYER') {
+               const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
+               const player = allPlayers.find(p => cleanString(p.name) === cleanString(d.originalName));
+               if (player) emj = `${getEmoji(player.country)} `;
+           } 
+           else if (f.type === 'MATCH' && d.originalName.includes('-')) {
+               const [t1, t2] = d.originalName.split(/\s*-\s*/);
+               emj = `${getEmoji(t1)} ${getEmoji(t2)} `;
+               displayName = `${formatTeamName(t1)} - ${formatTeamName(t2)}`;
+           } 
+           else if (f.type === 'GROUP') {
+               const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(d.originalName));
+               if (group) {
+                   emj = group.teams.map(t => getEmoji(t)).join('') + ' ';
+               }
+           }
+
+           text += `- ${emj}*${displayName}* (${d.count} voti)\n`;
         });
         text += `\n`;
       }

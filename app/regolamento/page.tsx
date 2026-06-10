@@ -259,7 +259,7 @@ export default function RegolamentoPage() {
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">3</div>
               <div>
                 <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Qualità del Tabellone</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Punti fatti nelle fasi più avanzate (Campione Mondiale → Finale → SF ecc).</p>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Si confrontano i punti fatti nelle singole fasi. Ordine: Sedicesimi → Ottavi → Quarti → Semifinali → Finaliste → Campione Mondiale.</p>
               </div>
             </div>
 
