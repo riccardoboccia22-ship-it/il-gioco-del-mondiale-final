@@ -43,7 +43,6 @@ const flagMap: { [key: string]: string } = {
   uruguay: 'uy', uzbekistan: 'uz',
 };
 
-// NORMALIZZATI PER IL RADAR ANOMALIE
 const TOP_TEAMS = ['Argentina', 'Belgio', 'Brasile', 'Francia', 'Germania', 'Inghilterra', 'Olanda', 'Portogallo', 'Spagna'];
 const MID_TEAMS = ['Austria', 'Colombia', 'C. Avorio', 'Croazia', 'Egitto', 'Giappone', 'Marocco', 'Messico', 'Norvegia', 'Senegal', 'Svizzera', 'Turchia', 'Uruguay', 'USA'];
 const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea Sud', 'Ecuador', 'Iran', 'Iraq', 'N. Zelanda', 'Panama', 'Paraguay', 'Rep. Ceca', 'Scozia', 'Svezia', 'Sudafrica', 'Tunisia'];
@@ -83,7 +82,6 @@ const cleanString = (str: string) => {
 export default function TuttiPronosticiPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
-  
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
 
   const [data, setData] = useState<any>({
@@ -312,7 +310,7 @@ export default function TuttiPronosticiPage() {
     });
 
     const groupedObj = anomalies.reduce((acc, ano) => {
-      const key = `${ano.phaseWeight}-${ano.type}-${ano.team}-${ano.msg}`;
+      const key = `${acc.phaseWeight || 0}-${ano.type}-${ano.team}-${ano.msg}`;
       if (!acc[key]) acc[key] = { ...ano, users: [ano.user] };
       else if (!acc[key].users.includes(ano.user)) acc[key].users.push(ano.user);
       return acc;
@@ -583,16 +581,20 @@ export default function TuttiPronosticiPage() {
                   <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
                     {offVal && (
                        <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-                          <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Risultato Ufficiale</span>
-                          <span className="text-white font-black uppercase italic">{offVal}</span>
+                          <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale Live</span>
+                          <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
                        </div>
                     )}
                     {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
                       const isUnset = ans === 'Nessuna Scelta';
-                      const isCorrect = offVal && cleanString(String(ans)) === cleanString(String(offVal));
+                      
+                      // CONTROLLO MATEMATICO DI ELIMINAZIONE PER I BONUS NUMERICI
+                      // Se il totale reale nel torneo è già SUPERIORE alla scelta dell'utente, l'utente ha perso il bonus.
+                      const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
+                      
+                      const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
                       const isMe = users.includes(data.currentUserUsername);
 
-                      // RENDERING BANDIERE IN BASE AL TIPO DI BONUS
                       let flagElement = null;
                       if (!isUnset) {
                         if (bonus.type === 'PLAYER') {
@@ -629,7 +631,15 @@ export default function TuttiPronosticiPage() {
                       }
 
                       return (
-                        <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${isCorrect ? 'bg-emerald-500/10 border-emerald-500/50' : isUnset ? 'bg-slate-900/30 border-slate-800/50 opacity-60' : 'bg-slate-900 border-slate-800'} ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                        <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                          isCorrect 
+                            ? 'bg-emerald-500/10 border-emerald-500/50' 
+                            : isUnset 
+                              ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
+                              : isMathematicallyWrong
+                                ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner' // Stile "spento ed eliminato"
+                                : 'bg-slate-900 border-slate-800'
+                        } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
                           
                           {isMe && !isUnset && (
                              <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
@@ -638,14 +648,26 @@ export default function TuttiPronosticiPage() {
                           <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
                              <div className="flex items-center gap-2.5">
                                {flagElement}
-                               <span className={`text-sm font-black uppercase italic tracking-tight ${isCorrect ? 'text-emerald-400' : isUnset ? 'text-slate-500' : 'text-white'}`}>{ans}</span>
+                               <span className={`text-sm font-black uppercase italic tracking-tight ${
+                                 isCorrect 
+                                   ? 'text-emerald-400' 
+                                   : isUnset 
+                                     ? 'text-slate-500' 
+                                     : isMathematicallyWrong 
+                                       ? 'text-slate-600 line-through decoration-rose-500/50' // Testo sbarrato
+                                       : 'text-white'
+                               }`}>{ans}</span>
+                               
                                {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
+                               
+                               {/* BADGE DI ELIMINAZIONE VISIVA SBARRA TUTTO */}
+                               {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
                              </div>
                              <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
                                 <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                              </div>
                           </div>
-                          <p className="text-[11px] font-medium text-slate-400 leading-relaxed capitalize-first">
+                          <p className={`text-[11px] font-medium leading-relaxed capitalize-first ${isMathematicallyWrong ? 'text-slate-600 font-normal line-through opacity-70' : 'text-slate-400'}`}>
                              {users.map((u: string, i: number) => (
                                <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
                                  {u}{i < users.length - 1 ? ', ' : ''}
@@ -737,11 +759,13 @@ export default function TuttiPronosticiPage() {
                         <h4 className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 w-max shadow-inner">{phase}</h4>
                         {phaseAnos.map((ano: any, i: number) => {
                           const isFlop = ano.type === 'FLOP';
-                          const isMe = ano.users.includes(data.currentUserUsername);
+                          const isMe = ano.values.includes(data.currentUserUsername); // Fix fallbacks per anomalie array
+                          const usersArray = ano.users || [];
+                          const isMeReal = usersArray.includes(data.currentUserUsername);
 
                           return (
-                            <div key={i} className={`flex flex-col p-3 rounded-2xl border relative overflow-hidden ${isFlop ? 'bg-rose-950/20 border-rose-900/30' : 'bg-indigo-950/20 border-indigo-900/30'} ${isMe ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                              {isMe && (
+                            <div key={i} className={`flex flex-col p-3 rounded-2xl border relative overflow-hidden ${isFlop ? 'bg-rose-950/20 border-rose-900/30' : 'bg-indigo-950/20 border-indigo-900/30'} ${isMeReal ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                              {isMeReal && (
                                  <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg">Coinvolto!</div>
                               )}
                               <div className="flex justify-between items-start mb-2 mt-1">
@@ -756,9 +780,9 @@ export default function TuttiPronosticiPage() {
                               <div className="pt-2 border-t border-slate-800/50">
                                  <p className="text-[10px] text-slate-300 font-medium leading-relaxed">
                                     <span className="text-slate-500 mr-1 uppercase font-black text-[8px] tracking-widest">Colpevoli:</span> 
-                                    {ano.users.map((u: string, index: number) => (
+                                    {usersArray.map((u: string, index: number) => (
                                        <span key={index} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                                         {u}{index < ano.users.length - 1 ? ', ' : ''}
+                                         {u}{index < usersArray.length - 1 ? ', ' : ''}
                                        </span>
                                     ))}
                                  </p>
