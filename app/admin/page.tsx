@@ -658,7 +658,7 @@ export default function AdminPage() {
       { label: "4° Classificato (50€)", index: 3 },
       { label: "5° Classificato (30€)", index: 4 },
       { label: "6° Classificato (20€)", index: 5 },
-      { label: "7° Classificato (10€)", index: 6 },
+      { label: "7° Classificato (20€)", index: 6 },
       { label: "8° Classificato (10€)", index: 7 },
     ];
 
@@ -685,30 +685,57 @@ export default function AdminPage() {
     // 2️⃣ PREMI PER FASE
     report += `\n📊 *PREMI PER FASE*\n`;
     
-    const reGironi = getWinner((a, b) => (b.points_groups || 0) - (a.points_groups || 0));
+    const reGironi = getWinner((a, b) => {
+      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0);
+      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // 1° Spareggio: Classifica
+      if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0); // 2° Spareggio: Fase Finale
+      return (b.points_bonus || 0) - (a.points_bonus || 0); // 3° Spareggio: Bonus
+    });
     report += `🏟️ Re dei Gironi (30€): *${reGironi ? reGironi.username : 'N/D'}*\n`;
 
-    const magoPlayoff = getWinner((a, b) => (b.points_bracket || 0) - (a.points_bracket || 0));
+    const magoPlayoff = getWinner((a, b) => {
+      if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0);
+      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // 1° Spareggio: Classifica
+      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); // 2° Spareggio: Gironi
+      return (b.points_bonus || 0) - (a.points_bonus || 0); // 3° Spareggio: Bonus
+    });
     report += `⚡ Mago dei Playoff (30€): *${magoPlayoff ? magoPlayoff.username : 'N/D'}*\n`;
 
-    const oracoloBonus = getWinner((a, b) => (b.points_bonus || 0) - (a.points_bonus || 0));
-    report += `🔮 Oracolo dei Bonus (20€): *${oracoloBonus ? oracoloBonus.username : 'N/D'}*\n`;
+    const oracoloBonus = getWinner((a, b) => {
+      if (b.points_bonus !== a.points_bonus) return (b.points_bonus || 0) - (a.points_bonus || 0);
+      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // 1° Spareggio: Classifica
+      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); // 2° Spareggio: Gironi
+      return (b.points_bracket || 0) - (a.points_bracket || 0); // 3° Spareggio: Fase Finale
+    });
+    report += `🔮 Oracolo dei Bonus (30€): *${oracoloBonus ? oracoloBonus.username : 'N/D'}*\n`;
 
     // 3️⃣ SPECIALITÀ E GOLIARDICI
     report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n`;
 
-    const cecchino = getWinner((a, b) => (b.exact_matches || 0) - (a.exact_matches || 0));
+    const cecchino = getWinner((a, b) => {
+      if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
+      return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // Parità: vince chi è più in alto in generale
+    });
     report += `🎯 Il Cecchino (30€): *${cecchino ? cecchino.username : 'N/D'}*\n`;
 
-    // Il Veggente richiede l'identificazione manuale della finale
-    report += `👁️ Il Veggente (20€): *(Verificare manualmente chi ha indovinato la finale)*\n`;
+    // Il Veggente richiede verifica manuale della squadra, ma aggiungiamo la nota sugli spareggi per l'admin
+    report += `👁️ Il Veggente (20€): *(Verificare manualmente - Spareggi: 1° Ris. Esatti, 2° Fase Finale, 3° Bonus)*\n`;
 
-    // Zero Assoluto: 0 risultati esatti, chi è PIÙ IN BASSO in classifica generale (inversione array eligible)
+    // Zero Assoluto: Algoritmo aggiornato con i nuovi spareggi (al contrario!)
     const eligibleZero = sorted.filter(u => !awardedUserIds.has(u.id) && (u.exact_matches === 0 || u.exact_matches === null));
-    const zeroAssoluto = eligibleZero.length > 0 ? eligibleZero[eligibleZero.length - 1] : null;
+    eligibleZero.sort((a, b) => {
+      // 1. Più in basso in classifica (ranking PIÙ ALTO)
+      if (a.ranking !== b.ranking) return parseInt(b.ranking || '0') - parseInt(a.ranking || '0');
+      // 2. Meno punti fase ad eliminazione (bracket)
+      if (a.points_bracket !== b.points_bracket) return (a.points_bracket || 0) - (b.points_bracket || 0);
+      // 3. Meno punti bonus
+      return (a.points_bonus || 0) - (b.points_bonus || 0);
+    });
+    
+    const zeroAssoluto = eligibleZero.length > 0 ? eligibleZero[0] : null;
     if (zeroAssoluto) awardedUserIds.add(zeroAssoluto.id);
     
-    report += `🧊 Zero Assoluto (10€): *${zeroAssoluto ? zeroAssoluto.username : 'NN/D'}*\n`;
+    report += `🧊 Zero Assoluto (10€): *${zeroAssoluto ? zeroAssoluto.username : 'N/D'}*\n`;
 
     navigator.clipboard.writeText(report);
     toast.success('Report Premi Generato e Copiato! 🏆', { icon: '🎁' });
