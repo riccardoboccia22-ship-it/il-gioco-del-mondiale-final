@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { 
   BookOpen, Timer, X, Edit3, Shield, Map, CheckCircle2, 
-  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3, Megaphone 
+  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3 
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -230,7 +230,6 @@ export default function ProfilePage() {
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
   const [userBonuses, setUserBonuses] = useState<any>(null);
   const [topScorers, setTopScorers] = useState<any[]>([]);
-  const [announcement, setAnnouncement] = useState('');
   
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -301,20 +300,18 @@ export default function ProfilePage() {
           bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
 
-        const [predsRes, bracketsRes, bonusRes, offBonusRes, matchesRes, scorersRes, settingsRes] = await Promise.all([
+        const [predsRes, bracketsRes, bonusRes, offBonusRes, matchesRes, scorersRes] = await Promise.all([
           supabase.from('predictions').select('home_score, away_score').eq('user_id', user.id),
           supabase.from('brackets').select('team_name').eq('user_id', user.id),
           supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle(),
           supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
           supabase.from('matches').select('*').eq('is_finished', true),
-          supabase.from('top_scorers').select('*').order('goals', { ascending: false }),
-          supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
+          supabase.from('top_scorers').select('*').order('goals', { ascending: false })
         ]);
 
         setUserBonuses(bonusRes.data);
         setOfficialBonuses(offBonusRes.data);
         setTopScorers(scorersRes.data || []);
-        if (settingsRes.data) setAnnouncement(settingsRes.data.announcement || '');
 
         const validPreds = predsRes.data?.filter(p => p.home_score !== null && String(p.home_score).trim() !== '' && p.away_score !== null && String(p.away_score).trim() !== '').length || 0;
         const validBrackets = bracketsRes.data?.filter(b => b.team_name && b.team_name.trim() !== '').length || 0;
@@ -413,60 +410,6 @@ export default function ProfilePage() {
         {userProfile ? (
           <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
             
-            {announcement && announcement.trim() !== '' && (
-              (() => {
-                const isLive = announcement.trim().toUpperCase().startsWith('LIVE:');
-                const displayText = isLive ? announcement.replace(/^LIVE:\s*/i, '') : announcement;
-                
-                return (
-                  <div className={`p-[2px] rounded-3xl shadow-lg animate-in fade-in zoom-in duration-500 ${isLive ? 'bg-gradient-to-r from-red-600 via-rose-500 to-red-600 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'bg-gradient-to-r from-blue-600 to-blue-400'}`}>
-                    <div className={`h-full w-full rounded-[calc(1.5rem-2px)] p-3 flex items-center gap-3 overflow-hidden relative ${isLive ? 'bg-red-950' : 'bg-slate-950'}`}>
-                      
-                      <style dangerouslySetInnerHTML={{__html: `
-                        .ticker-container { 
-                          width: 100%; 
-                          overflow: hidden; 
-                          white-space: nowrap; 
-                          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
-                          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); 
-                        }
-                        .ticker-text { 
-                          display: inline-block; 
-                          padding-left: 100%; 
-                          animation: ticker 15s linear infinite; 
-                        }
-                        @keyframes ticker { 
-                          0% { transform: translate3d(0, 0, 0); } 
-                          100% { transform: translate3d(-100%, 0, 0); } 
-                        }
-                      `}} />
-
-                      <div className={`relative z-10 shrink-0 flex items-center justify-center shadow-[5px_0_10px_rgba(2,6,23,0.8)] ${isLive ? 'h-8 px-3 rounded-full bg-red-500/20 border border-red-500/30 gap-1.5' : 'w-8 h-8 rounded-full bg-blue-500/20'}`}>
-                        {isLive ? (
-                          <>
-                            <span className="relative flex h-2 w-2 shrink-0">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            </span>
-                            <span className="text-[10px] font-black uppercase text-red-500 tracking-wider">Live</span>
-                          </>
-                        ) : (
-                          <Megaphone size={14} className="text-blue-400 animate-pulse" />
-                        )}
-                      </div>
-                      
-                      <div className="ticker-container flex-1">
-                        <div className={`ticker-text text-[11px] sm:text-xs font-black uppercase tracking-widest ${isLive ? 'text-red-50' : 'text-slate-200'}`}>
-                          {displayText}
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-                );
-              })()
-            )}
-
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-lg flex items-center justify-between">
               <div className="flex items-center gap-5 text-left">
                 

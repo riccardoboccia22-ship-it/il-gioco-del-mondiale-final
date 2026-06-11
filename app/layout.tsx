@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next'; 
 import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
+import LiveBanner from './components/LiveBanner'; // <-- 1. IMPORTATO IL BANNER
 import { Toaster } from 'react-hot-toast'; 
 
 const inter = Inter({ subsets: ['latin'] });
@@ -89,8 +90,12 @@ export default function RootLayout({
           }}
         />
 
+        {/* 2. IL NOSTRO SMART BANNER INSERITO QUI (sarà visibile ovunque) */}
+        <LiveBanner />
+
         {/* Container principale con padding bottom per la navbar */}
-        <div className="pb-24">
+        {/* Aggiunto pt-14 per evitare che il banner copra i titoli delle pagine */}
+        <div className="pb-24 pt-14">
           {children}
         </div>
         
