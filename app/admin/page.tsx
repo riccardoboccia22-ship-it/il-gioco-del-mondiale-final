@@ -7,7 +7,7 @@ import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield, Download, Gift
+  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield, Download, Gift, Activity
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -255,7 +255,10 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, bonus: false, statistiche: true, marcatori: false });
+  
+  // Aggiunto liveStats allo stato dei tab aperti
+  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, liveStats: false, bonus: false, statistiche: true, marcatori: false });
+  
   const [matches, setMatches] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
@@ -368,8 +371,10 @@ export default function AdminPage() {
     }
   };
 
-  const syncLeaderboard = async (isManual = true) => {
-    if (isManual && !window.confirm('Ricalcolare punti e spareggi per tutti?')) return;
+  // --- IL CERVELLO DELLA CLASSIFICA AGGIORNATO ---
+  // Aggiunto parametro includeLiveStats (di default false) in modo che i rossi/rigori non pesino mai sulla classifica!
+  const syncLeaderboard = async (isManual = true, includeLiveStats = false) => {
+    if (isManual && !window.confirm(includeLiveStats ? 'ATTENZIONE: Assegnerai i punti finali per Rossi, Rigori e Autogol. Sei sicuro?' : 'Ricalcolare punti e spareggi per tutti?')) return;
     setSyncing(true);
     const syncToast = !isManual ? toast.loading('Calcolo Classifica...') : null;
     try {
@@ -403,9 +408,13 @@ export default function AdminPage() {
          if (offBonuses.high_scoring_match) maxBonusPoints += 5;
          if (offBonuses.highest_scoring_group) maxBonusPoints += 5;
          if (offBonuses.lowest_scoring_group) maxBonusPoints += 5;
-         if (offBonuses.total_red_cards != null) maxBonusPoints += 3;
-         if (offBonuses.total_penalties != null) maxBonusPoints += 3;
-         if (offBonuses.total_own_goals != null) maxBonusPoints += 3;
+         
+         // Conta questi punti SOLO se abbiamo attivato il calcolo finale esplicito
+         if (includeLiveStats) {
+             if (offBonuses.total_red_cards != null) maxBonusPoints += 3;
+             if (offBonuses.total_penalties != null) maxBonusPoints += 3;
+             if (offBonuses.total_own_goals != null) maxBonusPoints += 3;
+         }
       }
       
       const totalMaxPoints = maxGroupPoints + maxBracketPoints + maxBonusPoints;
@@ -440,7 +449,22 @@ export default function AdminPage() {
 
         const ub = userBonuses?.find(b => b.user_id === profile.id);
         if (ub && offBonuses) {
-          const bMap: any = { top_scorer: 10, mvp_world_cup: 10, best_goalkeeper: 10, high_scoring_match: 5, highest_scoring_group: 5, lowest_scoring_group: 5, total_red_cards: 3, total_penalties: 3, total_own_goals: 3 };
+          const bMap: any = { 
+              top_scorer: 10, 
+              mvp_world_cup: 10, 
+              best_goalkeeper: 10, 
+              high_scoring_match: 5, 
+              highest_scoring_group: 5, 
+              lowest_scoring_group: 5 
+          };
+          
+          // Conta questi punti SOLO se l'Admin ha premuto il bottone per l'assegnazione finale!
+          if (includeLiveStats) {
+              bMap.total_red_cards = 3;
+              bMap.total_penalties = 3;
+              bMap.total_own_goals = 3;
+          }
+
           Object.entries(bMap).forEach(([k, pts]: any) => { 
             if (offBonuses[k] != null && ub[k] != null && cleanString(String(offBonuses[k])) === cleanString(String(ub[k]))) pBon += pts; 
           });
@@ -484,7 +508,7 @@ export default function AdminPage() {
       if (syncToast) toast.dismiss(syncToast);
       
       if (isManual) {
-        toast.success('Punti ricalcolati forzatamente!');
+        toast.success(includeLiveStats ? 'Punti Finali Assegnati!' : 'Punti ricalcolati!');
       } else {
         toast.success('Classifica aggiornata in automatico! 🏆');
       }
@@ -504,21 +528,42 @@ export default function AdminPage() {
     }
   };
 
+  // Funzione unificata per prendere tutto il blocco dei bonus
+  const getFullBonusPayload = () => ({
+      id: '00000000-0000-0000-0000-000000000000', 
+      total_red_cards: bonusData.red ? parseInt(bonusData.red) : null, 
+      total_penalties: bonusData.penalties ? parseInt(bonusData.penalties) : null, 
+      total_own_goals: bonusData.own_goals ? parseInt(bonusData.own_goals) : null, 
+      top_scorer: bonusData.top.trim() || null, 
+      mvp_world_cup: bonusData.mvp_world_cup.trim() || null, 
+      best_goalkeeper: bonusData.best_goalkeeper.trim() || null, 
+      high_scoring_match: bonusData.high || null, 
+      highest_scoring_group: bonusData.high_group || null, 
+      lowest_scoring_group: bonusData.low_group || null 
+  });
+
+  // Salva solo le Statistiche Live (NON CALCOLA PUNTI)
+  const saveLiveStats = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { error } = await supabase.from('official_bonuses').upsert(getFullBonusPayload(), { onConflict: 'id' });
+    if (!error) toast.success('Statistiche aggiornate sulla Dashboard!');
+  };
+
+  // Salva i Bonus Ufficiali (E RICALCOLA I PUNTI)
   const saveBonuses = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { id: '00000000-0000-0000-0000-000000000000', total_red_cards: bonusData.red ? parseInt(bonusData.red) : null, total_penalties: bonusData.penalties ? parseInt(bonusData.penalties) : null, total_own_goals: bonusData.own_goals ? parseInt(bonusData.own_goals) : null, top_scorer: bonusData.top.trim() || null, mvp_world_cup: bonusData.mvp_world_cup.trim() || null, best_goalkeeper: bonusData.best_goalkeeper.trim() || null, high_scoring_match: bonusData.high || null, highest_scoring_group: bonusData.high_group || null, lowest_scoring_group: bonusData.low_group || null };
-    const { error } = await supabase.from('official_bonuses').upsert(payload, { onConflict: 'id' });
-    if (!error) { toast.success('Bonus Ufficiali Salvati!'); await syncLeaderboard(false); }
+    const { error } = await supabase.from('official_bonuses').upsert(getFullBonusPayload(), { onConflict: 'id' });
+    if (!error) { toast.success('Bonus Ufficiali Salvati!'); await syncLeaderboard(false, false); }
   };
 
   const resetBonuses = async () => { 
-    if (window.confirm('Svuotare TUTTI i bonus ufficiali? I punteggi verranno ricalcolati.')) { 
+    if (window.confirm('Svuotare TUTTI i bonus e le statistiche ufficiali? I punteggi verranno ricalcolati.')) { 
       const payload = { id: '00000000-0000-0000-0000-000000000000', total_red_cards: null, total_penalties: null, total_own_goals: null, top_scorer: null, mvp_world_cup: null, best_goalkeeper: null, high_scoring_match: null, highest_scoring_group: null, lowest_scoring_group: null };
       const { error } = await supabase.from('official_bonuses').upsert(payload, { onConflict: 'id' }); 
       if (!error) {
-        toast.success('Bonus azzerati con successo!');
+        toast.success('Tutto azzerato con successo!');
         setBonusData({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' }); 
-        await syncLeaderboard(false); 
+        await syncLeaderboard(false, false); 
       } else {
         toast.error('Errore durante il reset: ' + error.message);
       }
@@ -988,7 +1033,7 @@ export default function AdminPage() {
                 <button onClick={exportClassificaCSV} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl">
                   <Download size={14} /> Excel
                 </button>
-                <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <button onClick={() => syncLeaderboard(true, false)} disabled={syncing} className={`w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
                 </button>
             </div>
@@ -1016,6 +1061,50 @@ export default function AdminPage() {
                 <button onClick={() => { setAnnouncement(''); saveAnnouncement(''); }} className="p-5 bg-slate-900 border border-slate-700 text-slate-500 hover:text-rose-500 rounded-2xl transition-colors"><Trash2 size={20} /></button>
                 <button onClick={() => saveAnnouncement(announcement)} className="flex-1 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">Pubblica Annuncio</button>
               </div>
+            </div>
+          )}
+        </section>
+
+        {/* ----- NUOVA SEZIONE: STATISTICHE LIVE (NO PUNTI) ----- */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-emerald-500">
+          <button onClick={() => setOpenSection({ ...openSection, liveStats: !openSection.liveStats })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Activity className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Live</h2></div>
+            {openSection.liveStats ? <ChevronUp /> : <ChevronDown />}
+          </button>
+          {openSection.liveStats && (
+            <div className="p-5 bg-slate-950/30">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4">
+                Questi dati aggiornano la Dashboard di tutti gli utenti, ma <strong className="text-rose-500">NON</strong> influenzeranno la classifica durante il mese.
+              </p>
+              <form onSubmit={saveLiveStats} className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center">Autogol</span>
+                    <input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" placeholder="0" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center">Rigori</span>
+                    <input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" placeholder="0" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center">Rossi</span>
+                    <input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" placeholder="0" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" />
+                  </div>
+                </div>
+                
+                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">
+                  SALVA E MOSTRA SULLA DASHBOARD
+                </button>
+
+                <div className="mt-6 pt-6 border-t border-slate-800">
+                  <p className="text-[9px] text-rose-400 font-bold uppercase tracking-widest mb-3 text-center">
+                    ⚠️ Usa questo bottone SOLO alla fine della finale del Mondiale per decretare chi ha indovinato.
+                  </p>
+                  <button type="button" onClick={() => syncLeaderboard(true, true)} className="w-full bg-yellow-500 hover:bg-yellow-400 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest text-slate-950 flex justify-center items-center gap-2 transition-all">
+                    <Trophy size={16} /> ASSEGNA PUNTI STATISTICHE FINALI
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </section>
@@ -1211,13 +1300,17 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+        {/* ----- SEZIONE BONUS UFFICIALI (QUESTI ASSEGNANO PUNTI AL SALVATAGGIO) ----- */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-purple-500">
           <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Ufficiali</h2></div>
+            <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Finali (Punti)</h2></div>
             {openSection.bonus ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.bonus && (
             <div className="p-5 bg-slate-950/30">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4">
+                Questi dati <strong className="text-purple-500">ASSEGNANO PUNTI</strong> istantaneamente non appena salvi. Compilali solo a gironi o Mondiale concluso.
+              </p>
               <form onSubmit={saveBonuses} className="space-y-5">
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1">
@@ -1235,9 +1328,8 @@ export default function AdminPage() {
 
                   <select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none appearance-none"><option value="">MATCH PIÙ GOL...</option>{Object.entries(groupedMatches).map(([g, m]) => (<optgroup key={g} label={g} className="bg-slate-900">{m.map(match => <option key={match} value={match}>{formatMatchName(match)}</option>)}</optgroup>))}</select>
                   <div className="grid grid-cols-2 gap-3"><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE PIÙ GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE MENO GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
-                  <div className="grid grid-cols-3 gap-3"><input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" placeholder="AUTOGOL" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs text-center" /><input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" placeholder="RIGORI" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs text-center" /><input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" placeholder="ROSSI" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-emerald-400 text-xs text-center" /></div>
                 </div>
-                <div className="flex gap-4 pt-4"><button type="button" onClick={resetBonuses} className="p-5 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl"><Trash2 size={20} /></button><button type="submit" className="flex-1 bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl">SALVA BONUS</button></div>
+                <div className="flex gap-4 pt-4"><button type="button" onClick={resetBonuses} className="p-5 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl"><Trash2 size={20} /></button><button type="submit" className="flex-1 bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl">SALVA E CALCOLA PUNTI</button></div>
               </form>
             </div>
           )}
