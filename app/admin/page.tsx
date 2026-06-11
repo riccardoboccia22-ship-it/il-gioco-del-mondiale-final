@@ -7,7 +7,7 @@ import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield, Download
+  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield, Download, Gift
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -466,7 +466,6 @@ export default function AdminPage() {
         if (b.points !== a.points) return b.points - a.points; 
         if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
         if (b.points_bonus !== a.points_bonus) return b.points_bonus - a.points_bonus; 
-        // MODIFICA ALGORITMO: Invertito ordine fasi tabellone (dai Sedicesimi a salire)
         if (b.pts_r32 !== a.pts_r32) return b.pts_r32 - a.pts_r32;
         if (b.pts_r16 !== a.pts_r16) return b.pts_r16 - a.pts_r16; 
         if (b.pts_qf !== a.pts_qf) return b.pts_qf - a.pts_qf;
@@ -642,6 +641,79 @@ export default function AdminPage() {
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
+  // --- CALCOLATORE PREMI AUTOMATICO ---
+  const copyPrizesReport = () => {
+    // 1. Ordina tutti i profili per classifica generale (utilizza il ranking salvato su DB)
+    const sorted = [...profiles].sort((a, b) => parseInt(a.ranking || '999') - parseInt(b.ranking || '999'));
+
+    let awardedUserIds = new Set();
+    let report = `🏆 *VINCITORI PREMI MONDIALE 2026* 🏆\n\n`;
+
+    // 1️⃣ CLASSIFICA GENERALE (Hanno la precedenza assoluta)
+    report += `👑 *CLASSIFICA GENERALE*\n`;
+    const genPrizes = [
+      { label: "1° Classificato (200€)", index: 0 },
+      { label: "2° Classificato (140€)", index: 1 },
+      { label: "3° Classificato (80€)", index: 2 },
+      { label: "4° Classificato (50€)", index: 3 },
+      { label: "5° Classificato (30€)", index: 4 },
+      { label: "6° Classificato (20€)", index: 5 },
+      { label: "7° Classificato (10€)", index: 6 },
+      { label: "8° Classificato (10€)", index: 7 },
+    ];
+
+    genPrizes.forEach(prize => {
+      const u = sorted[prize.index];
+      if (u) {
+        report += `${prize.label}: *${u.username}*\n`;
+        awardedUserIds.add(u.id);
+      }
+    });
+
+    // Funzione helper per trovare il vincitore di una categoria (escludendo chi ha già vinto)
+    const getWinner = (sortFn: (a: any, b: any) => number) => {
+      const eligible = sorted.filter(u => !awardedUserIds.has(u.id));
+      if (eligible.length === 0) return null;
+      // Il sort preserva l'ordine di partenza (che è la classifica generale), 
+      // quindi in caso di parità nel parametro specifico, vince chi è più in alto in generale!
+      const specificSorted = [...eligible].sort(sortFn);
+      const winner = specificSorted[0];
+      if (winner) awardedUserIds.add(winner.id);
+      return winner;
+    };
+
+    // 2️⃣ PREMI PER FASE
+    report += `\n📊 *PREMI PER FASE*\n`;
+    
+    const reGironi = getWinner((a, b) => (b.points_groups || 0) - (a.points_groups || 0));
+    report += `🏟️ Re dei Gironi (30€): *${reGironi ? reGironi.username : 'N/D'}*\n`;
+
+    const magoPlayoff = getWinner((a, b) => (b.points_bracket || 0) - (a.points_bracket || 0));
+    report += `⚡ Mago dei Playoff (30€): *${magoPlayoff ? magoPlayoff.username : 'N/D'}*\n`;
+
+    const oracoloBonus = getWinner((a, b) => (b.points_bonus || 0) - (a.points_bonus || 0));
+    report += `🔮 Oracolo dei Bonus (20€): *${oracoloBonus ? oracoloBonus.username : 'N/D'}*\n`;
+
+    // 3️⃣ SPECIALITÀ E GOLIARDICI
+    report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n`;
+
+    const cecchino = getWinner((a, b) => (b.exact_matches || 0) - (a.exact_matches || 0));
+    report += `🎯 Il Cecchino (30€): *${cecchino ? cecchino.username : 'N/D'}*\n`;
+
+    // Il Veggente richiede l'identificazione manuale della finale
+    report += `👁️ Il Veggente (20€): *(Verificare manualmente chi ha indovinato la finale)*\n`;
+
+    // Zero Assoluto: 0 risultati esatti, chi è PIÙ IN BASSO in classifica generale (inversione array eligible)
+    const eligibleZero = sorted.filter(u => !awardedUserIds.has(u.id) && (u.exact_matches === 0 || u.exact_matches === null));
+    const zeroAssoluto = eligibleZero.length > 0 ? eligibleZero[eligibleZero.length - 1] : null;
+    if (zeroAssoluto) awardedUserIds.add(zeroAssoluto.id);
+    
+    report += `🧊 Zero Assoluto (10€): *${zeroAssoluto ? zeroAssoluto.username : 'NN/D'}*\n`;
+
+    navigator.clipboard.writeText(report);
+    toast.success('Report Premi Generato e Copiato! 🏆', { icon: '🎁' });
+  };
+
   const copyClassificaReport = () => {
     const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
     let text = `🏆 *CLASSIFICA MONDIALE 2026* 🏆\n\n`;
@@ -661,15 +733,11 @@ export default function AdminPage() {
     let text = `📋 *STATO COMPLETAMENTO PRONOSTICI* 📋\n\n`;
 
     stats.forEach(u => {
-      const girIcon = u.uPreds === 72 ? '✅' : u.uPreds > 0 ? '⚠️' : '❌';
-      const tabIcon = u.uBracks >= u.maxBracks ? '✅' : u.uBracks > 0 ? '⚠️' : '❌';
-      const bonIcon = u.uBonus === 9 ? '✅' : u.uBonus > 0 ? '⚠️' : '❌';
-
-      text += `👤 *${u.username}* (${u.pct}%)\n`;
-      text += `Gir: ${u.uPreds}/72 ${girIcon} | Tab: ${u.uBracks}/${u.maxBracks} ${tabIcon} | Bon: ${u.uBonus}/9 ${bonIcon}\n\n`;
+      const icon = u.pct === 100 ? '✅' : u.pct > 0 ? '⚠️' : '❌';
+      text += `👤 *${u.username}* (${u.pct}%) ${icon}\n`;
     });
 
-    text += `👉 Entra per completare: www.iltuopronostico.it`;
+    text += `\n👉 Entra per completare: www.iltuopronostico.it`;
     navigator.clipboard.writeText(text);
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
   };
@@ -874,7 +942,10 @@ export default function AdminPage() {
             <button onClick={copyClassificaReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 border border-slate-800 hover:bg-emerald-500/10 transition-colors rounded-xl">
               <MessageCircle size={14} /> Classifica
             </button>
-            <button onClick={copyCompletionReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-slate-800 hover:bg-yellow-500/10 transition-colors rounded-xl">
+            <button onClick={copyPrizesReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-yellow-500/30 hover:bg-yellow-500/10 transition-colors rounded-xl">
+              <Gift size={14} /> Premi
+            </button>
+            <button onClick={copyCompletionReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-slate-400 bg-slate-950 border border-slate-800 hover:bg-slate-800/50 transition-colors rounded-xl">
               <MessageCircle size={14} /> Stato
             </button>
             <button onClick={copyWinnerReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-400 bg-slate-950 border border-slate-800 hover:bg-blue-400/10 transition-colors rounded-xl">
@@ -886,10 +957,10 @@ export default function AdminPage() {
             <button onClick={copyBonusReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-purple-400 bg-slate-950 border border-slate-800 hover:bg-purple-400/10 transition-colors rounded-xl">
               <MessageCircle size={14} /> Dati Bonus
             </button>
-            <button onClick={exportClassificaCSV} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl">
-              <Download size={14} /> Excel
-            </button>
-            <div className="col-span-2">
+            <div className="col-span-2 grid grid-cols-2 gap-3">
+                <button onClick={exportClassificaCSV} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl">
+                  <Download size={14} /> Excel
+                </button>
                 <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
                 </button>

@@ -10,7 +10,9 @@ import {
   ArrowLeft,
   Gift,
   Medal,
-  LayoutGrid
+  LayoutGrid,
+  Eye,
+  MessageCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -58,7 +60,7 @@ export default function RegolamentoPage() {
           <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl flex gap-3 items-start">
             <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={16} />
             <p className="text-xs text-rose-200 font-medium leading-relaxed">
-              Allo scoccare dell'orario limite, il sistema bloccherà automaticamente tutti i salvataggi. Le quote di partecipazione devono essere saldate all'Admin per validare l'iscrizione.
+              Allo scoccare dell'orario limite, il sistema bloccherà automaticamente tutti i salvataggi. Per la validazione definitiva dell'iscrizione, fai riferimento alle comunicazioni dell'Admin nel gruppo ufficiale.
             </p>
           </div>
         </section>
@@ -117,7 +119,7 @@ export default function RegolamentoPage() {
             <h2 className="text-xl font-black uppercase italic tracking-tight">2. Tabellone Finale</h2>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            Riceverai punti per <strong>ogni squadra</strong> che raggiunge effettivamente la fase che hai pronosticato, a prescindere dal suo percorso reale.
+            Riceverai punti per <strong>ogni squadra</strong> che raggiunge effettivamente la fase che hai pronosticato, a prescindere dal suo percorso reale e dagli incroci esatti.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -170,24 +172,31 @@ export default function RegolamentoPage() {
           <div className="absolute top-0 left-0 w-2 h-full bg-amber-400"></div>
           <div className="flex items-center gap-3 mb-6">
             <Gift className="text-amber-400" size={24} />
-            <h2 className="text-xl font-black uppercase italic tracking-tight">4. Premi e Categorie</h2>
+            <h2 className="text-xl font-black uppercase italic tracking-tight">4. Suddivisione Premi</h2>
           </div>
-          <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            Il montepremi verrà diviso su ben 10 piazzamenti. Nessun giocatore può accumulare più di un premio.
-          </p>
+          
+          <div className="bg-slate-950/50 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 mb-6">
+            <MessageCircle className="text-slate-400 shrink-0 mt-0.5" size={18} />
+            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+              Il nostro torneo prevede ben <strong>14 piazzamenti premiati</strong>. <br/>I dettagli esatti sul montepremi e sugli importi economici associati a ciascuna categoria sono gestiti privatamente e consultabili all'interno del <strong>Gruppo WhatsApp Ufficiale</strong>.
+            </p>
+          </div>
 
           <div className="space-y-4">
-            {/* GRUPPO 1: PODIO */}
+            {/* GRUPPO 1: CLASSIFICA GENERALE */}
             <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl">
               <h3 className="font-black text-yellow-500 uppercase text-xs mb-3 flex items-center gap-2">
-                <Medal size={16} /> Podio Generale
+                <Medal size={16} /> Classifica Generale
               </h3>
               <ul className="space-y-2 text-[11px] text-slate-300 font-medium">
-                <li>🥇 <strong>1° Classificato:</strong> Campione assoluto del torneo.</li>
-                <li>🥈 <strong>2° Classificato:</strong> Vice-campione.</li>
-                <li>🥉 <strong>3° Classificato:</strong> Terzo gradino del podio.</li>
-                <li>🪵 <strong>4° Classificato:</strong> Premio "Medaglia di Legno".</li>
-                <li>🎖️ <strong>5° Classificato:</strong> Quinto posto in classifica generale.</li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🥇 <strong>1° Classificato:</strong> Campione assoluto.</span></li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🥈 <strong>2° Classificato:</strong> Vice-campione.</span></li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🥉 <strong>3° Classificato:</strong> Terzo gradino del podio.</span></li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🪵 <strong>4° Classificato:</strong> Medaglia di Legno.</span></li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🎖️ <strong>5° Classificato:</strong> Quinto in classifica.</span></li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🏅 <strong>6° Classificato:</strong> Sesto in classifica.</span></li>
+                <li className="flex justify-between border-b border-slate-800 pb-1"><span>🤏 <strong>7° Classificato:</strong> Settimo posto.</span></li>
+                <li className="flex justify-between"><span>🍕 <strong>8° Classificato:</strong> Ottavo posto.</span></li>
               </ul>
             </div>
 
@@ -197,32 +206,58 @@ export default function RegolamentoPage() {
                 <LayoutGrid size={16} /> Premi per Fase
               </h3>
               <ul className="space-y-3 text-[11px] text-slate-300 font-medium">
-                <li>🏟️ <strong>Il Re dei Gironi:</strong> Miglior punteggio calcolato unicamente sulle 72 partite dei gironi.</li>
-                <li>⚡ <strong>Il Mago dei Playoff:</strong> Miglior punteggio calcolato sul tabellone (dai sedicesimi alla finale, incluso il bonus Campione).</li>
-                <li>🔮 <strong>L'Oracolo dei Bonus:</strong> Miglior punteggio ottenuto unicamente con le 9 risposte bonus.</li>
+                <li className="flex justify-between items-start gap-4">
+                  <span>🏟️ <strong>Il Re dei Gironi:</strong> Miglior punteggio unicamente sulle 72 partite dei gironi.</span>
+                </li>
+                <li className="flex justify-between items-start gap-4">
+                  <span>⚡ <strong>Il Mago dei Playoff:</strong> Miglior punteggio ottenuto sul tabellone (dai sedicesimi alla finale + bonus Campione).</span>
+                </li>
+                <li className="flex justify-between items-start gap-4">
+                  <span>🔮 <strong>L'Oracolo dei Bonus:</strong> Miglior punteggio ottenuto unicamente con le 9 risposte bonus.</span>
+                </li>
               </ul>
             </div>
 
             {/* GRUPPO 3: SPECIALITÀ */}
             <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl">
               <h3 className="font-black text-emerald-400 uppercase text-xs mb-3 flex items-center gap-2">
-                <Target size={16} /> Premi di Specialità
+                <Target size={16} /> Premi Speciali & Goliardici
               </h3>
               <ul className="space-y-3 text-[11px] text-slate-300 font-medium">
-                <li>🎯 <strong>Il Cecchino:</strong> Chi indovina più "Risultati Esatti" (+10 pt) nella fase a gironi.</li>
-                <li>🧊 <strong>Zero Assoluto:</strong> Premio goliardico a chi chiude i gironi con ZERO risultati esatti. In caso di parità, vince chi è più in basso in classifica generale.</li>
+                <li className="flex justify-between items-start gap-4">
+                  <span>🎯 <strong>Il Cecchino:</strong> Chi indovina più "Risultati Esatti" nei gironi.</span>
+                </li>
+                <li className="flex justify-between items-start gap-4">
+                  <span><Eye size={12} className="inline mr-1 -mt-0.5" /> <strong>Il Veggente:</strong> Chi indovina l'esatta partita della Finale. Se nessuno la indovina, scala al 9° in classifica generale.</span>
+                </li>
+                <li className="flex justify-between items-start gap-4 border-t border-slate-800 pt-3">
+                  <span>🧊 <strong>Zero Assoluto:</strong> A chi chiude i gironi con ZERO risultati esatti. In caso di parità, vince chi è <strong>più in basso</strong> in classifica generale.</span>
+                </li>
               </ul>
             </div>
 
-            {/* Regola Anti-Ingordigia */}
-            <div className="bg-rose-950/20 border border-rose-900/30 p-4 rounded-xl mt-4 text-center">
-              <h4 className="text-[10px] font-black uppercase text-rose-500 tracking-widest mb-1">⚠️Attenzione⚠️</h4>
-              <p className="text-[10px] text-rose-200/80 leading-relaxed italic mb-2">
-                Nessun giocatore può vincere due premi. Se un giocatore si qualifica per due o più premi, gli verrà assegnato quello di <strong>maggior valore/prestigio</strong>, e l'altro premio scivolerà automaticamente al giocatore successivo in classifica.
+            {/* Regola d'Oro e Gerarchia */}
+            <div className="bg-rose-950/20 border border-rose-900/30 p-5 rounded-2xl mt-4">
+              <h4 className="text-xs font-black uppercase text-rose-500 tracking-widest mb-3 text-center">⚠️ Regola d'Oro (Max 1 Premio)</h4>
+              <p className="text-[11px] text-rose-200/80 leading-relaxed mb-4">
+                <strong>Nessun giocatore può vincere più di un premio.</strong> Questo garantisce che a fine torneo ci saranno esattamente 14 vincitori diversi! Se un giocatore si qualifica per due o più premi, si applicano queste regole:
               </p>
-              <p className="text-[10px] text-rose-200/80 leading-relaxed font-bold uppercase tracking-wider">
-                Gerarchia: Podio Generale (Top 5) ➔ Premi per Fase ➔ Premi di Specialità ➔ Zero Assoluto.
-              </p>
+              
+              <div className="space-y-3 mb-4">
+                <div className="bg-rose-950/40 p-3 rounded-lg border border-rose-900/50">
+                  <span className="text-rose-400 font-bold block mb-1">1. Regola del Valore</span>
+                  <span className="text-[10px] text-rose-200/70">Viene assegnato sempre e in automatico il premio di <strong>maggior valore</strong>. Il premio scartato passerà al giocatore successivo in quella categoria.</span>
+                </div>
+                
+                <div className="bg-rose-950/40 p-3 rounded-lg border border-rose-900/50">
+                  <span className="text-rose-400 font-bold block mb-1">2. Regola del Prestigio (Gerarchia)</span>
+                  <span className="text-[10px] text-rose-200/70">In caso si vincano due premi dello stesso identico livello, viene assegnato quello più prestigioso seguendo l'ordine gerarchico della nostra app.</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/50 rounded-lg p-3 text-[10px] font-bold text-rose-300 uppercase tracking-wider text-center border border-rose-900/30">
+                Gerarchia: Classifica Generale ➔ Fasi ➔ Specialità ➔ Zero Assoluto
+              </div>
             </div>
           </div>
         </section>
@@ -235,39 +270,39 @@ export default function RegolamentoPage() {
             <h2 className="text-xl font-black uppercase italic tracking-tight">5. Criteri di Spareggio</h2>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            In caso di parità punti, la posizione in classifica viene determinata seguendo questo ordine di priorità:
+            In caso di parità punti, la posizione in classifica e nei premi di specialità viene sbrogliata automaticamente seguendo questo ordine:
           </p>
 
           <div className="space-y-3">
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">1</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Risultati Esatti (Gironi)</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Chi ha indovinato più punteggi perfetti da +10 PT.</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Classifica Generale</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Per assegnare i premi di Fasi o Specialità (es. parità nel Cecchino), vince sempre chi è posizionato meglio nella Classifica Generale del torneo.</p>
               </div>
             </div>
             
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">2</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Punti Bonus Totali</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Maggior punteggio ottenuto nelle domande bonus.</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Risultati Esatti (Gironi)</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">A parità di punti in Classifica Generale, prevale chi ha indovinato più punteggi perfetti da +10 PT.</p>
               </div>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">3</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Qualità del Tabellone</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Punti fatti nelle fases più avanzate (Sedicesimi, Ottavi, Quarti, Semifinale, Finale).</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Punti Bonus Totali</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Maggior punteggio ottenuto complessivamente nelle domande bonus.</p>
               </div>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">4</div>
               <div>
-                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Ex aequo</h3>
-                <p className="text-[9px] text-slate-500 mt-1 italic">Se persiste la parità assoluta, il premio viene diviso in parti uguali.</p>
+                <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Qualità del Tabellone</h3>
+                <p className="text-[9px] text-slate-500 mt-1 italic">Vince chi ha predetto meglio le fasi iniziali (Sedicesimi → Ottavi → Quarti → Semifinali → Finaliste → Campione).</p>
               </div>
             </div>
           </div>
