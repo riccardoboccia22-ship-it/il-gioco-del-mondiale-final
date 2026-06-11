@@ -262,7 +262,7 @@ export default function RegolamentoPage() {
           </div>
         </section>
 
-        {/* 5. SPAREGGI */}
+        {/* 5. SPAREGGI E DETTAGLI */}
         <section className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-2 h-full bg-orange-500"></div>
           <div className="flex items-center gap-3 mb-6">
@@ -305,6 +305,30 @@ export default function RegolamentoPage() {
                 <p className="text-[9px] text-slate-500 mt-1 italic">Vince chi ha predetto meglio le fasi iniziali (Sedicesimi → Ottavi → Quarti → Semifinali → Finaliste → Campione).</p>
               </div>
             </div>
+          </div>
+
+          {/* DETTAGLIO SPAREGGI PREMI SPECIFICI */}
+          <div className="bg-slate-950/50 border border-slate-800 p-4 rounded-xl mt-6">
+            <h3 className="font-black text-slate-200 uppercase text-xs mb-3 text-center border-b border-slate-800 pb-2">
+              Dettaglio Spareggi per i Premi Specifici
+            </h3>
+            <ul className="space-y-3 text-[10px] text-slate-400">
+              <li>
+                <strong className="text-blue-400">🏟️ Re dei Gironi:</strong> Parità ➔ 1. Posizione più alta in Classifica Generale ➔ 2. Più punti nella Fase Finale ➔ 3. Più punti Bonus.
+              </li>
+              <li>
+                <strong className="text-blue-400">⚡ Mago dei Playoff:</strong> Parità ➔ 1. Posizione più alta in Classifica Generale ➔ 2. Più punti nella Fase a Gironi ➔ 3. Più punti Bonus.
+              </li>
+              <li>
+                <strong className="text-blue-400">🔮 Oracolo dei Bonus:</strong> Parità ➔ 1. Posizione più alta in Classifica Generale ➔ 2. Più punti nella Fase a Gironi ➔ 3. Più punti nella Fase Finale.
+              </li>
+              <li className="pt-2 border-t border-slate-800/50">
+                <strong className="text-emerald-400">👁️ Il Veggente:</strong> Parità tra chi ha indovinato la finale ➔ 1. Maggior numero di Risultati Esatti ➔ 2. Più punti nella Fase Finale ➔ 3. Più punti Bonus.
+              </li>
+              <li>
+                <strong className="text-slate-500">🧊 Zero Assoluto:</strong> Parità (più utenti a 0 esatti) ➔ 1. Posizione PIÙ IN BASSO in Classifica Generale ➔ 2. MENO punti nella Fase ad eliminazione ➔ 3. MENO punti Bonus.
+              </li>
+            </ul>
           </div>
         </section>
 
