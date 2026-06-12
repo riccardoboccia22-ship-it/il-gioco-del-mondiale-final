@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { 
   BookOpen, Timer, X, Edit3, Shield, Map, CheckCircle2, 
-  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3 
+  Trophy, Award, ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3, Search
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -203,7 +203,7 @@ const AVATARS = [
   { id: 'olanda', name: 'Olanda', flagCode: 'nl', color: 'from-orange-500 to-orange-400' },
   { id: 'panama', name: 'Panama', flagCode: 'pa', color: 'from-red-600 to-red-500' },
   { id: 'paraguay', name: 'Paraguay', flagCode: 'py', color: 'from-red-600 to-red-500' },
-  { id: 'portogallo', name: 'Portogallo', flagCode: 'pt', color: 'from-red-600 to-red-500' },
+  { id: 'portogallo', name: 'Portogallo', flagCode: 'pt', border: 'red', color: 'from-red-600 to-red-500' },
   { id: 'qatar', name: 'Qatar', flagCode: 'qa', color: 'from-rose-800 to-rose-700' },
   { id: 'rep_ceca', name: 'Repubblica Ceca', flagCode: 'cz', color: 'from-red-600 to-red-500' },
   { id: 'rd_congo', name: 'R.D. Congo', flagCode: 'cd', color: 'from-sky-500 to-sky-400' },
@@ -230,6 +230,7 @@ export default function ProfilePage() {
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
   const [userBonuses, setUserBonuses] = useState<any>(null);
   const [topScorers, setTopScorers] = useState<any[]>([]);
+  const [scorerSearch, setScorerSearch] = useState('');
   
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -327,10 +328,9 @@ export default function ProfilePage() {
 
         setCompletionDetails({ preds: validPreds, brackets: validBrackets, bonus: validBonus });
 
-        // --- FORMULA SOMMA ASSOLUTA (Allineata al Pannello Admin) ---
         const maxBrackets = 63; 
         const totalCompleted = validPreds + validBrackets + validBonus;
-        const totalMax = 72 + maxBrackets + 9; // 144
+        const totalMax = 72 + maxBrackets + 9;
         const percentage = Math.round((totalCompleted / totalMax) * 100);
         
         setCompletionPct(percentage);
@@ -404,8 +404,12 @@ export default function ProfilePage() {
 
   const currentAvatar = AVATARS.find(a => a.id === userProfile?.avatar_id) || AVATARS[0];
 
+  const filteredScorers = topScorers.filter(scorer => 
+    scorer.name.toLowerCase().includes(scorerSearch.toLowerCase())
+  );
+
   return (
-    <main className="min-h-[100dvh] bg-slate-950 text-white px-4 pt-6 pb-20 flex flex-col items-center justify-start sm:justify-center font-sans overflow-y-auto sm:overflow-hidden">
+    <main className="min-h-screen bg-slate-950 text-white px-4 pt-8 pb-32 flex flex-col items-center justify-start font-sans overflow-y-auto">
       <div className="w-full max-w-[26rem] sm:max-w-md">
         {userProfile ? (
           <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500 w-full">
@@ -701,11 +705,11 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* MODALE CLASSIFICA GOL GIRONI */}
+      {/* MODALE CLASSIFICA GOL GIRONI (FIX ALTEZZA BLOCCHI INTERNI) */}
       {showGroupsModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md pb-safe-area sm:pb-4">
-          <div className="bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
-            <div className="flex justify-between items-center mb-6 border-b border-slate-800/50 pb-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[65vh] max-h-[520px] overflow-hidden">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-4 shrink-0">
               <div>
                 <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-lg">Gol per Girone</h3>
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Aggiornamento in tempo reale</p>
@@ -715,7 +719,7 @@ export default function ProfilePage() {
               </button>
             </div>
             
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-2 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0">
               {Object.entries(liveStats.groupGoals)
                 .sort((a,b) => b[1] - a[1])
                 .map(([g, pts], i) => (
@@ -731,36 +735,80 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* MODALE CLASSIFICA MARCATORI (LETTA DA DATABASE) */}
+      {/* MODALE CLASSIFICA MARCATORI (🏆 FIX DEFINITIVO SCORRIMENTO INTEGRATO) */}
       {showScorersModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md pb-safe-area sm:pb-4">
-          <div className="bg-slate-900 border-t-2 sm:border-2 border-cyan-500/40 w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
-            <div className="flex justify-between items-center mb-6 border-b border-slate-800/50 pb-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[65vh] max-h-[520px] overflow-hidden">
+            
+            {/* Titolo fisso in alto */}
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-4 shrink-0">
               <div>
                 <h3 className="text-cyan-400 font-black uppercase italic tracking-tighter text-lg">Top Marcatori</h3>
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Classifica Ufficiale</p>
               </div>
-              <button onClick={() => setShowScorersModal(false)} className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors">
+              <button 
+                onClick={() => { setShowScorersModal(false); setScorerSearch(''); }} 
+                className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors"
+              >
                 <X size={18} />
               </button>
             </div>
+
+            {/* Barra di ricerca fissa in alto */}
+            <div className="relative mb-4 shrink-0">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-600">
+                <Search size={14} />
+              </div>
+              <input
+                type="text"
+                placeholder="CERCA GIOCATORE..."
+                value={scorerSearch}
+                onChange={(e) => setScorerSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:border-cyan-400 outline-none text-white font-black text-xs uppercase tracking-wider placeholder:text-slate-600 transition-colors"
+              />
+            </div>
             
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-              {topScorers.length === 0 ? (
+            {/* Lista con scorrimento dinamico assicurato al 100% */}
+            <div className="space-y-1.5 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0">
+              {filteredScorers.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Nessun marcatore inserito</p>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                    {topScorers.length === 0 ? 'Nessun marcatore inserito' : 'Nessun marcatore trovato'}
+                  </p>
                 </div>
               ) : (
-                topScorers.map((scorer, i) => (
-                  <div key={scorer.id} className="flex justify-between items-center p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-600 font-black text-xs">{i+1}.</span>
-                      <img src={`https://flagcdn.com/w40/${scorer.team_code}.png`} alt="" className="w-5 h-auto rounded-sm shadow-sm" />
-                      <span className="font-black text-xs uppercase text-slate-300">{scorer.name}</span>
+                filteredScorers.map((scorer) => {
+                  const realRank = topScorers.findIndex(s => s.id === scorer.id) + 1;
+                  const isTop3 = realRank <= 3;
+                  const rankColor = realRank === 1 ? 'text-yellow-500' : realRank === 2 ? 'text-slate-400' : realRank === 3 ? 'text-amber-600' : 'text-slate-600';
+
+                  return (
+                    <div 
+                      key={scorer.id} 
+                      className={`flex justify-between items-center py-2.5 px-3 bg-slate-950 border rounded-xl transition-colors ${
+                        isTop3 ? 'border-cyan-500/20 bg-cyan-950/5' : 'border-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className={`font-black text-xs shrink-0 w-5 text-center ${rankColor}`}>
+                          {realRank}
+                        </span>
+                        <img 
+                          src={`https://flagcdn.com/w40/${scorer.team_code.toLowerCase()}.png`} 
+                          alt="" 
+                          className="w-5 h-3.5 object-cover rounded-sm shadow-sm shrink-0" 
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                        <span className="font-black text-xs uppercase text-slate-200 truncate pr-2">
+                          {scorer.name}
+                        </span>
+                      </div>
+                      <span className="font-black text-xs text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20 shrink-0">
+                        {scorer.goals} <span className="text-[9px] text-cyan-500/80 font-bold uppercase ml-0.5">Gol</span>
+                      </span>
                     </div>
-                    <span className="font-black text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20">{scorer.goals} Gol</span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
