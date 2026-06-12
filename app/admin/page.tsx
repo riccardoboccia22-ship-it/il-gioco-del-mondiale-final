@@ -256,7 +256,6 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
-  // Aggiunto liveStats allo stato dei tab aperti
   const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, liveStats: false, bonus: false, statistiche: true, marcatori: false });
   
   const [matches, setMatches] = useState<any[]>([]);
@@ -371,8 +370,6 @@ export default function AdminPage() {
     }
   };
 
-  // --- IL CERVELLO DELLA CLASSIFICA AGGIORNATO ---
-  // Aggiunto parametro includeLiveStats (di default false) in modo che i rossi/rigori non pesino mai sulla classifica!
   const syncLeaderboard = async (isManual = true, includeLiveStats = false) => {
     if (isManual && !window.confirm(includeLiveStats ? 'ATTENZIONE: Assegnerai i punti finali per Rossi, Rigori e Autogol. Sei sicuro?' : 'Ricalcolare punti e spareggi per tutti?')) return;
     setSyncing(true);
@@ -409,7 +406,6 @@ export default function AdminPage() {
          if (offBonuses.highest_scoring_group) maxBonusPoints += 5;
          if (offBonuses.lowest_scoring_group) maxBonusPoints += 5;
          
-         // Conta questi punti SOLO se abbiamo attivato il calcolo finale esplicito
          if (includeLiveStats) {
              if (offBonuses.total_red_cards != null) maxBonusPoints += 3;
              if (offBonuses.total_penalties != null) maxBonusPoints += 3;
@@ -458,7 +454,6 @@ export default function AdminPage() {
               lowest_scoring_group: 5 
           };
           
-          // Conta questi punti SOLO se l'Admin ha premuto il bottone per l'assegnazione finale!
           if (includeLiveStats) {
               bMap.total_red_cards = 3;
               bMap.total_penalties = 3;
@@ -528,7 +523,6 @@ export default function AdminPage() {
     }
   };
 
-  // Funzione unificata per prendere tutto il blocco dei bonus
   const getFullBonusPayload = () => ({
       id: '00000000-0000-0000-0000-000000000000', 
       total_red_cards: bonusData.red ? parseInt(bonusData.red) : null, 
@@ -542,14 +536,12 @@ export default function AdminPage() {
       lowest_scoring_group: bonusData.low_group || null 
   });
 
-  // Salva solo le Statistiche Live (NON CALCOLA PUNTI)
   const saveLiveStats = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('official_bonuses').upsert(getFullBonusPayload(), { onConflict: 'id' });
     if (!error) toast.success('Statistiche aggiornate sulla Dashboard!');
   };
 
-  // Salva i Bonus Ufficiali (E RICALCOLA I PUNTI)
   const saveBonuses = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('official_bonuses').upsert(getFullBonusPayload(), { onConflict: 'id' });
@@ -686,15 +678,12 @@ export default function AdminPage() {
     }).sort((a, b) => b.pct - a.pct || (a.username || '').localeCompare(b.username || ''));
   };
 
-  // --- CALCOLATORE PREMI AUTOMATICO ---
   const copyPrizesReport = () => {
-    // 1. Ordina tutti i profili per classifica generale (utilizza il ranking salvato su DB)
     const sorted = [...profiles].sort((a, b) => parseInt(a.ranking || '999') - parseInt(b.ranking || '999'));
 
     let awardedUserIds = new Set();
     let report = `🏆 *VINCITORI PREMI MONDIALE 2026* 🏆\n\n`;
 
-    // 1️⃣ CLASSIFICA GENERALE (Hanno la precedenza assoluta)
     report += `👑 *CLASSIFICA GENERALE*\n`;
     const genPrizes = [
       { label: "1° Classificato (200€)", index: 0 },
@@ -715,65 +704,55 @@ export default function AdminPage() {
       }
     });
 
-    // Funzione helper per trovare il vincitore di una categoria (escludendo chi ha già vinto)
     const getWinner = (sortFn: (a: any, b: any) => number) => {
       const eligible = sorted.filter(u => !awardedUserIds.has(u.id));
       if (eligible.length === 0) return null;
-      // Il sort preserva l'ordine di partenza (che è la classifica generale), 
-      // quindi in caso di parità nel parametro specifico, vince chi è più in alto in generale!
       const specificSorted = [...eligible].sort(sortFn);
       const winner = specificSorted[0];
       if (winner) awardedUserIds.add(winner.id);
       return winner;
     };
 
-    // 2️⃣ PREMI PER FASE
     report += `\n📊 *PREMI PER FASE*\n`;
     
     const reGironi = getWinner((a, b) => {
       if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0);
-      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // 1° Spareggio: Classifica
-      if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0); // 2° Spareggio: Fase Finale
-      return (b.points_bonus || 0) - (a.points_bonus || 0); // 3° Spareggio: Bonus
+      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
+      if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0); 
+      return (b.points_bonus || 0) - (a.points_bonus || 0); 
     });
     report += `🏟️ Re dei Gironi (30€): *${reGironi ? reGironi.username : 'N/D'}*\n`;
 
     const magoPlayoff = getWinner((a, b) => {
       if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0);
-      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // 1° Spareggio: Classifica
-      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); // 2° Spareggio: Gironi
-      return (b.points_bonus || 0) - (a.points_bonus || 0); // 3° Spareggio: Bonus
+      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
+      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); 
+      return (b.points_bonus || 0) - (a.points_bonus || 0); 
     });
     report += `⚡ Mago dei Playoff (30€): *${magoPlayoff ? magoPlayoff.username : 'N/D'}*\n`;
 
     const oracoloBonus = getWinner((a, b) => {
       if (b.points_bonus !== a.points_bonus) return (b.points_bonus || 0) - (a.points_bonus || 0);
-      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // 1° Spareggio: Classifica
-      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); // 2° Spareggio: Gironi
-      return (b.points_bracket || 0) - (a.points_bracket || 0); // 3° Spareggio: Fase Finale
+      if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
+      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); 
+      return (b.points_bracket || 0) - (a.points_bracket || 0); 
     });
     report += `🔮 Oracolo dei Bonus (30€): *${oracoloBonus ? oracoloBonus.username : 'N/D'}*\n`;
 
-    // 3️⃣ SPECIALITÀ E GOLIARDICI
     report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n`;
 
     const cecchino = getWinner((a, b) => {
       if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
-      return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); // Parità: vince chi è più in alto in generale
+      return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
     });
     report += `🎯 Il Cecchino (30€): *${cecchino ? cecchino.username : 'N/D'}*\n`;
 
-    // Il Veggente richiede verifica manuale della squadra, ma aggiungiamo la nota sugli spareggi per l'admin
     report += `👁️ Il Veggente (20€): *(Verificare manualmente - Spareggi: 1° Ris. Esatti, 2° Fase Finale, 3° Bonus)*\n`;
 
-    // Zero Assoluto: Algoritmo aggiornato con i nuovi spareggi (al contrario!)
     const eligibleZero = sorted.filter(u => !awardedUserIds.has(u.id) && (u.exact_matches === 0 || u.exact_matches === null));
     eligibleZero.sort((a, b) => {
-      // 1. Più in basso in classifica (ranking PIÙ ALTO)
       if (a.ranking !== b.ranking) return parseInt(b.ranking || '0') - parseInt(a.ranking || '0');
-      // 2. Meno punti fase ad eliminazione (bracket)
       if (a.points_bracket !== b.points_bracket) return (a.points_bracket || 0) - (b.points_bracket || 0);
-      // 3. Meno punti bonus
       return (a.points_bonus || 0) - (b.points_bonus || 0);
     });
     
@@ -1065,7 +1044,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- NUOVA SEZIONE: STATISTICHE LIVE (NO PUNTI) ----- */}
+        {/* ----- SEZIONE STATISTICHE LIVE ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-emerald-500">
           <button onClick={() => setOpenSection({ ...openSection, liveStats: !openSection.liveStats })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Activity className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Live</h2></div>
@@ -1258,6 +1237,7 @@ export default function AdminPage() {
           )}
         </section>
 
+        {/* ----- SEZIONE RISULTATI (ORDINAMENTO CRONOLOGICO/ID + RICERCA GIRONE) ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
@@ -1265,21 +1245,44 @@ export default function AdminPage() {
           </button>
           {openSection.risultati && (
             <div className="p-4 space-y-6 bg-slate-950/30">
-              <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} /><input type="text" placeholder="CERCA SQUADRA..." className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase outline-none focus:border-yellow-500" onChange={e => setSearchTerm(e.target.value)} /></div>
+              <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} /><input type="text" placeholder="CERCA SQUADRA O GRUPPO..." className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase outline-none focus:border-yellow-500" onChange={e => setSearchTerm(e.target.value)} /></div>
               <div className="grid gap-4">
-                {matches.filter(m => m.home_team.toLowerCase().includes(searchTerm.toLowerCase()) || m.away_team.toLowerCase().includes(searchTerm.toLowerCase())).map(m => {
-                  const hasR = m.is_finished && m.home_score_final !== null;
-                  return (
-                    <div key={m.id} className={`bg-slate-900 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] border transition-all ${hasR ? 'border-emerald-500/40 shadow-xl' : 'border-slate-800 shadow-md'}`}>
-                      <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2"><span className="text-[9px] font-black text-slate-500 uppercase italic">Match #{m.id}</span>{hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}</div>
-                      <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
-                        <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
-                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /><span className="text-slate-700 font-black">-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /></div>
-                        <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
+                {matches
+                  .map(m => {
+                    const homeFormatted = formatMatchName(m.home_team);
+                    const groupObj = TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === homeFormatted.toLowerCase()));
+                    return { ...m, groupName: groupObj ? groupObj.name : 'Z - Altri' };
+                  })
+                  .sort((a, b) => {
+                    const dateA = a.date || a.match_date || a.created_at || a.id;
+                    const dateB = b.date || b.match_date || b.created_at || b.id;
+                    if (dateA < dateB) return -1;
+                    if (dateA > dateB) return 1;
+                    return 0;
+                  })
+                  .filter(m => 
+                    (m.home_team || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    (m.away_team || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    m.groupName.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map(m => {
+                    const hasR = m.is_finished && m.home_score_final !== null;
+                    return (
+                      <div key={m.id} className={`bg-slate-900 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] border transition-all ${hasR ? 'border-emerald-500/40 shadow-xl' : 'border-slate-800 shadow-md'}`}>
+                        <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2">
+                           <span className="text-[9px] font-black text-slate-500 uppercase italic">
+                             Match #{m.id} <span className="ml-1 opacity-70">({m.groupName})</span>
+                           </span>
+                           {hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
+                        </div>
+                        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
+                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
+                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /><span className="text-slate-700 font-black">-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /></div>
+                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
+                        </div>
+                        <button onClick={() => updateScore(m.id)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${hasR ? 'bg-emerald-600 text-white' : 'bg-yellow-500 text-slate-950'}`}>{hasR ? 'Aggiorna' : 'Conferma'}</button>
                       </div>
-                      <button onClick={() => updateScore(m.id)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${hasR ? 'bg-emerald-600 text-white' : 'bg-yellow-500 text-slate-950'}`}>{hasR ? 'Aggiorna' : 'Conferma'}</button>
-                    </div>
-                  );
+                    );
                 })}
               </div>
             </div>

@@ -12,8 +12,63 @@ import {
   ChevronDown, 
   Minus,
   Loader2,
-  Target
+  Target,
+  X
 } from 'lucide-react';
+
+const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
+
+const TOURNAMENT_GROUPS = [
+  { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
+  { name: 'Gruppo B', teams: ['Canada', 'Svizzera', 'Qatar', 'Bosnia'] },
+  { name: 'Gruppo C', teams: ['Brasile', 'Marocco', 'Haiti', 'Scozia'] },
+  { name: 'Gruppo D', teams: ['USA', 'Australia', 'Paraguay', 'Turchia'] },
+  { name: 'Gruppo E', teams: ['Germania', "Costa Avorio", 'Ecuador', 'Curacao'] },
+  { name: 'Gruppo F', teams: ['Olanda', 'Svezia', 'Giappone', 'Tunisia'] },
+  { name: 'Gruppo G', teams: ['Belgio', 'Iran', 'Egitto', 'N. Zelanda'] },
+  { name: 'Gruppo H', teams: ['Spagna', 'Uruguay', 'Arabia S.', 'Capo Verde'] },
+  { name: 'Gruppo I', teams: ['Francia', 'Senegal', 'Norvegia', 'Iraq'] },
+  { name: 'Gruppo J', teams: ['Argentina', 'Austria', 'Algeria', 'Giordania'] },
+  { name: 'Gruppo K', teams: ['Portogallo', 'Colombia', 'Uzbekistan', 'R.D. Congo'] },
+  { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
+];
+
+const formatMatchName = (matchString: string) => {
+  if (!matchString) return '';
+  let formatted = matchString;
+  formatted = formatted.replace(/Repubblica Democratica del Congo/gi, 'R.D. Congo');
+  formatted = formatted.replace(/Repubblica Ceca/gi, 'Rep. Ceca');
+  formatted = formatted.replace(/Bosnia ed Erzegovina|Bosnia Erzegovina/gi, 'Bosnia');
+  formatted = formatted.replace(/Stati Uniti|USA/gi, 'USA');
+  formatted = formatted.replace(/Arabia Saudita/gi, 'Arabia S.');
+  formatted = formatted.replace(/Nuova Zelanda/gi, 'N. Zelanda');
+  formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
+  formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
+  return formatted;
+};
+
+// Funzione helper per ottenere il codice bandiera da qualsiasi formato di nome squadra
+const getTeamFlagCode = (teamName: string) => {
+  if (!teamName) return null;
+  const formattedName = formatMatchName(teamName).toLowerCase();
+  
+  const map: Record<string, string> = {
+    'messico': 'mx', 'sudafrica': 'za', 'corea sud': 'kr', 'rep. ceca': 'cz',
+    'canada': 'ca', 'svizzera': 'ch', 'qatar': 'qa', 'bosnia': 'ba',
+    'brasile': 'br', 'marocco': 'ma', 'haiti': 'ht', 'scozia': 'gb-sct',
+    'usa': 'us', 'australia': 'au', 'paraguay': 'py', 'turchia': 'tr',
+    'germania': 'de', 'costa avorio': 'ci', 'ecuador': 'ec', 'curacao': 'cw',
+    'olanda': 'nl', 'svezia': 'se', 'giappone': 'jp', 'tunisia': 'tn',
+    'belgio': 'be', 'iran': 'ir', 'egitto': 'eg', 'n. zelanda': 'nz',
+    'spagna': 'es', 'uruguay': 'uy', 'arabia s.': 'sa', 'capo verde': 'cv',
+    'francia': 'fr', 'senegal': 'sn', 'norvegia': 'no', 'iraq': 'iq',
+    'argentina': 'ar', 'austria': 'at', 'algeria': 'dz', 'giordania': 'jo',
+    'portogallo': 'pt', 'colombia': 'co', 'uzbekistan': 'uz', 'r.d. congo': 'cd',
+    'inghilterra': 'gb-eng', 'croazia': 'hr', 'ghana': 'gh', 'panama': 'pa'
+  };
+
+  return map[formattedName] || null;
+};
 
 const AVATARS = [
   // --- PRO & CLASSICI ---
@@ -23,7 +78,7 @@ const AVATARS = [
   { id: 'legend', name: 'Pallone d\'Oro', emoji: '🏆', color: 'from-yellow-600 to-yellow-400' },
   { id: 'ninja', name: 'Ninja', emoji: '🥷', color: 'from-zinc-800 to-zinc-600' },
   { id: 'clown', name: 'Clown', emoji: '🤡', color: 'from-red-500 to-sky-500' },
-  { id: 'pirate', name: 'Pirati', emoji: '🏴‍☠️', color: 'from-zinc-900 to-zinc-700' },
+  { id: 'pirate', name: 'Pirati', emoji: '💀', color: 'from-zinc-900 to-zinc-700' },
 
   // --- ANIMALI ---
   { id: 'shark', name: 'Squalo', emoji: '🦈', color: 'from-sky-700 to-blue-900' },
@@ -61,7 +116,7 @@ const AVATARS = [
   { id: 'panda', name: 'Panda', emoji: '🐼', color: 'from-slate-800 to-slate-950' },
   { id: 'parrot', name: 'Pappagallo', emoji: '🦜', color: 'from-red-400 to-green-500' },
   { id: 'dodo', name: 'Dodo', emoji: '🦤', color: 'from-stone-500 to-stone-700' },
-  { id: 'moose', name: 'Alce', emoji: '🫎', color: 'from-amber-700 to-stone-600' },
+  { id: 'moose', name: 'Alce', emoji: '𫎟', color: 'from-amber-700 to-stone-600' },
 
   // --- FOOD & DRINKS ---
   { id: 'beer', name: 'Birra', emoji: '🍺', color: 'from-yellow-400 to-amber-500' },
@@ -199,6 +254,12 @@ export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // --- STATI PER LA MODALE DETTAGLI PUNTI ---
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [playerPredictions, setPlayerPredictions] = useState<any[]>([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   useEffect(() => {
     fetchLeaderboard();
 
@@ -262,6 +323,116 @@ export default function LeaderboardPage() {
       if (showLoader) setLoading(false);
     }
   }
+
+  // --- 🪄 IL CALCOLATORE DI PUNTI A CASCATA (FASE A GIRONI) ---
+  const calculateMatchPoints = (predHome: any, predAway: any, realHome: any, realAway: any) => {
+    if (predHome === null || predAway === null || realHome === null || realAway === null) return 0;
+    
+    const pH = Number(predHome);
+    const pA = Number(predAway);
+    const rH = Number(realHome);
+    const rA = Number(realAway);
+
+    // 1. Risultato Esatto (+10 PT)
+    if (pH === rH && pA === rA) return 10;
+
+    // Definiamo i "Segni" per comodità (1, X, 2)
+    const predSign = pH > pA ? '1' : pH < pA ? '2' : 'X';
+    const realSign = rH > rA ? '1' : rH < rA ? '2' : 'X';
+    
+    const isSignMatch = predSign === realSign;
+    const isOneGoalMatch = pH === rH || pA === rA;
+
+    // 2. Segno + 1 Gol (+6 PT)
+    if (isSignMatch && isOneGoalMatch) return 6;
+
+    // 3. Solo Segno 1X2 (+4 PT)
+    if (isSignMatch && !isOneGoalMatch) return 4;
+
+    // 4. Solo 1 Gol (+2 PT)
+    if (!isSignMatch && isOneGoalMatch) return 2;
+
+    // 5. Nulla Cosmico (0 PT)
+    return 0;
+  };
+
+  // --- FUNZIONE BLINDATA PER RECUPERARE I PUNTI DETTAGLIATI ---
+  const handlePlayerClick = async (player: any) => {
+    setSelectedPlayer(player);
+    setShowDetailsModal(true);
+    setLoadingDetails(true);
+
+    try {
+      const { data: preds, error: predsError } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('user_id', player.id);
+
+      if (predsError) throw predsError;
+
+      if (!preds || preds.length === 0) {
+        setPlayerPredictions([]);
+        setLoadingDetails(false);
+        return;
+      }
+
+      const matchIds = preds.map(p => p.match_id || p.match || p.id_match || p.id_partita).filter(Boolean);
+
+      if (matchIds.length === 0) {
+        setPlayerPredictions([]);
+        setLoadingDetails(false);
+        return;
+      }
+
+      const { data: matches, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .in('id', matchIds)
+        .eq('is_finished', true);
+
+      if (matchesError) throw matchesError;
+
+      const combinedData = preds
+        .map(pred => {
+          const mId = pred.match_id || pred.match || pred.id_match || pred.id_partita;
+          const matchData = matches?.find(m => m.id === mId);
+          
+          if (!matchData) return null; 
+          
+          const livePoints = calculateMatchPoints(
+             pred.home_score, 
+             pred.away_score, 
+             matchData.home_score_final, 
+             matchData.away_score_final
+          );
+          
+          return {
+            home_score: pred.home_score,
+            away_score: pred.away_score,
+            points: livePoints,
+            matches: matchData
+          };
+        })
+        .filter(item => item !== null)
+        // ORDINAMENTO DI CALENDARIO: Dalla prima partita giocata in poi
+        .sort((a: any, b: any) => {
+          const dateA = a.matches.date || a.matches.match_date || a.matches.created_at || a.matches.id;
+          const dateB = b.matches.date || b.matches.match_date || b.matches.created_at || b.matches.id;
+          
+          if (dateA < dateB) return -1;
+          if (dateA > dateB) return 1;
+          return 0;
+        });
+
+      setPlayerPredictions(combinedData);
+
+    } catch (error) {
+      console.error("Errore Dettaglio Punti:", error);
+      toast.error('Impossibile caricare i dettagli delle partite.');
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   const getRankIcon = (rankValue: any) => {
     const rank = Number(rankValue);
@@ -338,10 +509,11 @@ export default function LeaderboardPage() {
             return (
               <div
                 key={player.id}
-                className={`flex items-center p-4 sm:p-5 rounded-[2rem] border transition-all duration-500 ${
+                onClick={() => handlePlayerClick(player)}
+                className={`flex items-center p-4 sm:p-5 rounded-[2rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${
                   isPodium
-                    ? 'bg-gradient-to-r from-yellow-500/10 to-slate-900/40 border-yellow-500/40 shadow-2xl shadow-yellow-500/5 scale-[1.02]'
-                    : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/40'
+                    ? 'bg-gradient-to-r from-yellow-500/10 to-slate-900/40 border-yellow-500/40 shadow-2xl shadow-yellow-500/5 hover:scale-[1.02]'
+                    : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/80 hover:border-slate-700'
                 }`}
               >
                 <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
@@ -356,7 +528,6 @@ export default function LeaderboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* AVATAR COLORATO IN CLASSIFICA CON SUPPORTO IMMAGINI */}
                     <div 
                       className={`w-8 sm:w-10 h-8 sm:h-10 shrink-0 rounded-full flex items-center justify-center text-lg sm:text-xl shadow-inner overflow-hidden bg-gradient-to-br ${currentAvatar.color} border border-slate-800`}
                       title={currentAvatar.name}
@@ -372,7 +543,6 @@ export default function LeaderboardPage() {
                       <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>
                         {player.username}
                       </p>
-                      {/* AGGIUNTA DEI RISULTATI ESATTI SOTTO IL NOME */}
                       {(player.exact_matches || 0) > 0 && (
                         <p className="text-[9px] font-bold text-slate-500 mt-1 flex items-center gap-1">
                           <Target size={10} className="text-emerald-500" /> {player.exact_matches} esatt{player.exact_matches === 1 ? 'o' : 'i'}
@@ -416,6 +586,91 @@ export default function LeaderboardPage() {
           )}
         </div>
       </div>
+
+      {/* --- MODALE DETTAGLIO PUNTI UTENTE --- */}
+      {showDetailsModal && selectedPlayer && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[70vh] max-h-[600px] overflow-hidden">
+            
+            <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-4 shrink-0">
+              <div>
+                <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-lg truncate pr-2">
+                  {selectedPlayer.username}
+                </h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Storico Punti Partite</p>
+              </div>
+              <button 
+                onClick={() => setShowDetailsModal(false)} 
+                className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 space-y-2">
+              {loadingDetails ? (
+                 <div className="flex justify-center items-center h-full">
+                   <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
+                 </div>
+              ) : playerPredictions.length === 0 ? (
+                 <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">
+                   Nessuna partita giocata
+                 </p>
+              ) : (
+                 playerPredictions.map((pred, idx) => {
+                    const isPerfectMatch = pred.points === 10;
+                    const isZeroPoints = pred.points === 0;
+
+                    return (
+                      <div key={idx} className={`bg-slate-950 border rounded-xl p-3 flex flex-col gap-2 transition-colors ${isPerfectMatch ? 'border-emerald-500/30' : isZeroPoints ? 'border-slate-800/50 opacity-60' : 'border-slate-800'}`}>
+                         
+                         {/* Risultato Reale della Partita con Bandiere */}
+                         <div className="flex justify-between items-center text-xs font-black uppercase text-slate-300">
+                            
+                            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                               <span className="truncate text-right">{formatMatchName(pred.matches.home_team)}</span>
+                               {getTeamFlagCode(pred.matches.home_team) && (
+                                  <img src={`https://flagcdn.com/w20/${getTeamFlagCode(pred.matches.home_team)}.png`} className="w-4 h-3 object-cover rounded-sm shadow-sm shrink-0" alt="" />
+                               )}
+                            </div>
+                            
+                            <span className="px-2.5 py-0.5 text-white bg-slate-800 border border-slate-700 rounded mx-2 shadow-inner shrink-0">
+                              {pred.matches.home_score_final} - {pred.matches.away_score_final}
+                            </span>
+                            
+                            <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
+                               {getTeamFlagCode(pred.matches.away_team) && (
+                                  <img src={`https://flagcdn.com/w20/${getTeamFlagCode(pred.matches.away_team)}.png`} className="w-4 h-3 object-cover rounded-sm shadow-sm shrink-0" alt="" />
+                               )}
+                               <span className="truncate text-left">{formatMatchName(pred.matches.away_team)}</span>
+                            </div>
+
+                         </div>
+                         
+                         {/* Pronostico dell'Utente e Punti */}
+                         <div className={`flex justify-between items-center rounded-lg p-2 border ${isPerfectMatch ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-slate-900/50 border-slate-800/50'}`}>
+                            <div className="flex flex-col">
+                               <span className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Pronostico</span>
+                               <span className={`text-[11px] font-bold ${isPerfectMatch ? 'text-emerald-400' : 'text-slate-300'}`}>
+                                 {pred.home_score} - {pred.away_score}
+                               </span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                               <span className={`text-[8px] uppercase font-black tracking-widest ${isPerfectMatch ? 'text-emerald-500/70' : 'text-yellow-500/70'}`}>Punti</span>
+                               <span className={`text-xs font-black ${isPerfectMatch ? 'text-emerald-500' : isZeroPoints ? 'text-slate-500' : 'text-yellow-500'}`}>
+                                 +{pred.points}
+                               </span>
+                            </div>
+                         </div>
+                      </div>
+                    );
+                 })
+              )}
+            </div>
+            
+          </div>
+        </div>
+      )}
     </main>
   );
 }
