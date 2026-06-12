@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import OneSignal from 'react-onesignal'; // <-- 1. IMPORTATO ONESIGNAL
 import { useRouter, usePathname } from 'next/navigation';
 import { User, Trophy, Star, ListOrdered, Users, Gamepad2, Loader2 } from 'lucide-react';
 
@@ -119,17 +118,6 @@ export default function HomePage() {
               </p>
             </div>
           )}
-          
-          {/* 2. IL BOTTONE PER FORZARE LE NOTIFICHE (Inserito sotto i pulsanti principali) */}
-          <div className="w-full mt-6">
-            <button
-              onClick={() => OneSignal.Slidedown.promptPush()}
-              className="w-full py-3 bg-purple-900/30 border border-purple-500/30 text-purple-400 font-black rounded-xl uppercase tracking-widest text-[10px] hover:bg-purple-900/50 transition-all flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.15)]"
-            >
-              🔔 Attiva Notifiche Push
-            </button>
-          </div>
-          
         </div>
 
         {/* Info Extra */}
