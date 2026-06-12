@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import Navbar from './components/Navbar'; 
 import LiveBanner from './components/LiveBanner'; // <-- 1. IMPORTATO IL BANNER
 import { Toaster } from 'react-hot-toast'; 
+import OneSignalInit from './components/OneSignalInit'; // <-- AGGIUNTO L'IMPORT PER LE NOTIFICHE PUSH
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -59,6 +60,10 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className={`${inter.className} bg-slate-950 text-white`}>
+        
+        {/* IL NOSTRO AGENTE SEGRETO PER LE NOTIFICHE (Non si vede, ma c'è) */}
+        <OneSignalInit />
+
         {/* Configurazione dei messaggi a comparsa (Toast) */}
         <Toaster 
           position="top-center"
