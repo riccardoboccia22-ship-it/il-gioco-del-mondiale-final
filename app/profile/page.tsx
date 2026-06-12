@@ -42,16 +42,13 @@ const formatMatchName = (matchString: string) => {
 };
 
 const AVATARS = [
-  // --- PRO & CLASSICI ---
   { id: 'trainer', name: 'Il Mister', emoji: '🧢', color: 'from-blue-600 to-blue-400' },
   { id: 'wizard', name: 'Il Mago', emoji: '🪄', color: 'from-purple-600 to-purple-400' },
   { id: 'bomber', name: 'Il Bomber', emoji: '⚽', color: 'from-rose-600 to-rose-400' },
   { id: 'legend', name: 'Pallone d\'Oro', emoji: '🏆', color: 'from-yellow-600 to-yellow-400' },
   { id: 'ninja', name: 'Ninja', emoji: '🥷', color: 'from-zinc-800 to-zinc-600' },
   { id: 'clown', name: 'Clown', emoji: '🤡', color: 'from-red-500 to-sky-500' },
-  { id: 'pirate', name: 'Pirati', emoji: '🏴\u200d☠️', color: 'from-zinc-900 to-zinc-700' },
-
-  // --- ANIMALI ---
+  { id: 'pirate', name: 'Pirati', emoji: '💀', color: 'from-zinc-900 to-zinc-700' },
   { id: 'shark', name: 'Squalo', emoji: '🦈', color: 'from-sky-700 to-blue-900' },
   { id: 'lion', name: 'Leone', emoji: '🦁', color: 'from-amber-500 to-orange-600' },
   { id: 'bull', name: 'Toro', emoji: '🐂', color: 'from-red-700 to-orange-600' },
@@ -76,7 +73,7 @@ const AVATARS = [
   { id: 'monkey', name: 'Scimmia', emoji: '🐒', color: 'from-amber-600 to-yellow-800' },
   { id: 'owl', name: 'Gufo', emoji: '🦉', color: 'from-stone-600 to-stone-800' },
   { id: 'worm', name: 'Verme', emoji: '🪱', color: 'from-pink-500 to-rose-400' },
-  { id: 'scorpion', name: 'Scorpione', emoji: 'Scorpione', color: 'from-orange-700 to-red-800' },
+  { id: 'scorpion', name: 'Scorpione', emoji: '🦂', color: 'from-orange-700 to-red-800' },
   { id: 'zebra', name: 'Zebra', emoji: '🦓', color: 'from-zinc-200 to-zinc-500' },
   { id: 'mammoth', name: 'Mammut', emoji: '🦣', color: 'from-amber-800 to-stone-700' },
   { id: 'kangaroo', name: 'Canguro', emoji: '🦘', color: 'from-orange-400 to-amber-600' },
@@ -88,8 +85,6 @@ const AVATARS = [
   { id: 'parrot', name: 'Pappagallo', emoji: '🦜', color: 'from-red-400 to-green-500' },
   { id: 'dodo', name: 'Dodo', emoji: '🦤', color: 'from-stone-500 to-stone-700' },
   { id: 'moose', name: 'Alce', emoji: '𫎟', color: 'from-amber-700 to-stone-600' },
-
-  // --- FOOD & DRINKS ---
   { id: 'beer', name: 'Birra', emoji: '🍺', color: 'from-yellow-400 to-amber-500' },
   { id: 'mate', name: 'Mate', emoji: '🧉', color: 'from-green-700 to-emerald-500' },
   { id: 'cocktail', name: 'Cocktail', emoji: '🍹', color: 'from-rose-400 to-orange-400' },
@@ -98,8 +93,6 @@ const AVATARS = [
   { id: 'pepper', name: 'Peperoncino', emoji: '🌶️', color: 'from-red-500 to-red-700' },
   { id: 'pizza', name: 'Pizza', emoji: '🍕', color: 'from-red-400 to-amber-400' },
   { id: 'corn', name: 'Pannocchia', emoji: '🌽', color: 'from-yellow-300 to-green-500' },
-
-  // --- NATURA & MONDO ---
   { id: 'tree', name: 'Albero', emoji: '🌳', color: 'from-green-800 to-lime-600' },
   { id: 'palm', name: 'Palma', emoji: '🌴', color: 'from-yellow-600 to-emerald-500' },
   { id: 'ice', name: 'Ghiaccio', emoji: '🧊', color: 'from-cyan-300 to-blue-100' },
@@ -113,8 +106,6 @@ const AVATARS = [
   { id: 'comet', name: 'Cometa', emoji: '☄️', color: 'from-orange-400 to-red-600' },
   { id: 'wind', name: 'Vento', emoji: '🌬️', color: 'from-sky-200 to-blue-300' },
   { id: 'snowflake', name: 'Fiocco', emoji: '❄️', color: 'from-cyan-200 to-blue-400' },
-
-  // --- FANTASY & SCI-FI ---
   { id: 'alien', name: 'Alieno', emoji: '👽', color: 'from-green-400 to-lime-600' },
   { id: 'ghost', name: 'Fantasma', emoji: '👻', color: 'from-slate-100 to-slate-300' },
   { id: 'robot', name: 'Robot', emoji: '🤖', color: 'from-zinc-400 to-slate-500' },
@@ -123,8 +114,6 @@ const AVATARS = [
   { id: 'zombie', name: 'Zombie', emoji: '🧟‍♂️', color: 'from-teal-600 to-green-800' },
   { id: 'genie', name: 'Genio', emoji: '🧞‍♂️', color: 'from-blue-500 to-indigo-600' },
   { id: 'ufo', name: 'UFO', emoji: '🛸', color: 'from-indigo-500 to-purple-700' },
-
-  // --- MOTORI & VELOCITÀ ---
   { id: 'f1', name: 'Formula 1', emoji: '🏎️', color: 'from-red-600 to-red-400' },
   { id: 'moto', name: 'Moto', emoji: '🏍️', color: 'from-orange-500 to-amber-400' },
   { id: 'scooter', name: 'Scooter', emoji: '🛵', color: 'from-sky-500 to-blue-300' },
@@ -132,8 +121,6 @@ const AVATARS = [
   { id: 'roller', name: 'Roller', emoji: '🎢', color: 'from-indigo-600 to-purple-500' },
   { id: 'missile', name: 'Missile', emoji: '🚀', color: 'from-slate-200 to-orange-400' },
   { id: 'paragliding', name: 'Parapendio', emoji: '🪂', color: 'from-rose-500 to-orange-400' },
-
-  // --- OGGETTI & GAMING ---
   { id: 'diamond', name: 'Diamante', emoji: '💎', color: 'from-cyan-400 to-blue-500' },
   { id: 'boxing', name: 'Boxe', emoji: '🥊', color: 'from-red-600 to-red-400' },
   { id: 'bang', name: 'Bang', emoji: '💥', color: 'from-orange-500 to-yellow-400' },
@@ -155,8 +142,6 @@ const AVATARS = [
   { id: 'extinguisher', name: 'Estintore', emoji: '🧯', color: 'from-red-500 to-rose-700' },
   { id: 'magnet', name: 'Magnete', emoji: '🧲', color: 'from-red-500 to-zinc-400' },
   { id: 'tp', name: 'Carta Igienica', emoji: '🧻', color: 'from-slate-100 to-slate-300' },
-  
-  // --- COLORI PURI ---
   { id: 'white', name: 'Bianco', emoji: '⚪', color: 'from-slate-300 to-slate-100' },
   { id: 'black', name: 'Nero', emoji: '⚫', color: 'from-slate-900 to-slate-700' },
   { id: 'lightblue', name: 'Azzurro', emoji: '🩵', color: 'from-sky-500 to-sky-300' },
@@ -168,8 +153,6 @@ const AVATARS = [
   { id: 'orange', name: 'Arancione', emoji: '🟠', color: 'from-orange-500 to-orange-400' },
   { id: 'pink', name: 'Rosa', emoji: '🩷', color: 'from-pink-500 to-pink-300' },
   { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' },
-
-  // --- NAZIONALI MONDIALE 2026 ---
   { id: 'algeria', name: 'Algeria', flagCode: 'dz', color: 'from-green-600 to-green-500' },
   { id: 'arabia_saudita', name: 'Arabia Saudita', flagCode: 'sa', color: 'from-green-700 to-green-600' },
   { id: 'argentina', name: 'Argentina', flagCode: 'ar', color: 'from-sky-400 to-sky-200' },
@@ -445,21 +428,20 @@ export default function ProfilePage() {
                 <BarChart3 size={14} className="text-slate-500" />
               </div>
 
-              {/* Contatori Flash */}
+              {/* Contatori Flash con Emoji */}
               <div className="grid grid-cols-3 gap-3 text-center mb-4">
-                 {/* 🟥 CARTELLINO ROSSO CUSTOM (Tailwind HTML Card) */}
-                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                   <div className="w-3 h-4 bg-rose-600 rounded-[2px] mx-auto mb-1.5 shadow-[0_0_10px_rgba(225,29,72,0.6)]"></div>
+                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center">
+                   <span className="text-[14px] leading-none mb-1.5 drop-shadow-md">🟥</span>
                    <p className="text-[9px] text-slate-500 uppercase font-black">Rossi</p>
                    <p className="text-xl font-black text-white">{officialBonuses?.total_red_cards || 0}</p>
                  </div>
-                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                   <Goal size={14} className="text-blue-500 mx-auto mb-1" />
+                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center">
+                   <span className="text-[14px] leading-none mb-1.5 drop-shadow-md">🎯</span>
                    <p className="text-[9px] text-slate-500 uppercase font-black">Rigori</p>
                    <p className="text-xl font-black text-white">{officialBonuses?.total_penalties || 0}</p>
                  </div>
-                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                   <Target size={14} className="text-rose-500 mx-auto mb-1" />
+                 <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center">
+                   <span className="text-[14px] leading-none mb-1.5 drop-shadow-md">💥</span>
                    <p className="text-[9px] text-slate-500 uppercase font-black">Autogol</p>
                    <p className="text-xl font-black text-white">{officialBonuses?.total_own_goals || 0}</p>
                  </div>
@@ -485,7 +467,7 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {/* Contenitore Fisso Inline con Scorrimento Interno Bloccato */}
+              {/* Contenitore Fisso Inline Scorrevole */}
               <div className="bg-slate-950/40 border border-slate-800/80 p-3 rounded-2xl h-36 max-h-36 overflow-y-auto pr-1 custom-scrollbar mb-4">
                 {activeLiveTab === 'scorers' && (
                   <div className="space-y-1.5 animate-in fade-in duration-200">
