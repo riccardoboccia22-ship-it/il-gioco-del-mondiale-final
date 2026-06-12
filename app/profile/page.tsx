@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { 
-  BookOpen, X, Edit3, Shield, Map, Trophy, Award, 
-  ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, Zap, BarChart3, Search
+  BookOpen, X, Edit3, Shield, Map, Trophy, Award, ChevronDown, ChevronUp,
+  ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, BarChart3, Search
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -49,7 +49,7 @@ const AVATARS = [
   { id: 'legend', name: 'Pallone d\'Oro', emoji: '🏆', color: 'from-yellow-600 to-yellow-400' },
   { id: 'ninja', name: 'Ninja', emoji: '🥷', color: 'from-zinc-800 to-zinc-600' },
   { id: 'clown', name: 'Clown', emoji: '🤡', color: 'from-red-500 to-sky-500' },
-  { id: 'pirate', name: 'Pirati', emoji: '🏴‍☠️', color: 'from-zinc-900 to-zinc-700' },
+  { id: 'pirate', name: 'Pirati', emoji: '🏴\u200d☠️', color: 'from-zinc-900 to-zinc-700' },
 
   // --- ANIMALI ---
   { id: 'shark', name: 'Squalo', emoji: '🦈', color: 'from-sky-700 to-blue-900' },
@@ -76,7 +76,7 @@ const AVATARS = [
   { id: 'monkey', name: 'Scimmia', emoji: '🐒', color: 'from-amber-600 to-yellow-800' },
   { id: 'owl', name: 'Gufo', emoji: '🦉', color: 'from-stone-600 to-stone-800' },
   { id: 'worm', name: 'Verme', emoji: '🪱', color: 'from-pink-500 to-rose-400' },
-  { id: 'scorpion', name: 'Scorpione', emoji: '🦂', color: 'from-orange-700 to-red-800' },
+  { id: 'scorpion', name: 'Scorpione', emoji: 'Scorpione', color: 'from-orange-700 to-red-800' },
   { id: 'zebra', name: 'Zebra', emoji: '🦓', color: 'from-zinc-200 to-zinc-500' },
   { id: 'mammoth', name: 'Mammut', emoji: '🦣', color: 'from-amber-800 to-stone-700' },
   { id: 'kangaroo', name: 'Canguro', emoji: '🦘', color: 'from-orange-400 to-amber-600' },
@@ -235,18 +235,14 @@ export default function ProfilePage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   
-  const [showGroupsModal, setShowGroupsModal] = useState(false);
   const [showScorersModal, setShowScorersModal] = useState(false);
+  const [showFinalBonuses, setShowFinalBonuses] = useState(false);
+  const [activeLiveTab, setActiveLiveTab] = useState<'scorers' | 'groups'>('scorers');
 
   const [liveStats, setLiveStats] = useState<{ groupGoals: Record<string, number> }>({ groupGoals: {} });
 
   const [stats, setStats] = useState({
-    total: 0,
-    groups: 0,
-    bracket: 0,
-    bonus: 0,
-    rank: '--',
-    isPaid: false,
+    total: 0, groups: 0, bracket: 0, bonus: 0, rank: '--', isPaid: false,
   });
   
   const router = useRouter();
@@ -434,7 +430,7 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {/* 🏆 STATISTICHE LIVE: Rendering immediato senza controlli o ritardi di caricamento */}
+            {/* ⚡ PANNELLO STATISTICHE LIVE TORNEO */}
             <div className="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-md w-full animate-in fade-in duration-500 mt-4">
               <div className="flex items-center justify-between mb-4 border-b border-slate-800/50 pb-3">
                 <div className="flex items-center gap-2">
@@ -449,9 +445,11 @@ export default function ProfilePage() {
                 <BarChart3 size={14} className="text-slate-500" />
               </div>
 
+              {/* Contatori Flash */}
               <div className="grid grid-cols-3 gap-3 text-center mb-4">
+                 {/* 🟥 CARTELLINO ROSSO CUSTOM (Tailwind HTML Card) */}
                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                   <Zap size={14} className="text-emerald-500 mx-auto mb-1" />
+                   <div className="w-3 h-4 bg-rose-600 rounded-[2px] mx-auto mb-1.5 shadow-[0_0_10px_rgba(225,29,72,0.6)]"></div>
                    <p className="text-[9px] text-slate-500 uppercase font-black">Rossi</p>
                    <p className="text-xl font-black text-white">{officialBonuses?.total_red_cards || 0}</p>
                  </div>
@@ -467,52 +465,125 @@ export default function ProfilePage() {
                  </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: 'mvp_world_cup', label: 'MVP', icon: <Trophy size={12}/> },
-                    { key: 'top_scorer', label: 'Capocannoniere', icon: <Award size={12}/> },
-                    { key: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={12}/> },
-                    { key: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={12}/> },
-                    { key: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={12}/> },
-                    { key: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={12}/> },
-                  ].map((s) => {
-                    const myPick = userBonuses?.[s.key];
-                    const offStat = officialBonuses?.[s.key];
-                    const displayOff = offStat != null && String(offStat).trim() !== '' ? offStat : '--';
-                    const isMatch = myPick && offStat && String(myPick).toLowerCase().trim() === String(offStat).toLowerCase().trim();
-
-                    return (
-                      <div key={s.key} className={`bg-slate-950 border p-2.5 rounded-2xl flex flex-col justify-between transition-colors ${isMatch ? 'border-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.1)]' : 'border-slate-800/60'}`}>
-                        <div className={`flex items-center gap-1 mb-2 ${isMatch ? 'text-emerald-400' : 'text-slate-500'}`}>
-                          {s.icon} <span className="text-[8px] font-black uppercase tracking-wider truncate">{s.label}</span>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center border-b border-slate-800/50 pb-1 gap-1">
-                            <span className="text-[7px] text-slate-600 uppercase font-black shrink-0">Scelta</span>
-                            <span className="text-[9px] text-slate-300 font-bold truncate text-right">
-                              {myPick || '--'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center pt-0.5 gap-1">
-                            <span className="text-[7px] text-rose-500 uppercase font-black shrink-0">Reale</span>
-                            <span className={`text-[10px] font-black truncate text-right ${isMatch ? 'text-emerald-400' : 'text-white'}`}>
-                              {displayOff}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Selettori del Mini-Tab Inline */}
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/80 mb-3">
+                <button 
+                  onClick={() => setActiveLiveTab('scorers')}
+                  className={`flex-1 py-2 rounded-lg font-black text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                    activeLiveTab === 'scorers' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-sm' : 'text-slate-500 hover:text-slate-400'
+                  }`}
+                >
+                  <Award size={10}/> ⚽ Bomber
+                </button>
+                <button 
+                  onClick={() => setActiveLiveTab('groups')}
+                  className={`flex-1 py-2 rounded-lg font-black text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                    activeLiveTab === 'groups' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 shadow-sm' : 'text-slate-500 hover:text-slate-400'
+                  }`}
+                >
+                  <BarChart3 size={10}/> 📊 Gol Gironi
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <button onClick={() => setShowGroupsModal(true)} className="py-3 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-black rounded-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2 hover:bg-yellow-500/20 transition-all shadow-sm">
-                   <BarChart3 size={14}/> Gol Gironi
+              {/* Contenitore Fisso Inline con Scorrimento Interno Bloccato */}
+              <div className="bg-slate-950/40 border border-slate-800/80 p-3 rounded-2xl h-36 max-h-36 overflow-y-auto pr-1 custom-scrollbar mb-4">
+                {activeLiveTab === 'scorers' && (
+                  <div className="space-y-1.5 animate-in fade-in duration-200">
+                    {topScorers.length === 0 ? (
+                      <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun marcatore inserito</p>
+                    ) : (
+                      topScorers.map((scorer, idx) => {
+                        const rank = idx + 1;
+                        const rankColor = rank === 1 ? 'text-yellow-500' : rank === 2 ? 'text-slate-400' : rank === 3 ? 'text-amber-600' : 'text-slate-500';
+                        return (
+                          <div key={scorer.id} className="flex justify-between items-center text-[11px] py-1 border-b border-slate-900/40 last:border-0">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <span className={`font-black w-3.5 text-center shrink-0 ${rankColor}`}>{rank}</span>
+                              <img src={`https://flagcdn.com/w20/${scorer.team_code.toLowerCase()}.png`} className="w-4 h-3 object-cover rounded-sm shadow-sm shrink-0" alt="" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                              <span className="font-bold text-slate-300 truncate uppercase pr-1">{scorer.name}</span>
+                            </div>
+                            <span className="font-black text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10 shrink-0">{scorer.goals} Gol</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {activeLiveTab === 'groups' && (
+                  <div className="space-y-1.5 animate-in fade-in duration-200">
+                    {Object.entries(liveStats.groupGoals)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([groupName, goals], idx) => {
+                        const rank = idx + 1;
+                        const rankColor = rank === 1 ? 'text-yellow-500' : rank === 2 ? 'text-slate-400' : rank === 3 ? 'text-amber-600' : 'text-slate-500';
+                        return (
+                          <div key={groupName} className="flex justify-between items-center text-[11px] py-1 border-b border-slate-900/40 last:border-0">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <span className={`font-black w-3.5 text-center shrink-0 ${rankColor}`}>{rank}</span>
+                              <span className="font-bold text-slate-300 truncate uppercase">{groupName}</span>
+                            </div>
+                            <span className="font-black text-yellow-500 bg-yellow-500/5 px-2 py-0.5 rounded border border-yellow-500/10 shrink-0">{goals} Gol</span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Accordion dei Pronostici Futuri di Fine Torneo */}
+              <div className="border-t border-slate-800/80 pt-3">
+                <button 
+                  onClick={() => setShowFinalBonuses(!showFinalBonuses)}
+                  className="w-full py-2.5 px-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between hover:bg-slate-900 hover:border-slate-700 transition-colors"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <Trophy size={12} className="text-yellow-500"/> I Miei Pronostici di Fine Torneo
+                  </span>
+                  {showFinalBonuses ? <ChevronUp size={14} className="text-slate-500"/> : <ChevronDown size={14} className="text-slate-500"/>}
                 </button>
-                <button onClick={() => setShowScorersModal(true)} className="py-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-black rounded-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2 hover:bg-cyan-500/20 transition-all shadow-sm">
-                   <Award size={14}/> Top Marcatori
+
+                {showFinalBonuses && (
+                  <div className="grid grid-cols-2 gap-2 mt-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {[
+                      { key: 'mvp_world_cup', label: 'MVP', icon: <Trophy size={12}/> },
+                      { key: 'top_scorer', label: 'Capocannoniere', icon: <Award size={12}/> },
+                      { key: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={12}/> },
+                      { key: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={12}/> },
+                      { key: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={12}/> },
+                      { key: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={12}/> },
+                    ].map((s) => {
+                      const myPick = userBonuses?.[s.key];
+                      const offStat = officialBonuses?.[s.key];
+                      const displayOff = offStat != null && String(offStat).trim() !== '' ? offStat : '--';
+                      const isMatch = myPick && offStat && String(myPick).toLowerCase().trim() === String(offStat).toLowerCase().trim();
+
+                      return (
+                        <div key={s.key} className={`bg-slate-950 border p-2.5 rounded-2xl flex flex-col justify-between transition-colors ${isMatch ? 'border-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.1)]' : 'border-slate-800/60'}`}>
+                          <div className={`flex items-center gap-1 mb-2 ${isMatch ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {s.icon} <span className="text-[8px] font-black uppercase tracking-wider truncate">{s.label}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between items-center border-b border-slate-800/50 pb-1 gap-1">
+                              <span className="text-[7px] text-slate-600 uppercase font-black shrink-0">Scelta</span>
+                              <span className="text-[9px] text-slate-300 font-bold truncate text-right">{myPick || '--'}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-0.5 gap-1">
+                              <span className="text-[7px] text-rose-500 uppercase font-black shrink-0">Reale</span>
+                              <span className={`text-[10px] font-black truncate text-right ${isMatch ? 'text-emerald-400' : 'text-white'}`}>{displayOff}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Cerca Bomber Secondario */}
+              <div className="mt-4 pt-3 border-t border-slate-800/50">
+                <button onClick={() => setShowScorersModal(true)} className="w-full py-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-black rounded-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2 hover:bg-cyan-500/20 transition-all shadow-sm">
+                   <Search size={14}/> Cerca Bomber Nel Dettaglio
                 </button>
               </div>
             </div>
@@ -581,11 +652,7 @@ export default function ProfilePage() {
                 >
                   <div className={`w-12 h-12 rounded-full mb-1.5 flex items-center justify-center text-2xl bg-gradient-to-br overflow-hidden ${avatar.color}`}>
                     {avatar.flagCode ? (
-                       <img 
-                         src={`https://flagcdn.com/w80/${avatar.flagCode}.png`} 
-                         alt={avatar.name}
-                         className="w-full h-full object-cover"
-                       />
+                       <img src={`https://flagcdn.com/w80/${avatar.flagCode}.png`} alt={avatar.name} className="w-full h-full object-cover" />
                     ) : (
                        <span>{avatar.emoji}</span>
                     )}
@@ -600,45 +667,15 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* --- MODALE GOL PER GIRONE (BOTTOM SHEET) --- */}
-      {showGroupsModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[65vh] max-h-[520px] overflow-hidden">
-            <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-4 shrink-0">
-              <div>
-                <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-lg">Gol per Girone</h3>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Aggiornamento in tempo reale</p>
-              </div>
-              <button onClick={() => setShowGroupsModal(false)} className="bg-slate-950 p-2 rounded-full text-slate-500 hover:text-rose-500 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="space-y-2 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0">
-              {Object.entries(liveStats.groupGoals)
-                .sort((a,b) => b[1] - a[1])
-                .map(([g, pts], i) => (
-                <div key={g} className="flex justify-between items-center p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                  <span className="font-black text-xs uppercase text-slate-300">
-                    <span className="text-slate-600 mr-2">{i+1}.</span> {g}
-                  </span>
-                  <span className="font-black text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20">{pts} Gol</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODALE TOP MARCATORI SCROLLABILE (BOTTOM SHEET) --- */}
+      {/* --- MODALE SEARCH TOP MARCATORI (BOTTOM SHEET DETTAGLIATO) --- */}
       {showScorersModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[65vh] max-h-[520px] overflow-hidden">
             
             <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-4 shrink-0">
               <div>
-                <h3 className="text-cyan-400 font-black uppercase italic tracking-tighter text-lg">Top Marcatori</h3>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Classifica Ufficiale</p>
+                <h3 className="text-cyan-400 font-black uppercase italic tracking-tighter text-lg">Cerca Giocatore</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Classifica Completa</p>
               </div>
               <button 
                 onClick={() => { setShowScorersModal(false); setScorerSearch(''); }} 
@@ -654,7 +691,7 @@ export default function ProfilePage() {
               </div>
               <input
                 type="text"
-                placeholder="CERCA GIOCATORE..."
+                placeholder="DIGITA IL NOME..."
                 value={scorerSearch}
                 onChange={(e) => setScorerSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:border-cyan-400 outline-none text-white font-black text-xs uppercase tracking-wider placeholder:text-slate-600 transition-colors"
