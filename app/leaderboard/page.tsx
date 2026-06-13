@@ -15,7 +15,8 @@ import {
   Target,
   X,
   Gamepad2,
-  Star
+  Star,
+  Shield // <-- ECCO L'IMPORT MANCANTE!
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -294,7 +295,6 @@ export default function LeaderboardPage() {
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (!profile || !profile.full_name) { router.push('/setup-profilo'); return; }
 
-      // Fetch leaderboard and official solutions for detail comparison
       const [profRes, offBracketRes, offBonusRes] = await Promise.all([
         supabase.from('profiles').select('*'),
         supabase.from('official_bracket').select('*'),
@@ -340,7 +340,7 @@ export default function LeaderboardPage() {
   // --- FUNZIONE PER RECUPERARE TUTTI I DETTAGLI (PARTITE, TABELLONE E BONUS) ---
   const handlePlayerClick = async (player: any) => {
     setSelectedPlayer(player);
-    setDetailTab('MATCHES'); // Reset tab
+    setDetailTab('MATCHES'); 
     setShowDetailsModal(true);
     setLoadingDetails(true);
 
@@ -373,14 +373,12 @@ export default function LeaderboardPage() {
       const correctBrackets: any[] = [];
       bData?.forEach(b => {
          const uS = normalizeStage(b.stage);
-         // È corretto se la scelta è presente nell'officialBracket per quella precisa fase
          const isCorrect = officialBracket.some(ob => normalizeStage(ob.stage) === uS && cleanString(ob.team_name) === cleanString(b.team_name));
          if (isCorrect) {
             const pts = STAGE_POINTS[uS] || 0;
             correctBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: pts });
          }
       });
-      // Mostriamo prima le fasi che danno più punti (Campione > Finalista > ecc)
       setPlayerBrackets(correctBrackets.sort((a,b) => b.points - a.points));
 
       // 3. CARICAMENTO BONUS
