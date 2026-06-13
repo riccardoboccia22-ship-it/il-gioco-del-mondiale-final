@@ -16,7 +16,8 @@ import {
   X,
   Gamepad2,
   Star,
-  Shield // <-- ECCO L'IMPORT MANCANTE!
+  Shield,
+  Search // <-- Aggiunta icona per la ricerca
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -257,6 +258,9 @@ export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // STATO PER LA RICERCA
+  const [searchQuery, setSearchQuery] = useState('');
+
   // --- STATI PER LA MODALE DETTAGLI PUNTI ---
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -359,7 +363,7 @@ export default function LeaderboardPage() {
             if (!mData) return null; 
             const pts = pred.points || pred.punti || calculateMatchPoints(pred.home_score, pred.away_score, mData.home_score_final, mData.away_score_final);
             return { home_score: pred.home_score, away_score: pred.away_score, points: pts, matches: mData };
-          }).filter(item => item !== null && item.points > 0).sort((a: any, b: any) => {
+          }).filter(item => item !== null).sort((a: any, b: any) => { // <-- RIMOSSO FILTRO > 0
             const dateA = a.matches.date || a.matches.match_date || a.matches.id;
             const dateB = b.matches.date || b.matches.match_date || b.matches.id;
             return dateA < dateB ? -1 : 1;
@@ -427,6 +431,12 @@ export default function LeaderboardPage() {
     return <ChevronDown className="text-rose-500" size={16} strokeWidth={3} />;
   };
 
+  // Applico il filtro di ricerca alla classifica
+  const filteredLeaderboard = leaderboard.filter(player => 
+    player.username?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    player.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading)
     return (
       <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center space-y-4">
@@ -437,7 +447,7 @@ export default function LeaderboardPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans">
-      <header className="text-center mb-12 mt-6">
+      <header className="text-center mb-10 mt-6">
         <h1 className="text-5xl font-black text-yellow-500 uppercase italic tracking-tighter drop-shadow-md">Classifica</h1>
         <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] mt-2 flex items-center justify-center gap-2">
           <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
@@ -446,6 +456,21 @@ export default function LeaderboardPage() {
       </header>
 
       <div className="max-w-3xl mx-auto">
+        
+        {/* BARRA DI RICERCA UTENTI */}
+        <div className="relative mb-6">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+            <Search className="text-slate-500" size={18} />
+          </div>
+          <input
+            type="text"
+            placeholder="Cerca giocatore..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm font-black uppercase text-white placeholder-slate-600 outline-none focus:border-yellow-500 transition-colors shadow-inner"
+          />
+        </div>
+
         <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic border-b border-slate-800/50 pb-2">
           <div className="flex-1 pl-14 sm:pl-16">Giocatore</div>
           <div className="flex gap-3 sm:gap-6 md:gap-10 pr-2">
@@ -457,7 +482,7 @@ export default function LeaderboardPage() {
         </div>
 
         <div className="space-y-3">
-          {leaderboard.map((player) => {
+          {filteredLeaderboard.map((player) => {
             const currentRank = Number(player.ranking);
             const isPodium = currentRank === 1;
             const currentAvatar = AVATARS.find(a => a.id === player.avatar_id) || AVATARS[0];
@@ -489,8 +514,8 @@ export default function LeaderboardPage() {
             );
           })}
 
-          {leaderboard.length === 0 && !loading && (
-            <div className="text-center py-12"><Trophy className="mx-auto w-12 h-12 text-slate-800 mb-3" /><p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nessun giocatore in classifica</p></div>
+          {filteredLeaderboard.length === 0 && !loading && (
+            <div className="text-center py-12"><Trophy className="mx-auto w-12 h-12 text-slate-800 mb-3" /><p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nessun giocatore trovato</p></div>
           )}
         </div>
       </div>
@@ -533,12 +558,14 @@ export default function LeaderboardPage() {
                    {/* TAB PARTITE GIRONI */}
                    {detailTab === 'MATCHES' && (
                      playerPredictions.length === 0 ? (
-                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun punto registrato sui Gironi</p>
+                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun pronostico inserito</p>
                      ) : (
                        playerPredictions.map((pred, idx) => {
                           const isPerfectMatch = pred.points === 10;
+                          const isZeroPoints = pred.points === 0;
+                          
                           return (
-                            <div key={idx} className={`bg-slate-950 border rounded-xl p-3 flex flex-col gap-2 transition-colors ${isPerfectMatch ? 'border-emerald-500/30' : 'border-slate-800'}`}>
+                            <div key={idx} className={`bg-slate-950 border rounded-xl p-3 flex flex-col gap-2 transition-colors ${isPerfectMatch ? 'border-emerald-500/30' : isZeroPoints ? 'border-slate-800/50 opacity-60' : 'border-slate-800'}`}>
                                <div className="flex justify-between items-center text-xs font-black uppercase text-slate-300">
                                   <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                                      <span className="truncate text-right">{formatMatchName(pred.matches.home_team)}</span>
@@ -553,11 +580,11 @@ export default function LeaderboardPage() {
                                <div className={`flex justify-between items-center rounded-lg p-2 border ${isPerfectMatch ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-slate-900/50 border-slate-800/50'}`}>
                                   <div className="flex flex-col">
                                      <span className="text-[8px] text-slate-500 uppercase font-black tracking-widest">Pronostico</span>
-                                     <span className={`text-[11px] font-bold ${isPerfectMatch ? 'text-emerald-400' : 'text-slate-300'}`}>{pred.home_score} - {pred.away_score}</span>
+                                     <span className={`text-[11px] font-bold ${isPerfectMatch ? 'text-emerald-400' : isZeroPoints ? 'text-slate-500 line-through decoration-rose-500/50' : 'text-slate-300'}`}>{pred.home_score} - {pred.away_score}</span>
                                   </div>
                                   <div className="flex flex-col items-end">
                                      <span className={`text-[8px] uppercase font-black tracking-widest ${isPerfectMatch ? 'text-emerald-500/70' : 'text-yellow-500/70'}`}>Punti</span>
-                                     <span className={`text-xs font-black ${isPerfectMatch ? 'text-emerald-500' : 'text-yellow-500'}`}>+{pred.points}</span>
+                                     <span className={`text-xs font-black ${isPerfectMatch ? 'text-emerald-500' : isZeroPoints ? 'text-slate-600' : 'text-yellow-500'}`}>+{pred.points}</span>
                                   </div>
                                </div>
                             </div>
