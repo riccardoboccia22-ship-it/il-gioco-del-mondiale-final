@@ -22,6 +22,32 @@ const STAGES = [
   { id: 'WINNER', label: 'Vincitore Mondiale (+20pt)', pts: 20 },
 ];
 
+const BRACKET_SLOTS: Record<string, { dbString: string, label: string }[]> = {
+  R32: [
+    { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore (Slot 1)' },
+    { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' },
+    { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore (Slot 2)' },
+    { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' },
+    { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore (Slot 3)' },
+    { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' },
+    { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore (Slot 4)' },
+    { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' },
+    { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore (Slot 5)' },
+    { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' },
+    { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore (Slot 6)' },
+    { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' },
+    { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore (Slot 7)' },
+    { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' },
+    { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore (Slot 8)' },
+    { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' },
+  ],
+  R16: Array.from({length: 16}, (_, i) => ({ dbString: `R16_OTTAVI_V${i+1}`, label: `Vincitrice Sedicesimi ${i+1}` })),
+  QF: Array.from({length: 8}, (_, i) => ({ dbString: `QF_QUARTI_V${i+1}`, label: `Vincitrice Ottavi ${i+1}` })),
+  SF: Array.from({length: 4}, (_, i) => ({ dbString: `SF_SEMIFINALI_V${i+1}`, label: `Vincitrice Quarti ${i+1}` })),
+  F: [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ],
+  WINNER: [ { dbString: 'WINNER_VINCITORE_1', label: 'Campione del Mondo' } ]
+};
+
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
 
 const TEAMS_2026 = [
@@ -90,14 +116,15 @@ const getEmoji = (team: string) => {
     return flagEmojiMap[team.toLowerCase().trim()] || '';
 };
 
+// Funzione Magica per decodificare le stringhe salvate nel DB
 const normalizeStage = (s: string) => {
   const u = s?.toUpperCase().trim() || '';
-  if (u.includes('SEDICESIM') || u === 'R32') return 'R32';
-  if (u.includes('OTTAV') || u === 'R16') return 'R16';
-  if (u.includes('QUART') || u === 'QF') return 'QF';
-  if (u.includes('SEMIFINAL') || u === 'SF') return 'SF';
-  if (u.includes('VINCITOR') || u.includes('CAMPIONE') || u === 'WINNER') return 'WINNER';
-  if (u.includes('FINAL') || u === 'F') return 'F';
+  if (u.includes('SEDICESIM') || u.includes('R32')) return 'R32';
+  if (u.includes('OTTAV') || u.includes('R16')) return 'R16';
+  if (u.includes('QUART') || u.includes('QF')) return 'QF';
+  if (u.includes('SEMIFINAL') || u.includes('SF')) return 'SF';
+  if (u.includes('VINCITOR') || u.includes('CAMPIONE') || u.includes('WINNER')) return 'WINNER';
+  if (u.includes('FINAL') || u === 'F' || u.includes('F_')) return 'F';
   return u;
 };
 
@@ -270,6 +297,11 @@ export default function AdminPage() {
   const [newScorerName, setNewScorerName] = useState('');
   const [newScorerTeam, setNewScorerTeam] = useState('');
 
+  // Nuovi stati per il tabellone
+  const [qTeam, setQTeam] = useState('');
+  const [qStage, setQStage] = useState('R32');
+  const [qSlot, setQSlot] = useState(BRACKET_SLOTS['R32'][0].dbString);
+
   const [bonusData, setBonusData] = useState({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
@@ -426,10 +458,14 @@ export default function AdminPage() {
             const ph = Number(pred.home_score), pa = Number(pred.away_score);
             const mh = Number(m.home_score_final), ma = Number(m.away_score_final);
             const pR = ph > pa ? '1' : ph < pa ? '2' : 'X', mR = mh > ma ? '1' : mh < ma ? '2' : 'X';
+            
+            const sMatch = pR === mR;
+            const gMatch = ph === mh || pa === ma;
+
             if (ph === mh && pa === ma) { pG += 10; pEx += 1; }
-            else if (pR === mR && (ph === mh || pa === ma)) pG += 6;
-            else if (pR === mR) pG += 4;
-            else if (ph === mh || pa === ma) pG += 2;
+            else if (sMatch && gMatch) pG += 6;
+            else if (sMatch && !gMatch) pG += 4;
+            else if (!sMatch && gMatch) pG += 2;
           }
         });
 
@@ -562,9 +598,26 @@ export default function AdminPage() {
     } 
   };
 
+  // Nuova Funzione Salvataggio Tabellone (Salva lo SLOT ESATTO)
   const saveQualif = async () => {
-    const t = (document.getElementById('q_team') as HTMLSelectElement).value, s = (document.getElementById('q_stage') as HTMLSelectElement).value;
-    if (t && s) { const { error } = await supabase.from('official_bracket').insert([{ stage: s, team_name: t }]); if (!error) { toast.success('Tabellone aggiornato!'); await syncLeaderboard(false); } }
+    if (qTeam && qStage && qSlot) { 
+      // Controlliamo se in quello slot c'è già una squadra
+      const existing = officialBracket.find(ob => ob.stage === qSlot);
+      if (existing) {
+         toast.error('Questo slot è già occupato! Rimuovi prima la squadra attuale.');
+         return;
+      }
+      
+      const { error } = await supabase.from('official_bracket').insert([{ stage: qSlot, team_name: qTeam }]); 
+      if (!error) { 
+        toast.success('Tabellone aggiornato!'); 
+        await syncLeaderboard(false); 
+      } else {
+        toast.error('Errore nel salvataggio');
+      }
+    } else {
+      toast.error('Seleziona Squadra, Fase e Slot!');
+    }
   };
 
   const deleteQualif = async (id: any) => { 
@@ -618,7 +671,7 @@ export default function AdminPage() {
   };
 
   const getWinnerStats = () => {
-    const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
+    const winners = allBrackets.filter(b => normalizeStage(b.stage) === 'WINNER' && b.team_name);
     const total = winners.length;
     if (total === 0) return [];
     const counts: any = {};
@@ -1289,16 +1342,59 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-blue-500">
           <button onClick={() => setOpenSection({ ...openSection, tabellone: !openSection.tabellone })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Trophy className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Fase Finale</h2></div>
             {openSection.tabellone ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.tabellone && (
-            <div className="p-5 space-y-5 bg-slate-950/30">
-              <div className="space-y-3"><select id="q_team" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-blue-500 appearance-none"><option value="">SQUADRA...</option>{TEAMS_2026.map(t => (<option key={t} value={t}>{t}</option>))}</select><select id="q_stage" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-blue-500 appearance-none">{STAGES.map(s => (<option key={s.id} value={s.id}>{s.label}</option>))}</select></div>
-              <button onClick={saveQualif} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">CONFERMA</button>
-              <div className="space-y-4 pt-4">{STAGES.map(stg => { const items = officialBracket.filter(o => normalizeStage(o.stage) === stg.id); if (items.length === 0) return null; return (<div key={stg.id} className="bg-slate-900 border border-slate-800/50 p-4 rounded-3xl"><h3 className="text-[10px] font-black text-blue-500 uppercase mb-3 border-b border-slate-800/50 pb-2 tracking-[0.2em]">{stg.label}</h3><div className="flex flex-wrap gap-2">{items.map(o => (<div key={o.id} className="bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl flex items-center gap-3"><span className="text-[10px] font-black uppercase italic text-white">{o.team_name}</span><button onClick={() => deleteQualif(o.id)} className="text-rose-500 p-1"><X size={14} /></button></div>))}</div></div>); })}</div>
+            <div className="p-5 space-y-6 bg-slate-950/30">
+              
+              <div className="bg-blue-950/20 border border-blue-900/30 p-4 rounded-2xl flex flex-col gap-3">
+                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">Inserimento Ufficiale</p>
+                 <select value={qTeam} onChange={e => setQTeam(e.target.value)} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-xs text-white uppercase outline-none focus:border-blue-500">
+                    <option value="">1. SCEGLI SQUADRA...</option>
+                    {TEAMS_2026.map(t => (<option key={t} value={t}>{t}</option>))}
+                 </select>
+                 <select value={qStage} onChange={e => { setQStage(e.target.value); setQSlot(BRACKET_SLOTS[e.target.value][0].dbString); }} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-xs text-white uppercase outline-none focus:border-blue-500">
+                    {STAGES.map(s => (<option key={s.id} value={s.id}>{s.label}</option>))}
+                 </select>
+                 <select value={qSlot} onChange={e => setQSlot(e.target.value)} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-xs text-white uppercase outline-none focus:border-blue-500 text-center">
+                    {BRACKET_SLOTS[qStage].map(slot => (<option key={slot.dbString} value={slot.dbString}>{slot.label}</option>))}
+                 </select>
+                 <button onClick={saveQualif} className="w-full bg-blue-600 hover:bg-blue-500 py-4 mt-2 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
+                    INSERISCI NEL TABELLONE
+                 </button>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                 {STAGES.map(stg => { 
+                    const items = officialBracket.filter(o => o.stage.includes(stg.id + '_')); 
+                    if (items.length === 0) return null; 
+                    
+                    return (
+                      <div key={stg.id} className="bg-slate-900 border border-slate-800/50 p-4 rounded-3xl">
+                         <h3 className="text-[10px] font-black text-blue-500 uppercase mb-3 border-b border-slate-800/50 pb-2 tracking-[0.2em]">{stg.label}</h3>
+                         <div className="flex flex-col gap-2">
+                            {items.map(o => {
+                               const slotLabel = BRACKET_SLOTS[stg.id].find(s => s.dbString === o.stage)?.label || 'Slot';
+                               return (
+                                 <div key={o.id} className="bg-slate-950 border border-slate-800 px-4 py-3 rounded-xl flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                       <span className="text-[11px] font-black uppercase text-white">{o.team_name}</span>
+                                       <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Slot: {slotLabel}</span>
+                                    </div>
+                                    <button onClick={() => deleteQualif(o.id)} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500 hover:text-white transition-colors">
+                                       <Trash2 size={14} />
+                                    </button>
+                                 </div>
+                               )
+                            })}
+                         </div>
+                      </div>
+                    ); 
+                 })}
+              </div>
             </div>
           )}
         </section>

@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
-import { Shield, ArrowLeft, Loader2 } from 'lucide-react';
+import { Shield, ArrowLeft, Loader2, Trophy, LayoutGrid } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -35,6 +35,70 @@ const tournamentGroups = [
   { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
 ];
 
+const BRACKET_ROUNDS = [
+  { id: 'R32', title: 'Sedicesimi', matches: 16 },
+  { id: 'R16', title: 'Ottavi', matches: 8 },
+  { id: 'QF', title: 'Quarti', matches: 4 },
+  { id: 'SF', title: 'Semifinali', matches: 2 },
+  { id: 'F', title: 'Finale', matches: 1 }
+];
+
+// GLI ACCOPPIAMENTI UFFICIALI (SEGNAPOSTI)
+const BRACKET_PLACEHOLDERS: Record<string, string[][]> = {
+  R32: [
+    ['1° Gruppo A', '3° Migliore'],
+    ['2° Gruppo B', '2° Gruppo C'],
+    ['1° Gruppo D', '3° Migliore'],
+    ['1° Gruppo F', '2° Gruppo H'],
+    ['1° Gruppo E', '3° Migliore'],
+    ['2° Gruppo A', '2° Gruppo G'],
+    ['1° Gruppo I', '3° Migliore'],
+    ['2° Gruppo D', '2° Gruppo F'],
+    ['1° Gruppo B', '3° Migliore'],
+    ['2° Gruppo K', '2° Gruppo L'],
+    ['1° Gruppo C', '3° Migliore'],
+    ['1° Gruppo J', '2° Gruppo I'],
+    ['1° Gruppo G', '3° Migliore'],
+    ['2° Gruppo E', '2° Gruppo J'],
+    ['1° Gruppo H', '3° Migliore'],
+    ['1° Gruppo K', '1° Gruppo L']
+  ],
+  R16: [
+    ['Vinc. Sedicesimi 1', 'Vinc. Sedicesimi 2'],
+    ['Vinc. Sedicesimi 3', 'Vinc. Sedicesimi 4'],
+    ['Vinc. Sedicesimi 5', 'Vinc. Sedicesimi 6'],
+    ['Vinc. Sedicesimi 7', 'Vinc. Sedicesimi 8'],
+    ['Vinc. Sedicesimi 9', 'Vinc. Sedicesimi 10'],
+    ['Vinc. Sedicesimi 11', 'Vinc. Sedicesimi 12'],
+    ['Vinc. Sedicesimi 13', 'Vinc. Sedicesimi 14'],
+    ['Vinc. Sedicesimi 15', 'Vinc. Sedicesimi 16']
+  ],
+  QF: [
+    ['Vinc. Ottavi 1', 'Vinc. Ottavi 2'],
+    ['Vinc. Ottavi 3', 'Vinc. Ottavi 4'],
+    ['Vinc. Ottavi 5', 'Vinc. Ottavi 6'],
+    ['Vinc. Ottavi 7', 'Vinc. Ottavi 8']
+  ],
+  SF: [
+    ['Vinc. Quarti 1', 'Vinc. Quarti 2'],
+    ['Vinc. Quarti 3', 'Vinc. Quarti 4']
+  ],
+  F: [
+    ['Vinc. Semifinale 1', 'Vinc. Semifinale 2']
+  ]
+};
+
+const normalizeStage = (s: string) => {
+  const u = s?.toUpperCase().trim() || '';
+  if (u.includes('SEDICESIM') || u === 'R32') return 'R32';
+  if (u.includes('OTTAV') || u === 'R16') return 'R16';
+  if (u.includes('QUART') || u === 'QF') return 'QF';
+  if (u.includes('SEMIFINAL') || u === 'SF') return 'SF';
+  if (u.includes('VINCITOR') || u.includes('CAMPIONE') || u === 'WINNER') return 'WINNER';
+  if (u.includes('FINAL') || u === 'F') return 'F';
+  return u;
+};
+
 // Funzione robusta per accorciare i nomi lunghi
 const formatTeamName = (teamName: string) => {
   if (!teamName) return '';
@@ -64,35 +128,38 @@ const normalizeName = (name: string) => {
 
 export default function GroupsPage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET'>('GIRONI');
+  
   const [matches, setMatches] = useState<any[]>([]);
+  const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Recupera i risultati reali delle partite dal DB
+  // Recupera i risultati delle partite e il tabellone ufficiale dal DB
   useEffect(() => {
-    const fetchMatches = async () => {
-      const { data, error } = await supabase.from('matches').select('*');
-      if (data && !error) {
-        setMatches(data);
-      }
+    const fetchData = async () => {
+      const [matchesRes, bracketRes] = await Promise.all([
+        supabase.from('matches').select('*'),
+        supabase.from('official_bracket').select('*')
+      ]);
+      
+      if (matchesRes.data) setMatches(matchesRes.data);
+      if (bracketRes.data) setOfficialBracket(bracketRes.data);
+      
       setLoading(false);
     };
-    fetchMatches();
+    fetchData();
   }, []);
 
   // Calcola Classifiche in tempo reale in base alle partite terminate
   const standings = useMemo(() => {
     const stdMap: Record<string, any[]> = {};
 
-    // Inizializza tutti a zero
     tournamentGroups.forEach(group => {
       stdMap[group.name] = group.teams.map(team => ({
-        name: team,
-        played: 0, won: 0, draw: 0, lost: 0,
-        gf: 0, ga: 0, gd: 0, pts: 0
+        name: team, played: 0, won: 0, draw: 0, lost: 0, gf: 0, ga: 0, gd: 0, pts: 0
       }));
     });
 
-    // Se ci sono partite, somma i punti
     matches.forEach(m => {
       if (!m.is_finished || m.home_score_final === null || m.away_score_final === null) return;
 
@@ -134,28 +201,71 @@ export default function GroupsPage() {
       }
     });
 
-    // Ordina le squadre in ogni girone
     Object.keys(stdMap).forEach(groupName => {
       stdMap[groupName].sort((a, b) => {
-        if (b.pts !== a.pts) return b.pts - a.pts; // 1. Punti
-        if (b.gd !== a.gd) return b.gd - a.gd;     // 2. Differenza Reti
-        if (b.gf !== a.gf) return b.gf - a.gf;     // 3. Gol Fatti
-        return a.name.localeCompare(b.name);       // 4. Alfabetico
+        if (b.pts !== a.pts) return b.pts - a.pts; 
+        if (b.gd !== a.gd) return b.gd - a.gd;     
+        if (b.gf !== a.gf) return b.gf - a.gf;     
+        return a.name.localeCompare(b.name);       
       });
     });
 
     return stdMap;
   }, [matches]);
 
+  // Calcola le Migliori 8 Terze Live!
+  const bestThirds = useMemo(() => {
+    const thirds: any[] = [];
+    Object.keys(standings).forEach(groupName => {
+      if (standings[groupName].length >= 3) {
+        thirds.push({ ...standings[groupName][2], group: groupName });
+      }
+    });
+
+    thirds.sort((a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      if (b.gd !== a.gd) return b.gd - a.gd;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      return a.name.localeCompare(b.name);
+    });
+
+    return thirds;
+  }, [standings]);
+
   const getFlagCode = (team: string) => {
     return flagMap[team?.toLowerCase().trim()];
+  };
+
+  // --- MOTORE DEL BRACKET ---
+  // Unisce le squadre inserite dall'Admin con i Segnaposti Ufficiali
+  const getTeamsForStage = (stageId: string, totalTeams: number) => {
+    const teams = officialBracket.filter(o => normalizeStage(o.stage) === stageId).map(o => o.team_name);
+    const pairs = [];
+    let teamIndex = 0;
+    
+    const placeholders = BRACKET_PLACEHOLDERS[stageId] || [];
+    
+    for (let i = 0; i < totalTeams / 2; i++) {
+       const p1 = placeholders[i]?.[0] || 'TBD';
+       const p2 = placeholders[i]?.[1] || 'TBD';
+       
+       const t1 = teams[teamIndex] || null;
+       const t2 = teams[teamIndex + 1] || null;
+       
+       pairs.push([
+         { name: t1, placeholder: p1 }, 
+         { name: t2, placeholder: p2 }
+       ]);
+       teamIndex += 2;
+    }
+    return pairs;
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-12 h-12 text-yellow-500 animate-spin mb-4" />
-        <p className="text-yellow-500 font-black uppercase text-sm tracking-widest animate-pulse">Caricamento Gironi...</p>
+        <p className="text-yellow-500 font-black uppercase text-sm tracking-widest animate-pulse">Caricamento Torneo...</p>
       </div>
     );
   }
@@ -164,7 +274,6 @@ export default function GroupsPage() {
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         
-        {/* Tasto Torna Indietro */}
         <div className="mt-4 mb-2 flex justify-start">
           <button 
             onClick={() => router.back()} 
@@ -174,91 +283,211 @@ export default function GroupsPage() {
           </button>
         </div>
 
-        {/* Intestazione */}
-        <header className="text-center mb-10 mt-4 relative">
+        <header className="text-center mb-8 mt-4 relative">
           <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 mb-2 uppercase tracking-tighter italic drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">
-            I Gironi
+            World Cup Live
           </h1>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em]">
-            Classifiche Ufficiali World Cup 2026
+            Dati Ufficiali del Torneo
           </p>
+
+          <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mt-6 max-w-[400px] mx-auto overflow-hidden">
+            <button 
+              onClick={() => setActiveTab('GIRONI')} 
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'GIRONI' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-500 hover:text-white'}`}
+            >
+              <LayoutGrid size={16} /> Gironi
+            </button>
+            <button 
+              onClick={() => setActiveTab('BRACKET')} 
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${activeTab === 'BRACKET' ? 'bg-blue-500 text-slate-950 shadow-md' : 'text-slate-500 hover:text-white'}`}
+            >
+              <Trophy size={16} /> Fase Finale
+            </button>
+          </div>
         </header>
 
-        {/* Griglia dei Gironi */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {tournamentGroups.map((group) => (
-            <div 
-              key={group.name} 
-              className="bg-slate-900/40 backdrop-blur-sm border border-slate-800 rounded-[2rem] overflow-hidden shadow-2xl hover:border-yellow-500/30 transition-all group"
-            >
-              {/* Nome del Girone */}
-              <div className="bg-slate-800/40 p-4 border-b border-slate-800/50 text-center">
-                <h2 className="text-xl font-black text-white group-hover:text-yellow-500 transition-colors italic tracking-tight">
-                  {group.name}
-                </h2>
-              </div>
-              
-              {/* Tabella Classifica */}
-              <div className="p-3 sm:p-4 overflow-x-auto">
-                <table className="w-full min-w-[280px] text-left border-collapse">
-                  <thead>
-                    <tr className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 border-b border-slate-800">
-                      <th className="pb-2 font-black pl-2">Squadra</th>
-                      <th className="pb-2 font-black text-center w-6" title="Giocate">G</th>
-                      <th className="pb-2 font-black text-center w-6" title="Vinte">V</th>
-                      <th className="pb-2 font-black text-center w-6" title="Pareggiate">N</th>
-                      <th className="pb-2 font-black text-center w-6" title="Perse">P</th>
-                      <th className="pb-2 font-black text-center w-6" title="Gol Fatti">GF</th>
-                      <th className="pb-2 font-black text-center w-6" title="Gol Subiti">GS</th>
-                      <th className="pb-2 font-black text-center w-6" title="Differenza Reti">DR</th>
-                      <th className="pb-2 font-black text-center w-8 text-yellow-500 text-[10px]" title="Punti">PT</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {standings[group.name]?.map((teamData, index) => {
-                      const flagCode = getFlagCode(teamData.name);
-                      // In un mondiale a 48 squadre le prime 2 si qualificano, più le 8 migliori terze. 
-                      // Per ora evidenziamo le prime due in verde.
-                      const isTopTwo = index < 2; 
-                      
-                      return (
-                        <tr key={teamData.name} className="border-b border-slate-800/20 hover:bg-slate-800/40 transition-colors">
-                          <td className="py-2.5 pl-2 flex items-center gap-2">
-                            <span className={`w-3 flex justify-center text-[10px] font-black ${isTopTwo ? 'text-emerald-500' : 'text-slate-600'}`}>
-                              {index + 1}
-                            </span>
-                            <div className="w-6 h-4 bg-slate-800 rounded-[2px] overflow-hidden shrink-0 shadow-sm relative border border-slate-700/50 flex items-center justify-center">
-                              {flagCode ? (
-                                <img src={`https://flagcdn.com/w40/${flagCode}.png`} alt={teamData.name} className="w-full h-full object-cover" />
+        {/* --- SCHEDA GIRONI E CLASSIFICHE --- */}
+        {activeTab === 'GIRONI' && (
+          <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {tournamentGroups.map((group) => (
+                <div key={group.name} className="bg-slate-900/40 backdrop-blur-sm border border-slate-800 rounded-[2rem] overflow-hidden shadow-2xl hover:border-yellow-500/30 transition-all group">
+                  <div className="bg-slate-800/40 p-4 border-b border-slate-800/50 text-center">
+                    <h2 className="text-xl font-black text-white group-hover:text-yellow-500 transition-colors italic tracking-tight">{group.name}</h2>
+                  </div>
+                  <div className="p-3 sm:p-4 overflow-x-auto">
+                    <table className="w-full min-w-[280px] text-left border-collapse">
+                      <thead>
+                        <tr className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 border-b border-slate-800">
+                          <th className="pb-2 font-black pl-2">Squadra</th>
+                          <th className="pb-2 font-black text-center w-6">G</th>
+                          <th className="pb-2 font-black text-center w-6">V</th>
+                          <th className="pb-2 font-black text-center w-6">N</th>
+                          <th className="pb-2 font-black text-center w-6">P</th>
+                          <th className="pb-2 font-black text-center w-6">GF</th>
+                          <th className="pb-2 font-black text-center w-6">GS</th>
+                          <th className="pb-2 font-black text-center w-6">DR</th>
+                          <th className="pb-2 font-black text-center w-8 text-yellow-500 text-[10px]">PT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {standings[group.name]?.map((teamData, index) => {
+                          const flagCode = getFlagCode(teamData.name);
+                          const isTopTwo = index < 2; 
+                          
+                          return (
+                            <tr key={teamData.name} className="border-b border-slate-800/20 hover:bg-slate-800/40 transition-colors">
+                              <td className="py-2.5 pl-2 flex items-center gap-2">
+                                <span className={`w-3 flex justify-center text-[10px] font-black ${isTopTwo ? 'text-emerald-500' : 'text-slate-600'}`}>{index + 1}</span>
+                                <div className="w-6 h-4 bg-slate-800 rounded-[2px] overflow-hidden shrink-0 shadow-sm relative border border-slate-700/50 flex items-center justify-center">
+                                  {flagCode ? <img src={`https://flagcdn.com/w40/${flagCode}.png`} alt={teamData.name} className="w-full h-full object-cover" /> : <Shield size={10} className="text-slate-500" />}
+                                </div>
+                                <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-tight truncate w-full max-w-[80px] sm:max-w-[110px] ${isTopTwo ? 'text-white' : 'text-slate-300'}`}>
+                                  {formatTeamName(teamData.name)}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-center text-[10px] text-slate-400 font-medium">{teamData.played}</td>
+                              <td className="py-2.5 text-center text-[10px] text-emerald-500/70 font-medium">{teamData.won}</td>
+                              <td className="py-2.5 text-center text-[10px] text-slate-500 font-medium">{teamData.draw}</td>
+                              <td className="py-2.5 text-center text-[10px] text-rose-500/70 font-medium">{teamData.lost}</td>
+                              <td className="py-2.5 text-center text-[10px] text-slate-300 font-medium">{teamData.gf}</td>
+                              <td className="py-2.5 text-center text-[10px] text-slate-300 font-medium">{teamData.ga}</td>
+                              <td className="py-2.5 text-center text-[10px] text-slate-400 font-medium">{teamData.gd > 0 ? `+${teamData.gd}` : teamData.gd}</td>
+                              <td className="py-2.5 text-center text-[11px] sm:text-xs font-black text-yellow-500">{teamData.pts}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* TABELLA MIGLIORI 8 TERZE */}
+            <div className="bg-slate-900 border border-slate-800 rounded-[2rem] overflow-hidden shadow-2xl mt-12 mb-8">
+               <div className="bg-slate-800/60 p-5 border-b border-slate-800 flex flex-col items-center justify-center">
+                  <h2 className="text-2xl font-black text-emerald-400 italic tracking-tight uppercase text-center">Classifica Migliori Terze</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 text-center">Le prime 8 passano ai sedicesimi</p>
+               </div>
+               <div className="p-3 sm:p-5 overflow-x-auto">
+                  <table className="w-full min-w-[300px] text-left border-collapse">
+                    <thead>
+                      <tr className="text-[9px] uppercase tracking-widest text-slate-500 border-b border-slate-800">
+                        <th className="pb-3 font-black pl-2">Squadra</th>
+                        <th className="pb-3 font-black text-center">Girone</th>
+                        <th className="pb-3 font-black text-center">GF</th>
+                        <th className="pb-3 font-black text-center">DR</th>
+                        <th className="pb-3 font-black text-center text-yellow-500">PT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bestThirds.map((teamData, index) => {
+                        const flagCode = getFlagCode(teamData.name);
+                        const isQualified = index < 8; 
+                        
+                        return (
+                          <tr key={teamData.name} className={`border-b border-slate-800/30 transition-colors ${isQualified ? 'bg-emerald-950/10 hover:bg-emerald-900/20' : 'opacity-60 bg-slate-950 hover:bg-slate-900'}`}>
+                            <td className="py-3 pl-2 flex items-center gap-3">
+                              <span className={`w-4 text-center text-[10px] font-black ${isQualified ? 'text-emerald-500' : 'text-slate-600'}`}>{index + 1}</span>
+                              <div className="w-6 h-4 bg-slate-800 rounded-[2px] overflow-hidden shrink-0 shadow-sm relative border border-slate-700/50 flex items-center justify-center">
+                                {flagCode ? <img src={`https://flagcdn.com/w40/${flagCode}.png`} alt={teamData.name} className="w-full h-full object-cover" /> : <Shield size={10} className="text-slate-500" />}
+                              </div>
+                              <span className={`text-xs font-bold uppercase tracking-tight ${isQualified ? 'text-white' : 'text-slate-400 line-through decoration-rose-500/50'}`}>{formatTeamName(teamData.name)}</span>
+                            </td>
+                            <td className="py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">{teamData.group.replace('Gruppo ', '')}</td>
+                            <td className="py-3 text-center text-[11px] text-slate-300 font-medium">{teamData.gf}</td>
+                            <td className="py-3 text-center text-[11px] text-slate-400 font-medium">{teamData.gd > 0 ? `+${teamData.gd}` : teamData.gd}</td>
+                            <td className={`py-3 text-center text-sm font-black ${isQualified ? 'text-yellow-500' : 'text-slate-500'}`}>{teamData.pts}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+               </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- SCHEDA BRACKET (FASE FINALE VISUALE) --- */}
+        {activeTab === 'BRACKET' && (
+          <div className="animate-in fade-in duration-500 w-full bg-slate-900/40 border border-slate-800 rounded-[2rem] shadow-2xl p-4 sm:p-6 overflow-hidden">
+             <div className="text-center mb-8">
+                <h2 className="text-2xl font-black text-blue-400 italic tracking-tight uppercase">Tabellone Ufficiale</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 px-4 leading-relaxed">
+                  Si compone in base agli inserimenti dell'Admin. <br className="sm:hidden" />Scorri verso destra per vedere la finale! 👉
+                </p>
+             </div>
+
+             <div className="w-full overflow-x-auto custom-scrollbar pb-6 cursor-grab active:cursor-grabbing">
+                <div className="flex flex-row items-stretch min-w-max gap-6 sm:gap-10 px-2 py-4 min-h-[500px]">
+                  
+                  {BRACKET_ROUNDS.map((round) => {
+                    const pairs = getTeamsForStage(round.id, round.matches * 2);
+                    return (
+                      <div key={round.id} className="flex flex-col justify-around w-40 sm:w-48 shrink-0 relative pt-8">
+                         
+                         <div className="absolute top-0 left-0 w-full text-center">
+                           <h3 className="text-[10px] sm:text-[11px] font-black uppercase text-blue-500 tracking-widest bg-slate-950/50 inline-block px-3 py-1 rounded-full border border-blue-500/20">{round.title}</h3>
+                         </div>
+                         
+                         {pairs.map((pair, pIdx) => (
+                            <div key={pIdx} className="relative z-10 flex flex-col bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-lg my-1.5 transition-colors hover:border-slate-500">
+                               {/* Team 1 */}
+                               <div className={`flex items-center gap-2.5 px-3 py-2.5 ${pair[0].name ? 'bg-slate-800/80' : 'bg-slate-900/40 opacity-70'}`}>
+                                 {pair[0].name && getFlagCode(pair[0].name) ? <img src={`https://flagcdn.com/w20/${getFlagCode(pair[0].name)}.png`} className="w-4 h-3 object-cover rounded-[2px]" alt=""/> : <div className="w-4 h-3 bg-slate-800 rounded-[2px]"></div>}
+                                 <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider truncate ${pair[0].name ? 'text-white' : 'text-slate-500'}`}>
+                                   {pair[0].name ? formatTeamName(pair[0].name) : pair[0].placeholder}
+                                 </span>
+                               </div>
+                               <div className="h-px w-full bg-slate-800"></div>
+                               {/* Team 2 */}
+                               <div className={`flex items-center gap-2.5 px-3 py-2.5 ${pair[1].name ? 'bg-slate-800/80' : 'bg-slate-900/40 opacity-70'}`}>
+                                 {pair[1].name && getFlagCode(pair[1].name) ? <img src={`https://flagcdn.com/w20/${getFlagCode(pair[1].name)}.png`} className="w-4 h-3 object-cover rounded-[2px]" alt=""/> : <div className="w-4 h-3 bg-slate-800 rounded-[2px]"></div>}
+                                 <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider truncate ${pair[1].name ? 'text-white' : 'text-slate-500'}`}>
+                                   {pair[1].name ? formatTeamName(pair[1].name) : pair[1].placeholder}
+                                 </span>
+                               </div>
+                            </div>
+                         ))}
+                      </div>
+                    )
+                  })}
+
+                  {/* COLONNA VINCITORE */}
+                  <div className="flex flex-col justify-center w-48 sm:w-56 shrink-0 relative ml-4">
+                     <div className="flex flex-col items-center bg-gradient-to-br from-yellow-500/20 to-yellow-900/20 border border-yellow-500/50 rounded-[2rem] p-6 shadow-[0_0_30px_rgba(234,179,8,0.2)] text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-400 to-transparent"></div>
+                        <Trophy size={40} className="text-yellow-500 mb-4 drop-shadow-md" />
+                        <h3 className="text-[10px] font-black uppercase text-yellow-500/70 tracking-[0.2em] mb-4">Campione del Mondo</h3>
+                        
+                        {(() => {
+                          const winner = officialBracket.find(o => normalizeStage(o.stage) === 'WINNER')?.team_name;
+                          const flag = getFlagCode(winner || '');
+                          return (
+                            <div className="flex flex-col items-center gap-3 w-full">
+                              {winner ? (
+                                 <>
+                                   {flag && <img src={`https://flagcdn.com/w80/${flag}.png`} className="w-14 h-10 object-cover rounded shadow-md border border-yellow-500/30" alt=""/>}
+                                   <span className="text-xl font-black uppercase italic text-yellow-400 truncate w-full">{formatTeamName(winner)}</span>
+                                 </>
                               ) : (
-                                <Shield size={10} className="text-slate-500" />
+                                 <>
+                                   <div className="w-14 h-10 bg-slate-900/50 rounded border border-slate-700/50"></div>
+                                   <span className="text-base font-black uppercase text-slate-500 mt-1">TBD</span>
+                                 </>
                               )}
                             </div>
-                            <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-tight truncate w-full max-w-[80px] sm:max-w-[110px] ${isTopTwo ? 'text-white' : 'text-slate-300'}`}>
-                              {formatTeamName(teamData.name)}
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-center text-[10px] text-slate-400 font-medium">{teamData.played}</td>
-                          <td className="py-2.5 text-center text-[10px] text-emerald-500/70 font-medium">{teamData.won}</td>
-                          <td className="py-2.5 text-center text-[10px] text-slate-500 font-medium">{teamData.draw}</td>
-                          <td className="py-2.5 text-center text-[10px] text-rose-500/70 font-medium">{teamData.lost}</td>
-                          <td className="py-2.5 text-center text-[10px] text-slate-300 font-medium">{teamData.gf}</td>
-                          <td className="py-2.5 text-center text-[10px] text-slate-300 font-medium">{teamData.ga}</td>
-                          <td className="py-2.5 text-center text-[10px] text-slate-400 font-medium">
-                            {teamData.gd > 0 ? `+${teamData.gd}` : teamData.gd}
-                          </td>
-                          <td className="py-2.5 text-center text-[11px] sm:text-xs font-black text-yellow-500">
-                            {teamData.pts}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
+                          )
+                        })()}
+                     </div>
+                  </div>
+
+                </div>
+             </div>
+          </div>
+        )}
 
       </div>
     </main>
