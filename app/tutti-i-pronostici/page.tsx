@@ -9,7 +9,7 @@ import {
   Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users
 } from 'lucide-react';
 
-const WORLD_CUP_START_DATE = new Date('2025-06-11T21:00:00+02:00');
+const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
 const STAGE_CAPACITY: { [key: string]: number } = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
@@ -246,7 +246,7 @@ export default function TuttiPronosticiPage() {
       counts[t].count += 1;
       
       const p = data.profiles.find((prof: any) => prof.id === w.user_id);
-      if (p) counts[t].users.push(p.username);
+      if (p && p.username) counts[t].users.push(p.username);
     });
     
     return Object.entries(counts)
@@ -261,6 +261,8 @@ export default function TuttiPronosticiPage() {
     let anomalies: { user: string, type: string, team: string, msg: string, phase: string, phaseWeight: number }[] = [];
 
     data.profiles.forEach((p: any) => {
+      if (!p || !p.id || !p.username) return;
+
       const uBrackets = data.bracketMap[p.id] || [];
       if (uBrackets.length === 0) return;
       
@@ -319,7 +321,7 @@ export default function TuttiPronosticiPage() {
     return Object.values(groupedObj).sort((a: any, b: any) => a.phaseWeight - b.phaseWeight || a.type.localeCompare(b.type) || a.team.localeCompare(b.team));
   };
 
-  const topCecchini = data.profiles.filter((p: any) => p.exact_matches > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
+  const topCecchini = (data.profiles || []).filter((p: any) => (p.exact_matches || 0) > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
 
   const renderMatchCard = (match: any) => {
     const hFlag = getFlagUrl(match.home_team);
@@ -588,8 +590,6 @@ export default function TuttiPronosticiPage() {
                     {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
                       const isUnset = ans === 'Nessuna Scelta';
                       
-                      // CONTROLLO MATEMATICO DI ELIMINAZIONE PER I BONUS NUMERICI
-                      // Se il totale reale nel torneo è già SUPERIORE alla scelta dell'utente, l'utente ha perso il bonus.
                       const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
                       
                       const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
@@ -637,7 +637,7 @@ export default function TuttiPronosticiPage() {
                             : isUnset 
                               ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
                               : isMathematicallyWrong
-                                ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner' // Stile "spento ed eliminato"
+                                ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner'
                                 : 'bg-slate-900 border-slate-800'
                         } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
                           
@@ -654,13 +654,11 @@ export default function TuttiPronosticiPage() {
                                    : isUnset 
                                      ? 'text-slate-500' 
                                      : isMathematicallyWrong 
-                                       ? 'text-slate-600 line-through decoration-rose-500/50' // Testo sbarrato
+                                       ? 'text-slate-600 line-through decoration-rose-500/50'
                                        : 'text-white'
                                }`}>{ans}</span>
                                
                                {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
-                               
-                               {/* BADGE DI ELIMINAZIONE VISIVA SBARRA TUTTO */}
                                {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
                              </div>
                              <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
@@ -732,7 +730,7 @@ export default function TuttiPronosticiPage() {
                   <div key={p.id} className={`flex justify-between items-center p-3 rounded-xl border ${p.username === data.currentUserUsername ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500' : 'bg-slate-950 border-slate-800'}`}>
                     <span className={`text-xs font-black uppercase italic truncate pr-2 ${p.username === data.currentUserUsername ? 'text-emerald-400' : 'text-white'}`}>{p.username} {p.username === data.currentUserUsername && '(TU)'}</span>
                     <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-inner shrink-0">
-                      {p.exact_matches} presi
+                      {p.exact_matches || 0} presi
                     </span>
                   </div>
                 )) : (
@@ -759,7 +757,6 @@ export default function TuttiPronosticiPage() {
                         <h4 className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 w-max shadow-inner">{phase}</h4>
                         {phaseAnos.map((ano: any, i: number) => {
                           const isFlop = ano.type === 'FLOP';
-                          const isMe = ano.values.includes(data.currentUserUsername); // Fix fallbacks per anomalie array
                           const usersArray = ano.users || [];
                           const isMeReal = usersArray.includes(data.currentUserUsername);
 
