@@ -225,6 +225,7 @@ const getFlagCode = (team: string) => {
   if (t === 'curacao') t = 'curaçao';
   if (t === 'costa avorio') t = "costa d'avorio";
   if (t === 'usa') t = 'stati uniti';
+  if (t === 'bosnia') t = 'bosnia ed erzegovina';
   return flagMap[t] || '';
 };
 
