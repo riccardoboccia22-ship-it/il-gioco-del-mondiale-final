@@ -203,6 +203,31 @@ const AVATARS = [
   { id: 'uzbekistan', name: 'Uzbekistan', flagCode: 'uz', color: 'from-blue-600 to-blue-500' }
 ];
 
+const flagMap: { [key: string]: string } = {
+  algeria: 'dz', 'arabia saudita': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
+  belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', brasile: 'br', canada: 'ca', 'capo verde': 'cv',
+  colombia: 'co', 'corea del sud': 'kr', "costa d'avorio": 'ci', croazia: 'hr', curaçao: 'cw',
+  ecuador: 'ec', egitto: 'eg', francia: 'fr', germania: 'de', ghana: 'gh', giappone: 'jp',
+  giordania: 'jo', haiti: 'ht', inghilterra: 'gb-eng', iran: 'ir', iraq: 'iq', marocco: 'ma',
+  messico: 'mx', norvegia: 'no', 'nuova zelanda': 'nz', olanda: 'nl', panama: 'pa', paraguay: 'py',
+  portogallo: 'pt', qatar: 'qa', 'repubblica ceca': 'cz', 'repubblica democratica del congo': 'cd',
+  scozia: 'gb-sct', senegal: 'sn', spagna: 'es', 'stati uniti': 'us', usa: 'us', sudafrica: 'za',
+  svezia: 'se', svizzera: 'ch', tunisia: 'tn', turchia: 'tr', uruguay: 'uy', uzbekistan: 'uz',
+};
+
+const getFlagCode = (team: string) => {
+  let t = team.toLowerCase().trim();
+  if (t === 'corea sud') t = 'corea del sud';
+  if (t === 'rep. ceca') t = 'repubblica ceca';
+  if (t === 'n. zelanda') t = 'nuova zelanda';
+  if (t === 'arabia s.') t = 'arabia saudita';
+  if (t === 'r.d. congo') t = 'repubblica democratica del congo';
+  if (t === 'curacao') t = 'curaçao';
+  if (t === 'costa avorio') t = "costa d'avorio";
+  if (t === 'usa') t = 'stati uniti';
+  return flagMap[t] || '';
+};
+
 export default function ProfilePage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -499,11 +524,25 @@ export default function ProfilePage() {
                       .map(([groupName, goals], idx) => {
                         const rank = idx + 1;
                         const rankColor = rank === 1 ? 'text-yellow-500' : rank === 2 ? 'text-slate-400' : rank === 3 ? 'text-amber-600' : 'text-slate-500';
+                        const groupObj = TOURNAMENT_GROUPS.find(g => g.name === groupName);
+
                         return (
                           <div key={groupName} className="flex justify-between items-center text-[11px] py-1 border-b border-slate-900/40 last:border-0">
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                               <span className={`font-black w-3.5 text-center shrink-0 ${rankColor}`}>{rank}</span>
-                              <span className="font-bold text-slate-300 truncate uppercase">{groupName}</span>
+                              <div className="flex flex-col gap-1.5 justify-center">
+                                <span className="font-bold text-slate-300 truncate uppercase leading-none">{groupName}</span>
+                                {groupObj && (
+                                  <div className="flex items-center gap-1">
+                                    {groupObj.teams.map(team => {
+                                      const flagCode = getFlagCode(team);
+                                      return flagCode ? (
+                                        <img key={team} src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-3.5 h-2.5 object-cover rounded-[1px] opacity-80 shadow-sm" alt={team} />
+                                      ) : null;
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <span className="font-black text-yellow-500 bg-yellow-500/5 px-2 py-0.5 rounded border border-yellow-500/10 shrink-0">{goals} Gol</span>
                           </div>
