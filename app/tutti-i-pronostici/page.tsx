@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
-  Trophy, Star, LayoutGrid, ChevronDown, Flame, CalendarDays,
+  Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame, CalendarDays,
   Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users
 } from 'lucide-react';
 
@@ -92,6 +92,7 @@ export default function TuttiPronosticiPage() {
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [expandedBonus, setExpandedBonus] = useState<string | null>(null);
+  const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>({});
 
   const isStarted = new Date() > WORLD_CUP_START_DATE;
 
@@ -155,18 +156,33 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
+  const toggleDay = (dayName: string) => {
+    setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
+  };
+
+  // UX OPTIMIZATION: Raggruppamento in Tendine per Giorno
+  // Ordine CRESCENTE: Dalla data più vecchia alla più recente.
   const groupedByDay = useMemo(() => {
-    const grouped: { [key: string]: any[] } = {};
+    const groupsMap: { [key: string]: { dateVal: number, matches: any[] } } = {};
     data.matches.forEach((m: any) => {
       let dayName = "Data da definire";
+      let dVal = 0;
       if (m.match_date) {
-        const dateStr = new Date(m.match_date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        const d = new Date(m.match_date);
+        dVal = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
         dayName = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
       }
-      if (!grouped[dayName]) grouped[dayName] = [];
-      grouped[dayName].push(m);
+      
+      if (!groupsMap[dayName]) {
+        groupsMap[dayName] = { dateVal: dVal, matches: [] };
+      }
+      groupsMap[dayName].matches.push(m);
     });
-    return grouped;
+
+    return Object.entries(groupsMap)
+      .map(([dayName, info]) => ({ dayName, dateVal: info.dateVal, matchesArray: info.matches }))
+      .sort((a, b) => a.dateVal - b.dateVal);
   }, [data.matches]);
 
   const getFlagUrl = (team: string) => {
@@ -462,20 +478,38 @@ export default function TuttiPronosticiPage() {
                 </button>
              </div>
 
-             {gironiViewMode === 'CHRONO' && Object.entries(groupedByDay).map(([dayName, matchesArray]) => (
-                <div key={dayName} className="space-y-3">
-                  <h2 className="text-sm font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-3">
-                    <CalendarDays size={16}/> {dayName}
-                    <div className="flex-1 h-px bg-slate-800/50"></div>
-                  </h2>
-                  {matchesArray.map((m: any) => renderMatchCard(m))}
-                </div>
-             ))}
+             {gironiViewMode === 'CHRONO' && groupedByDay.map(({ dayName, matchesArray }) => {
+               const isOpen = openDays[dayName];
+               return (
+                 <div key={dayName} className={`bg-slate-900/40 border-2 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${isOpen ? 'border-yellow-500/20 bg-slate-900/80 shadow-2xl' : 'border-slate-800'}`}>
+                   <button onClick={() => toggleDay(dayName)} className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-800/40 transition-colors">
+                     <div className="flex items-center gap-4">
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${isOpen ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
+                         <CalendarDays size={18} />
+                       </div>
+                       <h2 className="font-black text-base sm:text-lg uppercase italic text-white tracking-tight text-left">{dayName}</h2>
+                     </div>
+                     <div className="flex items-center gap-3">
+                       <span className="text-[10px] font-black text-slate-500 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 hidden sm:block">{matchesArray.length} Match</span>
+                       <div className="p-2 sm:p-3">
+                         {isOpen ? <ChevronUp className="text-yellow-500" /> : <ChevronDown className="text-slate-600" />}
+                       </div>
+                     </div>
+                   </button>
+
+                   {isOpen && (
+                     <div className="p-4 pt-0 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                       {matchesArray.map((m: any) => renderMatchCard(m))}
+                     </div>
+                   )}
+                 </div>
+               );
+             })}
 
              {gironiViewMode === 'GROUP' && TOURNAMENT_GROUPS.map((group) => {
                 const groupMatches = data.matches.filter((m: any) => 
                    group.teams.some(t => formatTeamName(t).toLowerCase() === formatTeamName(m.home_team).toLowerCase() || formatTeamName(t).toLowerCase() === formatTeamName(m.away_team).toLowerCase())
-                );
+                ); // Ordine cronologico standard
                 if (groupMatches.length === 0) return null;
 
                 return (

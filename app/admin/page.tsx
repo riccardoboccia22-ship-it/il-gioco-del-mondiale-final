@@ -735,87 +735,96 @@ export default function AdminPage() {
     const sorted = [...profiles].sort((a, b) => parseInt(a.ranking || '999') - parseInt(b.ranking || '999'));
 
     let awardedUserIds = new Set();
-    let report = `🏆 *VINCITORI PREMI MONDIALE 2026* 🏆\n\n`;
+    const results: any = {};
 
-    report += `👑 *CLASSIFICA GENERALE*\n`;
-    const genPrizes = [
-      { label: "1° Classificato (200€)", index: 0 },
-      { label: "2° Classificato (140€)", index: 1 },
-      { label: "3° Classificato (80€)", index: 2 },
-      { label: "4° Classificato (50€)", index: 3 },
-      { label: "5° Classificato (30€)", index: 4 },
-      { label: "6° Classificato (20€)", index: 5 },
-      { label: "7° Classificato (20€)", index: 6 },
-      { label: "8° Classificato (10€)", index: 7 },
-    ];
-
-    genPrizes.forEach(prize => {
-      const u = sorted[prize.index];
-      if (u) {
-        report += `${prize.label}: *${u.username}*\n`;
-        awardedUserIds.add(u.id);
-      }
-    });
-
-    const getWinner = (sortFn: (a: any, b: any) => number) => {
-      const eligible = sorted.filter(u => !awardedUserIds.has(u.id));
-      if (eligible.length === 0) return null;
+    const assignPrize = (key: string, sortFn: (a: any, b: any) => number, filterFn?: (u: any) => boolean) => {
+      let eligible = sorted.filter(u => !awardedUserIds.has(u.id));
+      if (filterFn) eligible = eligible.filter(filterFn);
+      if (eligible.length === 0) return;
       const specificSorted = [...eligible].sort(sortFn);
       const winner = specificSorted[0];
-      if (winner) awardedUserIds.add(winner.id);
-      return winner;
+      if (winner) {
+        awardedUserIds.add(winner.id);
+        results[key] = winner;
+      }
     };
 
-    report += `\n📊 *PREMI PER FASE*\n`;
+    const genSort = (a: any, b: any) => parseInt(a.ranking || '999') - parseInt(b.ranking || '999');
     
-    const reGironi = getWinner((a, b) => {
+    const girSort = (a: any, b: any) => {
       if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0);
       if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
       if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0); 
       return (b.points_bonus || 0) - (a.points_bonus || 0); 
-    });
-    report += `🏟️ Re dei Gironi (30€): *${reGironi ? reGironi.username : 'N/D'}*\n`;
+    };
 
-    const magoPlayoff = getWinner((a, b) => {
+    const brackSort = (a: any, b: any) => {
       if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0);
       if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
       if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); 
       return (b.points_bonus || 0) - (a.points_bonus || 0); 
-    });
-    report += `⚡ Mago dei Playoff (30€): *${magoPlayoff ? magoPlayoff.username : 'N/D'}*\n`;
+    };
 
-    const oracoloBonus = getWinner((a, b) => {
+    const bonusSort = (a: any, b: any) => {
       if (b.points_bonus !== a.points_bonus) return (b.points_bonus || 0) - (a.points_bonus || 0);
       if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
       if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); 
       return (b.points_bracket || 0) - (a.points_bracket || 0); 
-    });
-    report += `🔮 Oracolo dei Bonus (30€): *${oracoloBonus ? oracoloBonus.username : 'N/D'}*\n`;
+    };
 
-    report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n`;
-
-    const cecchino = getWinner((a, b) => {
+    const cecchSort = (a: any, b: any) => {
       if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
       return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
-    });
-    report += `🎯 Il Cecchino (30€): *${cecchino ? cecchino.username : 'N/D'}*\n`;
+    };
 
-    report += `👁️ Il Veggente (20€): *(Verificare manualmente - Spareggi: 1° Ris. Esatti, 2° Fase Finale, 3° Bonus)*\n`;
-
-    const eligibleZero = sorted.filter(u => !awardedUserIds.has(u.id) && (u.exact_matches === 0 || u.exact_matches === null));
-    eligibleZero.sort((a, b) => {
-      if (a.ranking !== b.ranking) return parseInt(b.ranking || '0') - parseInt(a.ranking || '0');
+    const zeroSort = (a: any, b: any) => {
+      if (a.ranking !== b.ranking) return parseInt(b.ranking || '999') - parseInt(a.ranking || '999');
       if (a.points_bracket !== b.points_bracket) return (a.points_bracket || 0) - (b.points_bracket || 0);
       return (a.points_bonus || 0) - (b.points_bonus || 0);
-    });
-    
-    const zeroAssoluto = eligibleZero.length > 0 ? eligibleZero[0] : null;
-    if (zeroAssoluto) awardedUserIds.add(zeroAssoluto.id);
-    
-    report += `🧊 Zero Assoluto (10€): *${zeroAssoluto ? zeroAssoluto.username : 'N/D'}*\n`;
+    };
+
+    // ORDINE DI ASSEGNAZIONE PER VALORE DEL PREMIO (PER MASSIMIZZARE LA VINCITA DEL SINGOLO UTENTE)
+    // 1. Premi Maggiori o uguali a 30€
+    assignPrize('gen1', genSort); // 200€
+    assignPrize('gen2', genSort); // 140€
+    assignPrize('gen3', genSort); // 80€
+    assignPrize('gen4', genSort); // 50€
+    assignPrize('gen5', genSort); // 30€
+    assignPrize('gir', girSort); // 30€
+    assignPrize('playoff', brackSort); // 30€
+    assignPrize('bonus', bonusSort); // 30€
+    assignPrize('cecchino', cecchSort); // 30€
+
+    // 2. Premi Minori (20€ e 10€)
+    assignPrize('gen6', genSort); // 20€
+    assignPrize('gen7', genSort); // 20€
+    assignPrize('gen8', genSort); // 10€
+    assignPrize('zero', zeroSort, (u) => u.exact_matches === 0 || u.exact_matches === null); // 10€
+
+    let report = `🏆 *VINCITORI PREMI MONDIALE 2026* 🏆\n\n`;
+
+    report += `👑 *CLASSIFICA GENERALE*\n`;
+    report += `1° Premio (200€): *${results.gen1?.username || 'N/D'}*\n`;
+    report += `2° Premio (140€): *${results.gen2?.username || 'N/D'}*\n`;
+    report += `3° Premio (80€): *${results.gen3?.username || 'N/D'}*\n`;
+    report += `4° Premio (50€): *${results.gen4?.username || 'N/D'}*\n`;
+    report += `5° Premio (30€): *${results.gen5?.username || 'N/D'}*\n`;
+    report += `6° Premio (20€): *${results.gen6?.username || 'N/D'}*\n`;
+    report += `7° Premio (20€): *${results.gen7?.username || 'N/D'}*\n`;
+    report += `8° Premio (10€): *${results.gen8?.username || 'N/D'}*\n`;
+
+    report += `\n📊 *PREMI PER FASE*\n`;
+    report += `🏟️ Re dei Gironi (30€): *${results.gir?.username || 'N/D'}*\n`;
+    report += `⚡ Mago dei Playoff (30€): *${results.playoff?.username || 'N/D'}*\n`;
+    report += `🔮 Oracolo dei Bonus (30€): *${results.bonus?.username || 'N/D'}*\n`;
+
+    report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n`;
+    report += `🎯 Il Cecchino (30€): *${results.cecchino?.username || 'N/D'}*\n`;
+    report += `👁️ Il Veggente (20€): *(Verifica Manuale)*\n`;
+    report += `🧊 Zero Assoluto (10€): *${results.zero?.username || 'N/D'}*\n`;
 
     navigator.clipboard.writeText(report);
-    toast.success('Report Premi Generato e Copiato! 🏆', { icon: '🎁' });
+    toast.success('Report Premi Ottimizzato e Copiato! 🏆', { icon: '🎁' });
   };
 
   const copyClassificaReport = () => {
@@ -857,45 +866,53 @@ export default function AdminPage() {
     toast.success('Statistiche Vincitore copiate! 🏆', { icon: '💬' });
   };
 
+  // NUOVA FUNZIONE AGGIORNATA PER INCLUDERE GLI ZERO E INCOLONNARE
   const copyCecchiniReport = () => {
-    let text = `🎯 *REPORT CECCHINI (RISULTATI ESATTI)* 🎯\n`;
-    const matchesWithExact = matches.filter(m => m.is_finished).map(m => {
-       const exactUsers = profiles.filter(p => {
-          const uPred = predictions.find(pred => pred.user_id === p.id && pred.match_id === m.id);
-          if(!uPred) return false;
-          return Number(uPred.home_score) === Number(m.home_score_final) && Number(uPred.away_score) === Number(m.away_score_final);
-       }).map(p => p.username);
-       return { ...m, exactUsers, group: TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === formatMatchName(m.home_team).toLowerCase()))?.name || 'Fase Finale' };
-    }).filter(m => m.exactUsers.length > 0);
+    const userStats = profiles.map(p => {
+      const exactMatches: string[] = [];
+      const uPreds = predictions.filter(pred => pred.user_id === p.id);
 
-    if(matchesWithExact.length === 0) {
-       text += `\nAncora nessun risultato esatto!\n`;
+      uPreds.forEach(pred => {
+        const m = matches.find(match => match.id === pred.match_id && match.is_finished);
+        if (m && m.home_score_final !== null && m.away_score_final !== null) {
+          if (Number(pred.home_score) === Number(m.home_score_final) && Number(pred.away_score) === Number(m.away_score_final)) {
+            exactMatches.push(`${getEmoji(m.home_team)} ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)} ${getEmoji(m.away_team)}`);
+          }
+        }
+      });
+
+      return {
+        username: p.username,
+        count: exactMatches.length,
+        matches: exactMatches
+      };
+    }).sort((a, b) => b.count - a.count);
+
+    let text = `🎯 *CLASSIFICA CECCHINI* 🎯\n(Risultati Esatti)\n\n`;
+
+    if (userStats.length === 0) {
+      text += `Ancora nessun iscritto!\n`;
     } else {
-       const grouped: any = {};
-       matchesWithExact.forEach(m => {
-          if(!grouped[m.group]) grouped[m.group] = [];
-          grouped[m.group].push(m);
-       });
-       
-       const sortedGroups = Object.keys(grouped).sort((a, b) => {
-          if(a.includes('Gruppo') && b.includes('Gruppo')) return a.localeCompare(b);
-          if(a.includes('Gruppo')) return -1;
-          return 1;
-       });
-
-       sortedGroups.forEach(g => {
-          text += `\n*${g}*\n`;
-          grouped[g].forEach((m: any) => {
-              text += `⚽ ${getEmoji(m.home_team)} ${formatTeamName(m.home_team)} ${m.home_score_final}-${m.away_score_final} ${formatTeamName(m.away_team)} ${getEmoji(m.away_team)}\n`;
-              text += `   👉 ${m.exactUsers.join(', ')}\n`;
-          });
-       });
+      userStats.forEach((u, i) => {
+        let medal = '🎯';
+        if (u.count === 0) medal = '🧊';
+        else if (i === 0) medal = '🥇';
+        else if (i === 1) medal = '🥈';
+        else if (i === 2) medal = '🥉';
+        
+        text += `${medal} *${u.username}*: ${u.count} esatt${u.count === 1 ? 'o' : 'i'}\n`;
+        if (u.count > 0) {
+          text += `   ↳ ${u.matches.join('\n   ↳ ')}\n\n`;
+        } else {
+          text += `\n`;
+        }
+      });
     }
 
-    text += `\n👉 Entra nell'app per vedere i pronostici di tutti:\nwww.iltuopronostico.it`;
+    text += `👉 Guarda i dettagli:\nwww.iltuopronostico.it`;
 
     navigator.clipboard.writeText(text);
-    toast.success('Report Cecchini copiato! 🎯', { icon: '🎯' });
+    toast.success('Classifica Cecchini copiata! 🎯', { icon: '🎯' });
   };
 
   const copyBonusReport = () => {
@@ -1428,7 +1445,7 @@ export default function AdminPage() {
                   <select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none appearance-none"><option value="">MATCH PIÙ GOL...</option>{Object.entries(groupedMatches).map(([g, m]) => (<optgroup key={g} label={g} className="bg-slate-900">{m.map(match => <option key={match} value={match}>{formatMatchName(match)}</option>)}</optgroup>))}</select>
                   <div className="grid grid-cols-2 gap-3"><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE PIÙ GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE MENO GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
                 </div>
-                <div className="flex gap-4 pt-4"><button type="button" onClick={resetBonuses} className="p-5 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl"><Trash2 size={20} /></button><button type="submit" className="flex-1 bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl">SALVA E CALCOLA PUNTI</button></div>
+                <div className="flex gap-4 pt-4"><button type="button" onClick={resetBonuses} className="p-5 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl"><Trash2 size={20} /></button><button type="submit" className="flex-1 bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl shadow-purple-600/20 active:scale-95 transition-all">SALVA BONUS UFFICIALI</button></div>
               </form>
             </div>
           )}
