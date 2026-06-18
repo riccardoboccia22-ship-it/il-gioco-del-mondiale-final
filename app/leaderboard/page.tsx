@@ -17,7 +17,8 @@ import {
   Gamepad2,
   Star,
   Shield,
-  Search // <-- Aggiunta icona per la ricerca
+  Search,
+  Lock
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -202,55 +203,7 @@ const AVATARS = [
   { id: 'purple', name: 'Viola', emoji: '🟣', color: 'from-purple-600 to-purple-400' },
   { id: 'orange', name: 'Arancione', emoji: '🟠', color: 'from-orange-500 to-orange-400' },
   { id: 'pink', name: 'Rosa', emoji: '🩷', color: 'from-pink-500 to-pink-300' },
-  { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' },
-  { id: 'algeria', name: 'Algeria', flagCode: 'dz', color: 'from-green-600 to-green-500' },
-  { id: 'arabia_saudita', name: 'Arabia Saudita', flagCode: 'sa', color: 'from-green-700 to-green-600' },
-  { id: 'argentina', name: 'Argentina', flagCode: 'ar', color: 'from-sky-400 to-sky-200' },
-  { id: 'australia', name: 'Australia', flagCode: 'au', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'austria', name: 'Austria', flagCode: 'at', color: 'from-red-600 to-red-500' },
-  { id: 'belgio', name: 'Belgio', flagCode: 'be', color: 'from-red-600 to-red-500' },
-  { id: 'bosnia', name: 'Bosnia Erzegovina', flagCode: 'ba', color: 'from-blue-700 to-blue-600' },
-  { id: 'brasile', name: 'Brasile', flagCode: 'br', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'canada', name: 'Canada', flagCode: 'ca', color: 'from-red-600 to-red-500' },
-  { id: 'capo_verde', name: 'Capo Verde', flagCode: 'cv', color: 'from-blue-700 to-blue-600' },
-  { id: 'colombia', name: 'Colombia', flagCode: 'co', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'corea_sud', name: 'Corea del Sud', flagCode: 'kr', color: 'from-red-600 to-red-500' },
-  { id: 'costa_avorio', name: "Costa d'Avorio", flagCode: 'ci', color: 'from-orange-500 to-orange-400' },
-  { id: 'croazia', name: 'Croazia', flagCode: 'hr', color: 'from-red-600 to-slate-200' },
-  { id: 'curacao', name: 'Curaçao', flagCode: 'cw', color: 'from-blue-600 to-blue-500' },
-  { id: 'ecuador', name: 'Ecuador', flagCode: 'ec', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'egitto', name: 'Egitto', flagCode: 'eg', color: 'from-red-600 to-red-500' },
-  { id: 'francia', name: 'Francia', flagCode: 'fr', color: 'from-blue-800 to-blue-700' },
-  { id: 'germania', name: 'Germania', flagCode: 'de', color: 'from-slate-200 to-slate-100' },
-  { id: 'ghana', name: 'Ghana', flagCode: 'gh', color: 'from-slate-200 to-slate-100' },
-  { id: 'giappone', name: 'Giappone', flagCode: 'jp', color: 'from-blue-600 to-blue-500' },
-  { id: 'giordania', name: 'Giordania', flagCode: 'jo', color: 'from-red-600 to-red-500' },
-  { id: 'haiti', name: 'Haiti', flagCode: 'ht', color: 'from-blue-700 to-blue-600' },
-  { id: 'inghilterra', name: 'Inghilterra', flagCode: 'gb-eng', color: 'from-slate-200 to-slate-100' },
-  { id: 'iran', name: 'Iran', flagCode: 'ir', color: 'from-slate-200 to-slate-100' },
-  { id: 'iraq', name: 'Iraq', flagCode: 'iq', color: 'from-green-600 to-green-500' },
-  { id: 'marocco', name: 'Marocco', flagCode: 'ma', color: 'from-red-600 to-red-500' },
-  { id: 'messico', name: 'Messico', flagCode: 'mx', color: 'from-green-600 to-green-500' },
-  { id: 'norvegia', name: 'Norvegia', flagCode: 'no', color: 'from-red-600 to-red-500' },
-  { id: 'nuova_zelanda', name: 'Nuova Zelanda', flagCode: 'nz', color: 'from-slate-200 to-slate-100' },
-  { id: 'olanda', name: 'Olanda', flagCode: 'nl', color: 'from-orange-500 to-orange-400' },
-  { id: 'panama', name: 'Panama', flagCode: 'pa', color: 'from-red-600 to-red-500' },
-  { id: 'paraguay', name: 'Paraguay', flagCode: 'py', color: 'from-red-600 to-red-500' },
-  { id: 'portogallo', name: 'Portogallo', flagCode: 'pt', color: 'from-red-600 to-red-500' },
-  { id: 'qatar', name: 'Qatar', flagCode: 'qa', color: 'from-rose-800 to-rose-700' },
-  { id: 'rep_ceca', name: 'Repubblica Ceca', flagCode: 'cz', color: 'from-red-600 to-red-500' },
-  { id: 'rd_congo', name: 'R.D. Congo', flagCode: 'cd', color: 'from-sky-500 to-sky-400' },
-  { id: 'scozia', name: 'Scozia', flagCode: 'gb-sct', color: 'from-blue-900 to-blue-800' },
-  { id: 'senegal', name: 'Senegal', flagCode: 'sn', color: 'from-green-600 to-green-500' },
-  { id: 'spagna', name: 'Spagna', flagCode: 'es', color: 'from-red-600 to-red-500' },
-  { id: 'stati_uniti', name: 'Stati Uniti', flagCode: 'us', color: 'from-slate-200 to-slate-100' },
-  { id: 'sudafrica', name: 'Sudafrica', flagCode: 'za', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'svezia', name: 'Svezia', flagCode: 'se', color: 'from-yellow-400 to-yellow-300' },
-  { id: 'svizzera', name: 'Svizzera', flagCode: 'ch', color: 'from-red-600 to-red-500' },
-  { id: 'tunisia', name: 'Tunisia', flagCode: 'tn', color: 'from-red-600 to-slate-100' },
-  { id: 'turchia', name: 'Turchia', flagCode: 'tr', color: 'from-red-600 to-red-500' },
-  { id: 'uruguay', name: 'Uruguay', flagCode: 'uy', color: 'from-sky-400 to-sky-300' },
-  { id: 'uzbekistan', name: 'Uzbekistan', flagCode: 'uz', color: 'from-blue-600 to-blue-500' }
+  { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' }
 ];
 
 export default function LeaderboardPage() {
@@ -388,10 +341,20 @@ export default function LeaderboardPage() {
       // 3. CARICAMENTO BONUS
       const { data: uBonus } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
       const correctBonuses: any[] = [];
-      if (uBonus && officialBonuses) {
+      
+      // Controllo se i bonus sono stati calcolati dall'admin (cioè se l'MVP è stato inserito)
+      const isBonusCalculated = officialBonuses && officialBonuses.mvp_world_cup;
+
+      if (isBonusCalculated && uBonus) {
          const checkBonus = (key: string, pts: number, label: string) => {
-            if (officialBonuses[key] != null && uBonus[key] != null && cleanString(String(officialBonuses[key])) === cleanString(String(uBonus[key]))) {
-               correctBonuses.push({ answer: uBonus[key], points: pts, label });
+            if (officialBonuses[key] != null && uBonus[key] != null) {
+               // Rendo la validazione flessibile in caso di pari merito (es. "Gruppo A, Gruppo B")
+               const offValues = String(officialBonuses[key]).split(',').map(v => cleanString(v));
+               const uVal = cleanString(String(uBonus[key]));
+               
+               if (offValues.includes(uVal)) {
+                   correctBonuses.push({ answer: uBonus[key], points: pts, label });
+               }
             }
          };
          checkBonus('mvp_world_cup', 10, 'MVP Mondiale');
@@ -615,8 +578,15 @@ export default function LeaderboardPage() {
 
                    {/* TAB BONUS */}
                    {detailTab === 'BONUS' && (
-                     playerBonuses.length === 0 ? (
-                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun punto registrato sui Bonus</p>
+                     (!officialBonuses || !officialBonuses.mvp_world_cup) ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 text-slate-500 h-full">
+                           <Lock size={36} className="mb-4 text-slate-700" />
+                           <p className="text-[11px] font-black uppercase tracking-widest text-center leading-relaxed">
+                             Bonus in attesa di <br/> <span className="text-purple-500">calcolo ufficiale</span>
+                           </p>
+                        </div>
+                     ) : playerBonuses.length === 0 ? (
+                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun bonus indovinato 🥲</p>
                      ) : (
                        playerBonuses.map((bo, idx) => (
                          <div key={idx} className="bg-purple-950/10 border border-purple-900/30 rounded-xl p-3 flex justify-between items-center">
