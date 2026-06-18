@@ -7,11 +7,11 @@ import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
-  User, ListOrdered, Gamepad2, Key, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, Shield, Download, Gift, Activity
+  User, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, 
+  Shield, Download, Gift, Activity, Key, Gamepad2, ListOrdered
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
-const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
 const STAGES = [
   { id: 'R32', label: 'Sedicesimi (+2pt)', pts: 2 },
@@ -77,7 +77,7 @@ const TOURNAMENT_GROUPS = [
   { name: 'Gruppo L', teams: ['Inghilterra', 'Croazia', 'Ghana', 'Panama'] },
 ];
 
-const flagMap: { [key: string]: string } = {
+const FLAG_MAP: Record<string, string> = {
   algeria: 'dz', 'arabia saudita': 'sa', 'arabia s.': 'sa', argentina: 'ar', australia: 'au', austria: 'at',
   belgio: 'be', 'bosnia ed erzegovina': 'ba', 'bosnia erzegovina': 'ba', bosnia: 'ba',
   brasile: 'br', canada: 'ca', 'capo verde': 'cv', colombia: 'co', 'corea del sud': 'kr', 'corea sud': 'kr', 
@@ -91,7 +91,7 @@ const flagMap: { [key: string]: string } = {
   uruguay: 'uy', uzbekistan: 'uz',
 };
 
-const flagEmojiMap: { [key: string]: string } = {
+const FLAG_EMOJI_MAP: Record<string, string> = {
   algeria: '🇩🇿', 'arabia saudita': '🇸🇦', 'arabia s.': '🇸🇦', argentina: '🇦🇷', australia: '🇦🇺', austria: '🇦🇹',
   belgio: '🇧🇪', 'bosnia ed erzegovina': '🇧🇦', 'bosnia erzegovina': '🇧🇦', bosnia: '🇧🇦',
   brasile: '🇧🇷', canada: '🇨🇦', 'capo verde': '🇨🇻', colombia: '🇨🇴', 'corea del sud': '🇰🇷', 'corea sud': '🇰🇷', 
@@ -105,15 +105,44 @@ const flagEmojiMap: { [key: string]: string } = {
   uruguay: '🇺🇾', uzbekistan: '🇺🇿',
 };
 
+const COUNTRY_OPTIONS = [
+  { name: 'Algeria', code: 'dz' }, { name: 'Arabia Saudita', code: 'sa' }, { name: 'Argentina', code: 'ar' }, { name: 'Australia', code: 'au' },
+  { name: 'Austria', code: 'at' }, { name: 'Belgio', code: 'be' }, { name: 'Bosnia', code: 'ba' }, { name: 'Brasile', code: 'br' },
+  { name: 'Canada', code: 'ca' }, { name: 'Capo Verde', code: 'cv' }, { name: 'Colombia', code: 'co' }, { name: 'Corea del Sud', code: 'kr' },
+  { name: "Costa d'Avorio", code: 'ci' }, { name: 'Croazia', code: 'hr' }, { name: 'Curaçao', code: 'cw' }, { name: 'Ecuador', code: 'ec' },
+  { name: 'Egitto', code: 'eg' }, { name: 'Francia', code: 'fr' }, { name: 'Germania', code: 'de' }, { name: 'Ghana', code: 'gh' },
+  { name: 'Giappone', code: 'jp' }, { name: 'Giordania', code: 'jo' }, { name: 'Haiti', code: 'ht' }, { name: 'Inghilterra', code: 'gb-eng' },
+  { name: 'Iran', code: 'ir' }, { name: 'Iraq', code: 'iq' }, { name: 'Marocco', code: 'ma' }, { name: 'Messico', code: 'mx' },
+  { name: 'Norvegia', code: 'no' }, { name: 'Nuova Zelanda', code: 'nz' }, { name: 'Olanda', code: 'nl' }, { name: 'Panama', code: 'pa' },
+  { name: 'Paraguay', code: 'py' }, { name: 'Portogallo', code: 'pt' }, { name: 'Qatar', code: 'qa' }, { name: 'Rep. Ceca', code: 'cz' },
+  { name: 'R.D. Congo', code: 'cd' }, { name: 'Scozia', code: 'gb-sct' }, { name: 'Senegal', code: 'sn' }, { name: 'Spagna', code: 'es' },
+  { name: 'Stati Uniti', code: 'us' }, { name: 'Sudafrica', code: 'za' }, { name: 'Svezia', code: 'se' }, { name: 'Svizzera', code: 'ch' },
+  { name: 'Tunisia', code: 'tn' }, { name: 'Turchia', code: 'tr' }, { name: 'Uruguay', code: 'uy' }, { name: 'Uzbekistan', code: 'uz' }
+].sort((a, b) => a.name.localeCompare(b.name));
+
+const getFlagCode = (team: string) => {
+  if (!team) return '';
+  let t = team.toLowerCase().trim();
+  if (t === 'corea sud') t = 'corea del sud';
+  if (t === 'rep. ceca') t = 'repubblica ceca';
+  if (t === 'n. zelanda') t = 'nuova zelanda';
+  if (t === 'arabia s.') t = 'arabia saudita';
+  if (t === 'r.d. congo') t = 'repubblica democratica del congo';
+  if (t === 'curacao') t = 'curaçao';
+  if (t === 'costa avorio') t = "costa d'avorio";
+  if (t === 'usa') t = 'stati uniti';
+  if (t === 'bosnia') t = 'bosnia ed erzegovina';
+  return FLAG_MAP[t] || '';
+};
+
 const getFlag = (team: string) => {
-    if (!team) return null;
-    const code = flagMap[team.toLowerCase().trim()];
+    const code = getFlagCode(team);
     return code ? `https://flagcdn.com/w40/${code}.png` : null;
 };
 
 const getEmoji = (team: string) => {
     if (!team) return '';
-    return flagEmojiMap[team.toLowerCase().trim()] || '';
+    return FLAG_EMOJI_MAP[team.toLowerCase().trim()] || '';
 };
 
 // Funzione Magica per decodificare le stringhe salvate nel DB
@@ -297,14 +326,13 @@ export default function AdminPage() {
   const [newScorerName, setNewScorerName] = useState('');
   const [newScorerTeam, setNewScorerTeam] = useState('');
 
-  // Nuovi stati per il tabellone
   const [qTeam, setQTeam] = useState('');
   const [qStage, setQStage] = useState('R32');
   const [qSlot, setQSlot] = useState(BRACKET_SLOTS['R32'][0].dbString);
 
-  const [bonusData, setBonusData] = useState({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' });
+  // Rimossi high, high_group, low_group perché calcolati automaticamente!
+  const [bonusData, setBonusData] = useState({ red: '', top: '', penalties: '', own_goals: '', mvp_world_cup: '', best_goalkeeper: '' });
   const [searchTerm, setSearchTerm] = useState('');
-  const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     async function init() {
@@ -329,8 +357,7 @@ export default function AdminPage() {
     const brData = await fetchAllRecords('brackets');
     const predData = await fetchAllRecords('predictions');
 
-    const fetchedMatches = mRes.data || [];
-    setMatches(fetchedMatches); 
+    setMatches(mRes.data || []); 
     setProfiles(pData || []); 
     setOfficialBracket(obRes.data || []); 
     setAllUserBonuses(ubData || []);
@@ -342,26 +369,15 @@ export default function AdminPage() {
       setAnnouncement(settingsRes.data.announcement || '');
     }
 
-    const tempGroups: Record<string, string[]> = {};
-    fetchedMatches.forEach((m) => {
-        if (!m.home_team || !m.away_team || m.home_team.includes('TBD')) return;
-        const fullMatchString = `${m.home_team} - ${m.away_team}`;
-        const formattedHomeTeam = formatMatchName(m.home_team);
-        const groupObj = TOURNAMENT_GROUPS.find(g => 
-            g.teams.some(t => t.toLowerCase() === formattedHomeTeam.toLowerCase())
-        );
-        const groupName = groupObj ? groupObj.name : 'Altri Match';
-        if (!tempGroups[groupName]) tempGroups[groupName] = [];
-        tempGroups[groupName].push(fullMatchString);
-    });
-    setGroupedMatches(tempGroups);
-
     if (bRes.data) {
+      // Conserviamo solo quelli manuali
       setBonusData({
-        red: bRes.data.total_red_cards?.toString() || '', top: bRes.data.top_scorer || '', high: bRes.data.high_scoring_match || '',
-        penalties: bRes.data.total_penalties?.toString() || '', own_goals: bRes.data.total_own_goals?.toString() || '',
-        high_group: bRes.data.highest_scoring_group || '', low_group: bRes.data.lowest_scoring_group || '',
-        mvp_world_cup: bRes.data.mvp_world_cup || '', best_goalkeeper: bRes.data.best_goalkeeper || '',
+        red: bRes.data.total_red_cards?.toString() || '', 
+        top: bRes.data.top_scorer || '', 
+        penalties: bRes.data.total_penalties?.toString() || '', 
+        own_goals: bRes.data.total_own_goals?.toString() || '',
+        mvp_world_cup: bRes.data.mvp_world_cup || '', 
+        best_goalkeeper: bRes.data.best_goalkeeper || '',
       });
     }
   }
@@ -420,6 +436,65 @@ export default function AdminPage() {
 
       if (!profs || profs.length === 0) return;
 
+      // ==========================================
+      // CALCOLO AUTOMATICO BONUS PARTITE/GIRONI 
+      // ==========================================
+      let maxMatchGoals = -1;
+      let topMatches: string[] = [];
+      const gGoals: Record<string, number> = {};
+      GROUPS.forEach(g => gGoals[g] = 0);
+
+      allMatches?.forEach(m => {
+          const goals = (m.home_score_final || 0) + (m.away_score_final || 0);
+          
+          if (goals > maxMatchGoals) { 
+              maxMatchGoals = goals; 
+              topMatches = [`${m.home_team} - ${m.away_team}`]; 
+          } else if (goals === maxMatchGoals && goals >= 0) { 
+              topMatches.push(`${m.home_team} - ${m.away_team}`); 
+          }
+
+          const homeFormatted = formatMatchName(m.home_team).toLowerCase();
+          const groupObj = TOURNAMENT_GROUPS.find(gr => gr.teams.some(t => t.toLowerCase() === homeFormatted));
+          if (groupObj) {
+              gGoals[groupObj.name] += goals;
+          }
+      });
+
+      let maxGroupGoals = -1;
+      let minGroupGoals = 999;
+      let topGroups: string[] = [];
+      let bottomGroups: string[] = [];
+
+      if (allMatches && allMatches.length > 0) {
+          Object.entries(gGoals).forEach(([g, goals]) => {
+              if (goals > maxGroupGoals) { maxGroupGoals = goals; topGroups = [g]; }
+              else if (goals === maxGroupGoals) { topGroups.push(g); }
+
+              if (goals < minGroupGoals) { minGroupGoals = goals; bottomGroups = [g]; }
+              else if (goals === minGroupGoals) { bottomGroups.push(g); }
+          });
+      }
+
+      const computedHighMatch = topMatches.length > 0 ? topMatches.join(', ') : null;
+      const computedHighGroup = topGroups.length > 0 ? topGroups.join(', ') : null;
+      const computedLowGroup = bottomGroups.length > 0 ? bottomGroups.join(', ') : null;
+
+      if (offBonuses) {
+          offBonuses.high_scoring_match = computedHighMatch;
+          offBonuses.highest_scoring_group = computedHighGroup;
+          offBonuses.lowest_scoring_group = computedLowGroup;
+          // Salviamo a database così il frontend profilo li vede
+          await supabase.from('official_bonuses').update({
+              high_scoring_match: computedHighMatch,
+              highest_scoring_group: computedHighGroup,
+              lowest_scoring_group: computedLowGroup
+          }).eq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      // ==========================================
+      // ASSEGNAZIONE PUNTI
+      // ==========================================
       const finishedMatchesCount = allMatches?.length || 0;
       const maxGroupPoints = finishedMatchesCount * 10;
       
@@ -497,7 +572,11 @@ export default function AdminPage() {
           }
 
           Object.entries(bMap).forEach(([k, pts]: any) => { 
-            if (offBonuses[k] != null && ub[k] != null && cleanString(String(offBonuses[k])) === cleanString(String(ub[k]))) pBon += pts; 
+            if (offBonuses[k] != null && ub[k] != null) {
+              const offValues = String(offBonuses[k]).split(',').map(v => cleanString(v));
+              const uVal = cleanString(String(ub[k]));
+              if (offValues.includes(uVal)) pBon += pts; 
+            }
           });
         }
         
@@ -566,10 +645,8 @@ export default function AdminPage() {
       total_own_goals: bonusData.own_goals ? parseInt(bonusData.own_goals) : null, 
       top_scorer: bonusData.top.trim() || null, 
       mvp_world_cup: bonusData.mvp_world_cup.trim() || null, 
-      best_goalkeeper: bonusData.best_goalkeeper.trim() || null, 
-      high_scoring_match: bonusData.high || null, 
-      highest_scoring_group: bonusData.high_group || null, 
-      lowest_scoring_group: bonusData.low_group || null 
+      best_goalkeeper: bonusData.best_goalkeeper.trim() || null
+      // Le altre 3 sono calcolate in automatico da syncLeaderboard
   });
 
   const saveLiveStats = async (e: React.FormEvent) => {
@@ -590,7 +667,7 @@ export default function AdminPage() {
       const { error } = await supabase.from('official_bonuses').upsert(payload, { onConflict: 'id' }); 
       if (!error) {
         toast.success('Tutto azzerato con successo!');
-        setBonusData({ red: '', top: '', high: '', penalties: '', own_goals: '', high_group: '', low_group: '', mvp_world_cup: '', best_goalkeeper: '' }); 
+        setBonusData({ red: '', top: '', penalties: '', own_goals: '', mvp_world_cup: '', best_goalkeeper: '' }); 
         await syncLeaderboard(false, false); 
       } else {
         toast.error('Errore durante il reset: ' + error.message);
@@ -783,23 +860,20 @@ export default function AdminPage() {
       return (a.points_bonus || 0) - (b.points_bonus || 0);
     };
 
-    // ORDINE DI ASSEGNAZIONE PER VALORE DEL PREMIO (PER MASSIMIZZARE LA VINCITA DEL SINGOLO UTENTE)
-    // 1. Premi Maggiori o uguali a 30€
-    assignPrize('gen1', genSort); // 200€
-    assignPrize('gen2', genSort); // 140€
-    assignPrize('gen3', genSort); // 80€
-    assignPrize('gen4', genSort); // 50€
-    assignPrize('gen5', genSort); // 30€
-    assignPrize('gir', girSort); // 30€
-    assignPrize('playoff', brackSort); // 30€
-    assignPrize('bonus', bonusSort); // 30€
-    assignPrize('cecchino', cecchSort); // 30€
+    assignPrize('gen1', genSort); 
+    assignPrize('gen2', genSort); 
+    assignPrize('gen3', genSort); 
+    assignPrize('gen4', genSort); 
+    assignPrize('gen5', genSort); 
+    assignPrize('gir', girSort); 
+    assignPrize('playoff', brackSort); 
+    assignPrize('bonus', bonusSort); 
+    assignPrize('cecchino', cecchSort); 
 
-    // 2. Premi Minori (20€ e 10€)
-    assignPrize('gen6', genSort); // 20€
-    assignPrize('gen7', genSort); // 20€
-    assignPrize('gen8', genSort); // 10€
-    assignPrize('zero', zeroSort, (u) => u.exact_matches === 0 || u.exact_matches === null); // 10€
+    assignPrize('gen6', genSort); 
+    assignPrize('gen7', genSort); 
+    assignPrize('gen8', genSort); 
+    assignPrize('zero', zeroSort, (u) => u.exact_matches === 0 || u.exact_matches === null); 
 
     let report = `🏆 *VINCITORI PREMI MONDIALE 2026* 🏆\n\n`;
 
@@ -866,7 +940,6 @@ export default function AdminPage() {
     toast.success('Statistiche Vincitore copiate! 🏆', { icon: '💬' });
   };
 
-  // NUOVA FUNZIONE AGGIORNATA PER INCLUDERE GLI ZERO E INCOLONNARE
   const copyCecchiniReport = () => {
     const userStats = profiles.map(p => {
       const exactMatches: string[] = [];
@@ -1141,7 +1214,20 @@ export default function AdminPage() {
                   </div>
                 </div>
                 
-                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">
+                {/* INFORMAZIONI CALCOLO AUTOMATICO */}
+                <div className="space-y-3 pt-3 border-t border-slate-800/50">
+                  <div className="bg-emerald-950/30 border border-emerald-500/30 p-4 rounded-xl flex items-start gap-3">
+                    <Activity className="text-emerald-500 shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Calcolo Automatico Attivo</p>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        I bonus <strong className="text-white">Match + Gol</strong>, <strong className="text-white">Girone + Gol</strong> e <strong className="text-white">Girone - Gol</strong> vengono calcolati e assegnati <strong className="text-emerald-500">automaticamente</strong> in base ai risultati confermati nella sezione "Risultati Gironi".
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 mt-2 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">
                   SALVA E MOSTRA SULLA DASHBOARD
                 </button>
 
@@ -1174,7 +1260,7 @@ export default function AdminPage() {
                   placeholder="Nome (es. K. Mbappé)" 
                   suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
                   onSelectCustom={(item) => {
-                    const code = flagMap[item.country.toLowerCase().trim()];
+                    const code = getFlagCode(item.country);
                     if (code) setNewScorerTeam(code);
                   }}
                 />
@@ -1185,10 +1271,8 @@ export default function AdminPage() {
                     className="flex-1 sm:w-40 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500 appearance-none text-center"
                   >
                     <option value="">Nazione...</option>
-                    {Object.entries(flagMap)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([country, code]) => (
-                        <option key={code + country} value={code}>{country}</option>
+                    {COUNTRY_OPTIONS.map(c => (
+                        <option key={c.code + c.name} value={c.code}>{c.name.toUpperCase()}</option>
                     ))}
                   </select>
                   <button onClick={(e) => addScorer(e)} className="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-2xl text-white transition-all shadow-lg active:scale-95 shrink-0">
@@ -1346,9 +1430,9 @@ export default function AdminPage() {
                            {hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
                         </div>
                         <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
-                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${flagMap[m.home_team?.toLowerCase().trim()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
+                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.home_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
                           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /><span className="text-slate-700 font-black">-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /></div>
-                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${flagMap[m.away_team?.toLowerCase().trim()] || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
+                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.away_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
                         </div>
                         <button onClick={() => updateScore(m.id)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${hasR ? 'bg-emerald-600 text-white' : 'bg-yellow-500 text-slate-950'}`}>{hasR ? 'Aggiorna' : 'Conferma'}</button>
                       </div>
@@ -1416,36 +1500,59 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE BONUS UFFICIALI (QUESTI ASSEGNANO PUNTI AL SALVATAGGIO) ----- */}
+        {/* ----- SEZIONE BONUS UFFICIALI E STATS LIVE ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-purple-500">
           <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Finali (Punti)</h2></div>
+            <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Finali e Stats Live</h2></div>
             {openSection.bonus ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.bonus && (
             <div className="p-5 bg-slate-950/30">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4">
-                Questi dati <strong className="text-purple-500">ASSEGNANO PUNTI</strong> istantaneamente non appena salvi. Compilali solo a gironi o Mondiale concluso.
+                I dati compilati qui aggiorneranno la <strong className="text-emerald-500">Dashboard Live</strong> degli utenti.<br/>
+                Quando clicchi "Assegna Punti", influenzeranno la <strong className="text-purple-500">Classifica Generale</strong>.
               </p>
+              
               <form onSubmit={saveBonuses} className="space-y-5">
                 <div className="grid grid-cols-1 gap-4">
+                  {/* PREMI PRINCIPALI */}
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Mvp del Mondiale</span>
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">MVP Mondiale (10pt)</span>
                     <AutocompleteInput value={bonusData.mvp_world_cup} onChange={val => setBonusData({ ...bonusData, mvp_world_cup: val })} placeholder="MVP MONDIALE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Capocannoniere</span>
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Capocannoniere (10pt)</span>
                     <AutocompleteInput value={bonusData.top} onChange={val => setBonusData({ ...bonusData, top: val })} placeholder="CAPOCANNONIERE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Miglior Portiere</span>
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Miglior Portiere (10pt)</span>
                     <AutocompleteInput value={bonusData.best_goalkeeper} onChange={val => setBonusData({ ...bonusData, best_goalkeeper: val })} placeholder="MIGLIOR PORTIERE" suggestions={WORLD_CUP_GOALKEEPERS} />
                   </div>
 
-                  <select value={bonusData.high} onChange={e => setBonusData({ ...bonusData, high: e.target.value })} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none appearance-none"><option value="">MATCH PIÙ GOL...</option>{Object.entries(groupedMatches).map(([g, m]) => (<optgroup key={g} label={g} className="bg-slate-900">{m.map(match => <option key={match} value={match}>{formatMatchName(match)}</option>)}</optgroup>))}</select>
-                  <div className="grid grid-cols-2 gap-3"><select value={bonusData.high_group} onChange={e => setBonusData({ ...bonusData, high_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE PIÙ GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select><select value={bonusData.low_group} onChange={e => setBonusData({ ...bonusData, low_group: e.target.value })} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black uppercase text-blue-400 text-xs outline-none"><option value="">GIRONE MENO GOL...</option>{GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}</select></div>
+                  <div className="h-px bg-slate-800 w-full my-2"></div>
+                  
+                  {/* CONTATORI LIVE */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1"><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-1 text-center w-full block">Autogol (3pt)</span><input value={bonusData.own_goals} onChange={e => setBonusData({...bonusData, own_goals: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" /></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-1 text-center w-full block">Rigori (3pt)</span><input value={bonusData.penalties} onChange={e => setBonusData({...bonusData, penalties: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" /></div>
+                    <div className="space-y-1"><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-1 text-center w-full block">Rossi (3pt)</span><input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" /></div>
+                  </div>
                 </div>
-                <div className="flex gap-4 pt-4"><button type="button" onClick={resetBonuses} className="p-5 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl"><Trash2 size={20} /></button><button type="submit" className="flex-1 bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl shadow-purple-600/20 active:scale-95 transition-all">SALVA BONUS UFFICIALI</button></div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={resetBonuses} className="p-4 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all" title="Azzera tutto"><Trash2 size={20} /></button>
+                  <button type="submit" className="flex-1 bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all">SALVA DATI</button>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-slate-800">
+                  <p className="text-[9px] text-yellow-400 font-bold uppercase tracking-widest mb-3 text-center">
+                    ⚠️ Usa questo bottone SOLO alla fine dei gironi o del Mondiale per assegnare i punti effettivi.
+                  </p>
+                  <button type="button" onClick={() => syncLeaderboard(true, true)} className="w-full bg-yellow-500 hover:bg-yellow-400 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest text-slate-950 flex justify-center items-center gap-2 transition-all shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                    <Trophy size={16} /> ASSEGNA PUNTI E RICALCOLA
+                  </button>
+                </div>
+
               </form>
             </div>
           )}
