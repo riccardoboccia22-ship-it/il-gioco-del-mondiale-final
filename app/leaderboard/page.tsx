@@ -92,7 +92,6 @@ const getTeamFlagCode = (teamName: string) => {
   return flagMap[formattedName] || null;
 };
 
-// Tipo definito esplicitamente per risolvere l'errore TypeScript di Vercel
 type AvatarDef = {
   id: string;
   name: string;
@@ -338,7 +337,6 @@ export default function LeaderboardPage() {
     }
   }
 
-  // --- CALCOLATORE DI PUNTI A CASCATA (FASE A GIRONI) ---
   const calculateMatchPoints = (predHome: any, predAway: any, realHome: any, realAway: any) => {
     if (predHome === null || predAway === null || realHome === null || realAway === null) return 0;
     const pH = Number(predHome), pA = Number(predAway), rH = Number(realHome), rA = Number(realAway);
@@ -351,7 +349,6 @@ export default function LeaderboardPage() {
     return 0;
   };
 
-  // --- FUNZIONE PER RECUPERARE TUTTI I DETTAGLI (PARTITE, TABELLONE E BONUS) ---
   const handlePlayerClick = async (player: any) => {
     setSelectedPlayer(player);
     setDetailTab('MATCHES'); 
@@ -359,30 +356,29 @@ export default function LeaderboardPage() {
     setLoadingDetails(true);
 
     try {
-      // 1. CARICAMENTO GIRONI (Partite)
+      // 1. CARICAMENTO GIRONI
       const { data: preds } = await supabase.from('predictions').select('*').eq('user_id', player.id);
       let combinedMatches: any[] = [];
       
       if (preds && preds.length > 0) {
-        const matchIds = preds.map(p => p.match_id || p.match || p.id_match || p.id_partita).filter(Boolean);
+        const matchIds = preds.map(p => p.match_id).filter(Boolean);
         if (matchIds.length > 0) {
           const { data: matches } = await supabase.from('matches').select('*').in('id', matchIds).eq('is_finished', true);
           combinedMatches = preds.map(pred => {
-            const mId = pred.match_id || pred.match || pred.id_match || pred.id_partita;
-            const mData = matches?.find(m => m.id === mId);
+            const mData = matches?.find(m => m.id === pred.match_id);
             if (!mData) return null; 
-            const pts = pred.points || pred.punti || calculateMatchPoints(pred.home_score, pred.away_score, mData.home_score_final, mData.away_score_final);
+            const pts = calculateMatchPoints(pred.home_score, pred.away_score, mData.home_score_final, mData.away_score_final);
             return { home_score: pred.home_score, away_score: pred.away_score, points: pts, matches: mData };
           }).filter(item => item !== null).sort((a: any, b: any) => {
-            const dateA = a.matches.date || a.matches.match_date || a.matches.id;
-            const dateB = b.matches.date || b.matches.match_date || b.matches.id;
+            const dateA = a.matches.match_date || a.matches.id;
+            const dateB = b.matches.match_date || b.matches.id;
             return dateA < dateB ? -1 : 1;
           });
         }
       }
       setPlayerPredictions(combinedMatches);
 
-      // 2. CARICAMENTO TABELLONE (Fase Finale)
+      // 2. CARICAMENTO TABELLONE
       const { data: bData } = await supabase.from('brackets').select('*').eq('user_id', player.id);
       const correctBrackets: any[] = [];
       bData?.forEach(b => {
@@ -395,32 +391,40 @@ export default function LeaderboardPage() {
       });
       setPlayerBrackets(correctBrackets.sort((a,b) => b.points - a.points));
 
-      // 3. CARICAMENTO BONUS
+      // 3. CARICAMENTO BONUS (CON CONTROLLI RIGIDI)
       const { data: uBonus } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
       const correctBonuses: any[] = [];
       
-      // Controllo se i bonus sono stati calcolati dall'admin (cioè se l'utente ha accumulato più di 0 punti bonus)
-      if ((player.points_bonus || 0) > 0 && uBonus && officialBonuses) {
+      // Controllo Rigido: il valore non deve essere vuoto né 'TBD'
+      const isGroupsClosed = officialBonuses && officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD';
+      const isTournamentFinished = officialBonuses && officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD';
+
+      if (uBonus) {
          const checkBonus = (key: string, pts: number, label: string) => {
-            if (officialBonuses[key] != null && uBonus[key] != null) {
-               // Rendo la validazione flessibile in caso di pari merito (es. "Gruppo A, Gruppo B")
+            if (officialBonuses[key] && officialBonuses[key] !== 'TBD' && uBonus[key]) {
                const offValues = String(officialBonuses[key]).split(',').map(v => cleanString(v));
                const uVal = cleanString(String(uBonus[key]));
                
-               if (offValues.includes(uVal)) {
+               if (offValues.includes(uVal) && uVal !== '') {
                    correctBonuses.push({ answer: uBonus[key], points: pts, label });
                }
             }
          };
-         checkBonus('mvp_world_cup', 10, 'MVP Mondiale');
-         checkBonus('top_scorer', 10, 'Capocannoniere');
-         checkBonus('best_goalkeeper', 10, 'Miglior Portiere');
-         checkBonus('high_scoring_match', 5, 'Match + Gol');
-         checkBonus('highest_scoring_group', 5, 'Girone + Gol');
-         checkBonus('lowest_scoring_group', 5, 'Girone - Gol');
-         checkBonus('total_own_goals', 3, 'Totale Autogol');
-         checkBonus('total_penalties', 3, 'Totale Rigori');
-         checkBonus('total_red_cards', 3, 'Totale Rossi');
+         
+         if (isGroupsClosed) {
+           checkBonus('high_scoring_match', 5, 'Match + Gol');
+           checkBonus('highest_scoring_group', 5, 'Girone + Gol');
+           checkBonus('lowest_scoring_group', 5, 'Girone - Gol');
+         }
+
+         if (isTournamentFinished) {
+           checkBonus('mvp_world_cup', 10, 'MVP Mondiale');
+           checkBonus('top_scorer', 10, 'Capocannoniere');
+           checkBonus('best_goalkeeper', 10, 'Miglior Portiere');
+           checkBonus('total_own_goals', 3, 'Totale Autogol');
+           checkBonus('total_penalties', 3, 'Totale Rigori');
+           checkBonus('total_red_cards', 3, 'Totale Rossi');
+         }
       }
       setPlayerBonuses(correctBonuses.sort((a,b) => b.points - a.points));
 
@@ -449,11 +453,14 @@ export default function LeaderboardPage() {
     return <ChevronDown className="text-rose-500" size={16} strokeWidth={3} />;
   };
 
-  // Applico il filtro di ricerca alla classifica
   const filteredLeaderboard = leaderboard.filter(player => 
     player.username?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     player.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Stato Globale dei lucchetti
+  const isGroupsClosed = officialBonuses && officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD';
+  const isTournamentFinished = officialBonuses && officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD';
 
   if (loading)
     return (
