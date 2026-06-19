@@ -64,9 +64,26 @@ const formatTeamName = (name: string) => {
   return name;
 };
 
+const normalizeStage = (s: string) => {
+  const u = s?.toUpperCase().trim() || '';
+  if (u.includes('SEDICESIM') || u === 'R32') return 'R32';
+  if (u.includes('OTTAV') || u === 'R16') return 'R16';
+  if (u.includes('QUART') || u === 'QF') return 'QF';
+  if (u.includes('SEMIFINAL') || u === 'SF') return 'SF';
+  if (u.includes('VINCITOR') || u === 'WINNER') return 'WINNER';
+  if (u.includes('FINAL') || u === 'F') return 'F';
+  return u;
+};
+
+const cleanString = (str: string) => {
+  if (!str) return '';
+  return formatTeamName(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
 export default function BracketPage() {
   const router = useRouter(); 
   const [selections, setSelections] = useState<any>({});
+  const [officialBracket, setOfficialBracket] = useState<any[]>([]); // <- NUOVO STATO
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   
@@ -91,24 +108,32 @@ export default function BracketPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/'); return; } 
 
-      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-      if (!profile || !profile.full_name) {
+      const [profileRes, bracketRes, offBracketRes] = await Promise.all([
+         supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+         supabase.from('brackets').select('stage, team_name').eq('user_id', user.id),
+         supabase.from('official_bracket').select('*') // <- RECUPERO TABELLONE UFFICIALE
+      ]);
+
+      if (!profileRes.data || !profileRes.data.full_name) {
         router.push('/setup-profilo');
         return;
       }
 
-      const { data, error } = await supabase.from('brackets').select('stage, team_name').eq('user_id', user.id);
-      if (error) throw error;
-      if (data) {
+      if (bracketRes.data) {
         const saved: any = {};
         const stageCounts: any = {};
-        data.forEach((row) => {
+        bracketRes.data.forEach((row) => {
           const count = stageCounts[row.stage] || 0;
           saved[`${row.stage}-${count}`] = row.team_name;
           stageCounts[row.stage] = count + 1;
         });
         setSelections(saved);
       }
+
+      if (offBracketRes.data) {
+          setOfficialBracket(offBracketRes.data);
+      }
+
     } catch (err) { toast.error('Errore caricamento'); } finally { setFetching(false); }
   }
 
@@ -183,6 +208,9 @@ export default function BracketPage() {
     const isCurrentCellTeam = selections[`${activeCell?.stageId}-${activeCell?.index}`] === t;
     const isDisabled = isSelectedInStage && !isCurrentCellTeam;
 
+    // Controllo se la squadra è tra le QUALIFICATE UFFICIALI della fase attiva (Admin Info)
+    const isOfficialForActiveStage = officialBracket.some(ob => normalizeStage(ob.stage) === activeCell?.stageId && cleanString(ob.team_name) === cleanString(t));
+
     const teamStages = Object.entries(selections)
        .filter(([k, v]) => v === t)
        .map(([k]) => k.split('-')[0]);
@@ -203,7 +231,9 @@ export default function BracketPage() {
             ? 'bg-yellow-500/10 border-yellow-500 shadow-md' 
             : isDisabled
               ? 'bg-slate-950 border-slate-800 opacity-40 cursor-not-allowed'
-              : 'bg-slate-950 border-slate-800 active:border-yellow-500 hover:border-slate-700 shadow-md'
+              : isOfficialForActiveStage
+                ? 'bg-emerald-950/20 border-emerald-500/40 active:border-emerald-400 hover:border-emerald-500/80 shadow-md'
+                : 'bg-slate-950 border-slate-800 active:border-yellow-500 hover:border-slate-700 shadow-md'
         }`}
       >
         <div className="flex items-center justify-between w-full">
@@ -213,21 +243,28 @@ export default function BracketPage() {
               className={`w-7 h-5 sm:w-9 sm:h-6 object-cover rounded shadow-lg border border-slate-800 transition-colors ${!isDisabled ? 'group-hover:border-slate-600' : ''}`} 
               alt="" 
             />
-            <span className={`text-[11px] sm:text-[12px] font-black uppercase italic truncate ${isCurrentCellTeam ? 'text-yellow-500' : 'text-white'}`}>
+            <span className={`text-[11px] sm:text-[12px] font-black uppercase italic truncate ${isCurrentCellTeam ? 'text-yellow-500' : isOfficialForActiveStage ? 'text-emerald-400' : 'text-white'}`}>
               {formatTeamName(t)}
             </span>
           </div>
           
-          {isCurrentCellTeam && (
-            <span className="text-[8px] font-black bg-yellow-500 text-slate-950 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-0.5 shadow-sm shrink-0">
-              <CheckCircle2 size={10}/> Tua Scelta
-            </span>
-          )}
-          {isDisabled && (
-            <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">
-              Già Scelta
-            </span>
-          )}
+          <div className="flex items-center gap-1">
+            {isOfficialForActiveStage && !isCurrentCellTeam && (
+              <span className="text-[8px] font-black bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-0.5 shrink-0">
+                <CheckCircle2 size={10}/> Ufficiale
+              </span>
+            )}
+            {isCurrentCellTeam && (
+              <span className="text-[8px] font-black bg-yellow-500 text-slate-950 px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-0.5 shadow-sm shrink-0">
+                <CheckCircle2 size={10}/> Tua Scelta
+              </span>
+            )}
+            {isDisabled && (
+              <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">
+                Già Scelta
+              </span>
+            )}
+          </div>
         </div>
         
         {uniqueStages.length > 0 && (
@@ -262,9 +299,9 @@ export default function BracketPage() {
         </div>
       </header>
 
-      <div className={`max-w-4xl mx-auto space-y-12 ${isExpired ? 'opacity-70 pointer-events-none' : ''}`}>
+      <div className={`max-w-4xl mx-auto space-y-12 ${isExpired ? 'opacity-90' : ''}`}>
         
-        {/* INFO BOX (Regole di Inserimento) */}
+        {/* INFO BOX */}
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 -mt-2 mb-10 shadow-lg">
           <Info className="text-yellow-500 shrink-0 mt-0.5" size={18} />
           <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
@@ -272,63 +309,102 @@ export default function BracketPage() {
           </p>
         </div>
 
-        {STAGES.map((stage) => (
-          <section key={stage.id} className="relative">
-            <div className="flex flex-col mb-6">
-              <div className="flex items-center gap-3 px-2">
-                <span className="bg-yellow-500 text-slate-950 text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-lg italic flex items-center gap-1 shrink-0 shadow-lg shadow-yellow-500/20">
-                  {stage.pts} PT
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight shrink-0">{stage.label}</h2>
-                <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-800 to-transparent"></div>
-              </div>
-            </div>
+        {STAGES.map((stage) => {
+          // Filtraggio squadre ufficiali caricate per questa fase
+          const officialTeamsInStage = officialBracket.filter(ob => normalizeStage(ob.stage) === stage.id);
+          const isStageFull = officialTeamsInStage.length >= stage.count;
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr">
-              {Array.from({ length: stage.count }).map((_, i) => {
-                const currentSelection = selections[`${stage.id}-${i}`];
-                const cellNumber = i + 1;
-                
-                return (
-                  <div key={i} className="relative h-full">
-                    <button
-                      disabled={isExpired}
-                      onClick={() => {
-                        if (isExpired) return;
-                        setActiveCell({stageId: stage.id, index: i});
-                      }}
-                      className={`w-full h-full bg-slate-900 border-2 rounded-2xl py-3 pl-2 pr-10 sm:p-4 sm:pr-14 flex items-center gap-1.5 sm:gap-3 transition-all text-left
-                        ${currentSelection ? 'border-yellow-500/50 text-yellow-500 shadow-xl shadow-yellow-500/5' : 'border-slate-800 text-slate-600 hover:border-slate-700'}
-                        ${isExpired ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      <span className={`text-[9px] sm:text-[11px] font-black w-3 sm:w-4 text-center shrink-0 ${currentSelection ? 'text-yellow-600/50' : 'text-slate-700'}`}>
-                        {cellNumber}
-                      </span>
-                      <div className="shrink-0 flex items-center justify-center">
-                        {currentSelection ? (
-                          <img src={getFileFlag(currentSelection)!} className="w-5 sm:w-8 h-auto rounded-[3px] shadow-sm border border-slate-800 object-cover" alt="" />
-                        ) : (
-                          <ShieldCheck className="text-slate-800 w-4 h-4 sm:w-6 sm:h-6" />
-                        )}
-                      </div>
-                      <span className="text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight flex-1 truncate">
-                        {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
-                      </span>
-                    </button>
-                    {currentSelection && !isExpired && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
-                        className="absolute right-0 top-0 bottom-0 px-3 sm:px-4 text-rose-500 hover:text-rose-400 active:scale-90 transition-all z-20 flex items-center justify-center"
+          return (
+            <section key={stage.id} className="relative">
+              <div className="flex flex-col mb-6">
+                <div className="flex items-center gap-3 px-2">
+                  <span className="bg-yellow-500 text-slate-950 text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-lg italic flex items-center gap-1 shrink-0 shadow-lg shadow-yellow-500/20">
+                    {stage.pts} PT
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight shrink-0">{stage.label}</h2>
+                  <div className="flex-1 h-[1px] bg-gradient-to-r from-slate-800 to-transparent"></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr">
+                {Array.from({ length: stage.count }).map((_, i) => {
+                  const currentSelection = selections[`${stage.id}-${i}`];
+                  const cellNumber = i + 1;
+                  
+                  // CONTROLLI STATUS UFFICIALI DELLA CELLA
+                  const isOfficial = currentSelection && officialTeamsInStage.some(ob => cleanString(ob.team_name) === cleanString(currentSelection));
+                  const isWrong = currentSelection && isStageFull && !isOfficial;
+
+                  // GESTIONE CSS CELLA E TESTO
+                  let cellClass = 'border-slate-800 text-slate-600 hover:border-slate-700 bg-slate-900';
+                  let numClass = 'text-slate-700';
+                  let nameClass = 'text-slate-500';
+
+                  if (currentSelection) {
+                     if (isOfficial) {
+                        cellClass = 'border-emerald-500/40 bg-emerald-950/20 shadow-xl shadow-emerald-500/5';
+                        numClass = 'text-emerald-500/40';
+                        nameClass = 'text-emerald-400';
+                     } else if (isWrong) {
+                        cellClass = 'border-rose-900/50 bg-rose-950/10 opacity-70';
+                        numClass = 'text-rose-900/50';
+                        nameClass = 'text-rose-500/60 line-through decoration-rose-500/50';
+                     } else {
+                        cellClass = 'border-yellow-500/40 bg-yellow-950/10 shadow-xl shadow-yellow-500/5 hover:border-yellow-500/60';
+                        numClass = 'text-yellow-600/50';
+                        nameClass = 'text-yellow-500';
+                     }
+                  }
+
+                  return (
+                    <div key={i} className="relative h-full">
+                      <button
+                        disabled={isExpired}
+                        onClick={() => {
+                          if (isExpired) return;
+                          setActiveCell({stageId: stage.id, index: i});
+                        }}
+                        className={`w-full h-full border-2 rounded-2xl py-3 pl-2 pr-10 sm:p-4 sm:pr-14 flex items-center gap-1.5 sm:gap-3 transition-all text-left ${cellClass} ${isExpired ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                       >
-                        <X size={18} strokeWidth={3} className="sm:w-5 sm:h-5" />
+                        <span className={`text-[9px] sm:text-[11px] font-black w-3 sm:w-4 text-center shrink-0 ${numClass}`}>
+                          {cellNumber}
+                        </span>
+                        
+                        <div className="shrink-0 flex items-center justify-center relative">
+                          {currentSelection ? (
+                            <>
+                              <img src={getFileFlag(currentSelection)!} className={`w-5 sm:w-8 h-auto rounded-[3px] shadow-sm border object-cover ${isWrong ? 'border-rose-900/50 grayscale' : 'border-slate-800'}`} alt="" />
+                              {isOfficial && (
+                                <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full border-2 border-emerald-950 shadow-sm">
+                                  <CheckCircle2 size={10} className="text-slate-950" />
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <ShieldCheck className="text-slate-800 w-4 h-4 sm:w-6 sm:h-6" />
+                          )}
+                        </div>
+                        
+                        <span className={`text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight flex-1 truncate ${nameClass}`}>
+                          {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
+                        </span>
                       </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ))}
+                      
+                      {currentSelection && !isExpired && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
+                          className="absolute right-0 top-0 bottom-0 px-3 sm:px-4 text-rose-500 hover:text-rose-400 active:scale-90 transition-all z-20 flex items-center justify-center"
+                        >
+                          <X size={18} strokeWidth={3} className="sm:w-5 sm:h-5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       {activeCell && !isExpired && (
@@ -386,7 +462,7 @@ export default function BracketPage() {
 
                   return (
                     <>
-                      {/* 1. QUALIFICATE DAL TURNO PRECEDENTE (Divise per girone) */}
+                      {/* 1. QUALIFICATE DAL TURNO PRECEDENTE */}
                       {prevGroups.length > 0 && (
                          <div className="space-y-5 mb-10">
                             <div className="flex items-center gap-3 px-2">

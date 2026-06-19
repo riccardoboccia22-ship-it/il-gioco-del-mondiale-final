@@ -156,21 +156,6 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
-const formatTeamName = (teamName: string) => {
-  if (!teamName) return '';
-  const lowerName = teamName.toLowerCase().trim();
-  if (lowerName === 'repubblica democratica del congo') return 'R.D. Congo';
-  if (lowerName === 'bosnia ed erzegovina' || lowerName === 'bosnia erzegovina') return 'Bosnia';
-  if (lowerName === 'repubblica ceca') return 'Rep. Ceca';
-  if (lowerName === 'arabia saudita') return 'Arabia S.';
-  if (lowerName === 'corea del sud') return 'Corea Sud';
-  if (lowerName === 'stati uniti' || lowerName === 'usa') return 'USA';
-  if (lowerName === 'nuova zelanda') return 'N. Zelanda';
-  if (lowerName === "costa d'avorio") return 'Costa Avorio';
-  if (teamName.length > 12) return teamName.substring(0, 10) + '.';
-  return teamName;
-};
-
 const formatMatchName = (matchString: string) => {
   if (!matchString) return '';
   let formatted = matchString;
@@ -180,13 +165,16 @@ const formatMatchName = (matchString: string) => {
   formatted = formatted.replace(/Stati Uniti|USA/gi, 'USA');
   formatted = formatted.replace(/Arabia Saudita/gi, 'Arabia S.');
   formatted = formatted.replace(/Nuova Zelanda/gi, 'N. Zelanda');
-  formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
-  formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
+  formatted = formatted.replace(/Corea del Sud|Corea Sud/gi, 'Corea Sud');
+  formatted = formatted.replace(/Costa d'Avorio|Costa Avorio/gi, 'Costa Avorio');
   return formatted;
 };
 
+const formatTeamName = formatMatchName;
+
 const cleanString = (str: string) => {
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  if (!str) return '';
+  return formatMatchName(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
 const AutocompleteInput = ({ 
@@ -291,12 +279,18 @@ const AutocompleteInput = ({
   );
 };
 
-const fetchAllRecords = async (table: string) => {
+// FIX: Aggiunto ordinamento univoco a 3 livelli per evitare che il DB salti le righe nel limite delle 1000 iterazioni!
+const fetchAllRecords = async (table: string, orderCol1?: string, orderCol2?: string, orderCol3?: string) => {
   let result: any[] = [];
   let start = 0;
   const limit = 1000;
   while (true) {
-    const { data, error } = await supabase.from(table).select('*').range(start, start + limit - 1);
+    let query = supabase.from(table).select('*');
+    if (orderCol1) query = query.order(orderCol1, { ascending: true });
+    if (orderCol2) query = query.order(orderCol2, { ascending: true });
+    if (orderCol3) query = query.order(orderCol3, { ascending: true });
+    
+    const { data, error } = await query.range(start, start + limit - 1);
     if (error || !data || data.length === 0) break;
     result.push(...data);
     if (data.length < limit) break;
@@ -351,10 +345,11 @@ export default function AdminPage() {
       supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
     ]);
     
-    const pData = await fetchAllRecords('profiles');
-    const ubData = await fetchAllRecords('user_bonus_answers');
-    const brData = await fetchAllRecords('brackets');
-    const predData = await fetchAllRecords('predictions');
+    // FETCH A BLOCCHI SICURO CON ORDINAMENTO UNIVOCO
+    const pData = await fetchAllRecords('profiles', 'id');
+    const ubData = await fetchAllRecords('user_bonus_answers', 'user_id');
+    const brData = await fetchAllRecords('brackets', 'user_id', 'stage', 'team_name'); // <- FONDAMENTALE!
+    const predData = await fetchAllRecords('predictions', 'user_id', 'match_id');
 
     const fetchedMatches = mRes.data || [];
     setMatches(fetchedMatches); 
@@ -409,12 +404,9 @@ export default function AdminPage() {
     if (!newScorerName.trim() || !newScorerTeam) return toast.error('Compila tutti i campi');
     
     const cleanName = newScorerName.trim();
-    
-    // Controlla se il marcatore è già presente nella lista (ignorando maiuscole/minuscole)
     const existingScorer = topScorers.find(s => s.name.toLowerCase() === cleanName.toLowerCase());
 
     if (existingScorer) {
-      // Se esiste già, aggiungi 1 gol al suo conteggio attuale
       await updateScorerGoals(existingScorer.id, existingScorer.goals, 1);
       setNewScorerName('');
       setNewScorerTeam('');
@@ -422,7 +414,6 @@ export default function AdminPage() {
       return;
     }
 
-    // Se non esiste, crea un nuovo record
     const { data, error } = await supabase.from('top_scorers').insert([{ name: cleanName, team_code: newScorerTeam, goals: 1 }]).select();
     if (error) {
       toast.error('Errore durante l\'aggiunta');
@@ -450,7 +441,6 @@ export default function AdminPage() {
     }
   };
 
-  // --- AZIONE 1: CHIUSURA GIRONI (Auto-calcola Match e Gironi) ---
   const closeGroupStage = async () => {
     if (!window.confirm('Vuoi calcolare e assegnare i punti per i Gironi e Match con più/meno gol?')) return;
     const toastId = toast.loading('Calcolo bonus gironi...');
@@ -484,7 +474,6 @@ export default function AdminPage() {
 
         if (matches && matches.length > 0) {
             Object.entries(gGoals).forEach(([g, goals]) => {
-                // Non consideriamo gironi a 0 gol se non sono state giocate partite
                 if (goals > 0 || matches.some(m => m.is_finished)) {
                   if (goals > maxGroupGoals) { maxGroupGoals = goals; topGroups = [g]; }
                   else if (goals === maxGroupGoals) { topGroups.push(g); }
@@ -512,7 +501,6 @@ export default function AdminPage() {
     }
   };
 
-  // --- AZIONE 2: RICALCOLO GLOBALE (Granulare in base a cosa c'è nel DB) ---
   const syncLeaderboard = async (isManual = true) => {
     if (isManual && !window.confirm('Ricalcolare punti e spareggi per tutti?')) return;
     setSyncing(true);
@@ -525,10 +513,10 @@ export default function AdminPage() {
         supabase.from('official_bracket').select('*'), 
       ]);
       
-      const profs = await fetchAllRecords('profiles');
-      const allPreds = await fetchAllRecords('predictions');
-      const userBrackets = await fetchAllRecords('brackets');
-      const userBonuses = await fetchAllRecords('user_bonus_answers');
+      const profs = await fetchAllRecords('profiles', 'id');
+      const allPreds = await fetchAllRecords('predictions', 'user_id', 'match_id');
+      const userBrackets = await fetchAllRecords('brackets', 'user_id', 'stage', 'team_name');
+      const userBonuses = await fetchAllRecords('user_bonus_answers', 'user_id');
 
       if (!profs || profs.length === 0) return;
 
@@ -541,18 +529,17 @@ export default function AdminPage() {
          maxBracketPoints += STAGES.find(s => s.id === uS)?.pts || 0;
       });
 
-      // Valutiamo cosa è stato chiuso in base ai campi compilati
       const isGroupsClosed = offBonuses && offBonuses.high_scoring_match && offBonuses.high_scoring_match !== 'TBD' && offBonuses.high_scoring_match.trim() !== '';
       const isTournamentClosed = offBonuses && offBonuses.mvp_world_cup && offBonuses.mvp_world_cup !== 'TBD' && offBonuses.mvp_world_cup.trim() !== '';
 
       let maxBonusPoints = 0;
       if (offBonuses) {
          if (isGroupsClosed) {
-           maxBonusPoints += 15; // 3 domande x 5pt
+           maxBonusPoints += 15;
          }
          if (isTournamentClosed) {
-           maxBonusPoints += 30; // 3 domande x 10pt (MVP, Scorer, GK)
-           maxBonusPoints += 9;  // 3 domande x 3pt (Rossi, Rigori, Autogol)
+           maxBonusPoints += 30;
+           maxBonusPoints += 9;
          }
       }
       
@@ -581,12 +568,20 @@ export default function AdminPage() {
         });
 
         const uBrackets = userBrackets?.filter(b => b.user_id === profile.id) || [];
+        const seenBracketMatches = new Set();
+        
         uBrackets.forEach(ub => {
           const uS = normalizeStage(ub.stage);
-          if (offBracket?.some(ob => normalizeStage(ob.stage) === uS && ob.team_name.toLowerCase().trim() === ub.team_name.toLowerCase().trim())) {
-            const pts = STAGES.find(s => s.id === uS)?.pts || 0;
-            pB += pts;
-            if (uS === 'WINNER') sW += pts; else if (uS === 'F') sF += pts; else if (uS === 'SF') sSF += pts; else if (uS === 'QF') sQF += pts; else if (uS === 'R16') sR16 += pts; else if (uS === 'R32') sR32 += pts;
+          const cleanT = cleanString(ub.team_name);
+          const uniqueKey = `${uS}-${cleanT}`;
+
+          if (offBracket?.some(ob => normalizeStage(ob.stage) === uS && cleanString(ob.team_name) === cleanT)) {
+            if (!seenBracketMatches.has(uniqueKey)) {
+              seenBracketMatches.add(uniqueKey);
+              const pts = STAGES.find(s => s.id === uS)?.pts || 0;
+              pB += pts;
+              if (uS === 'WINNER') sW += pts; else if (uS === 'F') sF += pts; else if (uS === 'SF') sSF += pts; else if (uS === 'QF') sQF += pts; else if (uS === 'R16') sR16 += pts; else if (uS === 'R32') sR32 += pts;
+            }
           }
         });
 
@@ -662,7 +657,9 @@ export default function AdminPage() {
       if (syncToast) toast.dismiss(syncToast);
       
       if (isManual) {
-        toast.success('Punti ricalcolati!');
+        toast.success('Punti ricalcolati forzatamente!');
+      } else {
+        toast.success('Classifica aggiornata in automatico! 🏆');
       }
       
       fetchData(); 
@@ -784,6 +781,23 @@ export default function AdminPage() {
       counts[t] = (counts[t] || 0) + 1; 
     });
     return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).map(([name, count]) => ({ name, count, pct: Math.round((Number(count) / total) * 100) }));
+  };
+
+  const getAverage = (k: string) => { 
+    const v = allUserBonuses.filter(b => b[k] != null && String(b[k]).trim() !== '').map(b => Number(b[k])).filter(n => !isNaN(n)); 
+    if (!v.length) return '0';
+    return (v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('it-IT', { maximumFractionDigits: 1 }); 
+  };
+
+  const getTopPicks = (k: string) => { 
+    const counts: any = {}; 
+    allUserBonuses.forEach(b => { 
+      if (b[k]) { 
+        const v = b[k].trim().toUpperCase(); 
+        counts[v] = (counts[v] || 0) + 1; 
+      } 
+    }); 
+    return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3); 
   };
 
   const getBonusDetails = (k: string) => {
@@ -1125,6 +1139,31 @@ export default function AdminPage() {
     toast.success('Super Backup scaricato con successo! 📊');
   };
 
+  const copyWhatsAppReport = () => {
+    if (profiles.length === 0) return toast.error('Nessuno in classifica!');
+    const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
+    
+    let text = `🏆 *CLASSIFICA MONDIALE 2026 - AGGIORNAMENTO* 🏆\n\n`;
+    sorted.forEach((p, i) => {
+      let medal = '⚽';
+      if (i === 0) medal = '🥇';
+      if (i === 1) medal = '🥈';
+      if (i === 2) medal = '🥉';
+      if (i < 10) {
+        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
+      }
+    });
+
+    if (sorted.length > 10) {
+      text += `\n...e altri ${sorted.length - 10} giocatori!\n`;
+    }
+
+    text += `\n👉 Guarda la classifica completa: www.tuodominio.it/leaderboard`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Bollettino copiato! Incollalo su WhatsApp 📱', { icon: '💬' });
+  };
+
   const navItems = [
     { name: 'Profilo', path: '/profile', icon: <User size={20} strokeWidth={2.5} /> },
     { name: 'Fase Gironi', path: '/matches', icon: <Gamepad2 size={20} strokeWidth={2.5} /> },
@@ -1141,7 +1180,6 @@ export default function AdminPage() {
   const paidUsers = profiles.filter(p => p.is_paid).length;
   const unpaidUsers = totalUsers - paidUsers;
 
-  // Raggruppamento Utenti per Metodo di Pagamento
   const unpaidUsersList = profiles.filter(p => !p.is_paid);
   const satispayUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Satispay');
   const paypalUsers = profiles.filter(p => p.is_paid && p.payment_method === 'PayPal');
@@ -1164,8 +1202,26 @@ export default function AdminPage() {
         <ArrowLeft size={16} /> Indietro
       </button>
 
-      <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4">
+      <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4 relative">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
+        
+        <div className="absolute right-2 top-0 flex items-center gap-1">
+          <button 
+            onClick={copyWhatsAppReport} 
+            className="p-2 text-slate-500 hover:text-emerald-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg"
+            title="Copia Bollettino per WhatsApp"
+          >
+            <MessageCircle size={18} />
+          </button>
+          <button 
+            onClick={() => syncLeaderboard(true)} 
+            disabled={syncing} 
+            className={`p-2 text-slate-500 hover:text-blue-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg ${syncing ? 'animate-spin text-blue-500' : ''}`}
+            title="Forza Ricalcolo Classifica"
+          >
+            <RefreshCw size={18} />
+          </button>
+        </div>
         
         <div className="w-full max-w-2xl bg-slate-900/80 p-4 rounded-3xl border border-slate-800 shadow-xl">
           <div className="grid grid-cols-2 gap-3">
@@ -1187,12 +1243,9 @@ export default function AdminPage() {
             <button onClick={copyBonusReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-purple-400 bg-slate-950 border border-slate-800 hover:bg-purple-400/10 transition-colors rounded-xl">
               <MessageCircle size={14} /> Dati Bonus
             </button>
-            <div className="col-span-2 grid grid-cols-2 gap-3">
+            <div className="col-span-2">
                 <button onClick={exportClassificaCSV} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl">
-                  <Download size={14} /> Excel
-                </button>
-                <button onClick={() => syncLeaderboard(true)} disabled={syncing} className={`w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-500 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors rounded-xl ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> Ricalcola
+                  <Download size={14} /> Excel Backup Completo
                 </button>
             </div>
           </div>
@@ -1223,7 +1276,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE 1: STATISTICHE LIVE (Non influenzano la classifica) ----- */}
+        {/* ----- SEZIONE 1: STATISTICHE LIVE ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-emerald-500">
           <button onClick={() => setOpenSection({ ...openSection, liveStats: !openSection.liveStats })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Activity className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Live Dashboard</h2></div>
@@ -1278,7 +1331,6 @@ export default function AdminPage() {
                  </button>
               </div>
 
-              {/* CHIUSURA MONDIALE */}
               <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                   <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2 border-t border-slate-800/50 pt-6"><Trophy size={16}/> Chiusura Mondiale</h3>
                   
@@ -1372,17 +1424,12 @@ export default function AdminPage() {
           )}
         </section>
 
+        {/* SEZIONE 1: ISCRIZIONI E QUOTE OTTIMIZZATA PER GRUPPI */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3">
-              <Users className="text-emerald-500" size={24} />
-              <h2 className="text-lg font-black uppercase italic tracking-tight">
-                Iscrizioni ({totalUsers})
-              </h2>
-            </div>
+            <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({totalUsers})</h2></div>
             {openSection.iscrizioni ? <ChevronUp /> : <ChevronDown />}
           </button>
-          
           {openSection.iscrizioni && (
             <div className="bg-slate-950/50 flex flex-col">
               <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
@@ -1610,6 +1657,47 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
+                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rossi Avg</p>
+                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_red_cards')}>{getAverage('total_red_cards')}</p>
+                </div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
+                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rigori Avg</p>
+                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_penalties')}>{getAverage('total_penalties')}</p>
+                </div>
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
+                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Autogol Avg</p>
+                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_own_goals')}>{getAverage('total_own_goals')}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                {[
+                  { label: 'MVP Mondiale', key: 'mvp_world_cup' },
+                  { label: 'Capocannoniere', key: 'top_scorer' },
+                  { label: 'Miglior Portiere', key: 'best_goalkeeper' },
+                  { label: 'Match con più Gol', key: 'high_scoring_match' },
+                  { label: 'Girone con più Gol', key: 'highest_scoring_group' },
+                  { label: 'Girone con meno Gol', key: 'lowest_scoring_group' },
+                ].map((s) => (
+                  <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
+                    <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic">{s.label}</p>
+                    <div className="flex-1 flex flex-col justify-start">
+                      {getTopPicks(s.key).map(([name, count]: any) => (
+                        <div key={name} className="flex justify-between text-[10px] font-black uppercase italic mb-1.5">
+                          <span className="truncate pr-2 text-white">{name}</span>
+                          <span className="text-cyan-500 font-mono shrink-0">{count} voti</span>
+                        </div>
+                      ))}
+                      {getTopPicks(s.key).length === 0 && (
+                        <p className="text-[8px] text-slate-700 italic text-center py-2 uppercase mt-auto">Nessun voto registrato</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
             </div>
           )}
         </section>

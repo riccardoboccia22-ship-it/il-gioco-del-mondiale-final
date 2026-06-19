@@ -61,8 +61,8 @@ const formatMatchName = (matchString: string) => {
   formatted = formatted.replace(/Stati Uniti|USA/gi, 'USA');
   formatted = formatted.replace(/Arabia Saudita/gi, 'Arabia S.');
   formatted = formatted.replace(/Nuova Zelanda/gi, 'N. Zelanda');
-  formatted = formatted.replace(/Corea del Sud/gi, 'Corea Sud');
-  formatted = formatted.replace(/Costa d'Avorio/gi, 'Costa Avorio');
+  formatted = formatted.replace(/Corea del Sud|Corea Sud/gi, 'Corea Sud');
+  formatted = formatted.replace(/Costa d'Avorio|Costa Avorio/gi, 'Costa Avorio');
   return formatted;
 };
 
@@ -381,10 +381,17 @@ export default function LeaderboardPage() {
       // 2. CARICAMENTO TABELLONE
       const { data: bData } = await supabase.from('brackets').select('*').eq('user_id', player.id);
       const correctBrackets: any[] = [];
+      const seenBrackets = new Set(); // Fix per evitare di calcolare la stessa squadra due volte
+      
       bData?.forEach(b => {
          const uS = normalizeStage(b.stage);
-         const isCorrect = officialBracket.some(ob => normalizeStage(ob.stage) === uS && cleanString(ob.team_name) === cleanString(b.team_name));
-         if (isCorrect) {
+         const cleanT = cleanString(b.team_name);
+         const uniqueKey = `${uS}-${cleanT}`;
+         
+         const isCorrect = officialBracket.some(ob => normalizeStage(ob.stage) === uS && cleanString(ob.team_name) === cleanT);
+         
+         if (isCorrect && !seenBrackets.has(uniqueKey)) {
+            seenBrackets.add(uniqueKey);
             const pts = STAGE_POINTS[uS] || 0;
             correctBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: pts });
          }
@@ -458,7 +465,6 @@ export default function LeaderboardPage() {
     player.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Stato Globale dei lucchetti
   const isGroupsClosed = officialBonuses && officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD';
   const isTournamentFinished = officialBonuses && officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD';
 

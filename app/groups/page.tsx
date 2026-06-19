@@ -43,48 +43,48 @@ const BRACKET_ROUNDS = [
   { id: 'F', title: 'Finale', matches: 1 }
 ];
 
-// GLI ACCOPPIAMENTI UFFICIALI (SEGNAPOSTI)
-const BRACKET_PLACEHOLDERS: Record<string, string[][]> = {
+// FIX: LA NUOVA STRUTTURA AD INCASTRO CON GLI SLOT UFFICIALI DELL'ADMIN
+const BRACKET_MATCHES: Record<string, { dbString: string, label: string }[][]> = {
   R32: [
-    ['1° Gruppo A', '3° Migliore'],
-    ['2° Gruppo B', '2° Gruppo C'],
-    ['1° Gruppo D', '3° Migliore'],
-    ['1° Gruppo F', '2° Gruppo H'],
-    ['1° Gruppo E', '3° Migliore'],
-    ['2° Gruppo A', '2° Gruppo G'],
-    ['1° Gruppo I', '3° Migliore'],
-    ['2° Gruppo D', '2° Gruppo F'],
-    ['1° Gruppo B', '3° Migliore'],
-    ['2° Gruppo K', '2° Gruppo L'],
-    ['1° Gruppo C', '3° Migliore'],
-    ['1° Gruppo J', '2° Gruppo I'],
-    ['1° Gruppo G', '3° Migliore'],
-    ['2° Gruppo E', '2° Gruppo J'],
-    ['1° Gruppo H', '3° Migliore'],
-    ['1° Gruppo K', '1° Gruppo L']
+    [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore (Slot 1)' } ],
+    [ { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ],
+    [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore (Slot 2)' } ],
+    [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ],
+    [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore (Slot 3)' } ],
+    [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ],
+    [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore (Slot 4)' } ],
+    [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ],
+    [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore (Slot 5)' } ],
+    [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ],
+    [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore (Slot 6)' } ],
+    [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ],
+    [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore (Slot 7)' } ],
+    [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ],
+    [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore (Slot 8)' } ],
+    [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' } ],
   ],
   R16: [
-    ['Vinc. Sedicesimi 1', 'Vinc. Sedicesimi 2'],
-    ['Vinc. Sedicesimi 3', 'Vinc. Sedicesimi 4'],
-    ['Vinc. Sedicesimi 5', 'Vinc. Sedicesimi 6'],
-    ['Vinc. Sedicesimi 7', 'Vinc. Sedicesimi 8'],
-    ['Vinc. Sedicesimi 9', 'Vinc. Sedicesimi 10'],
-    ['Vinc. Sedicesimi 11', 'Vinc. Sedicesimi 12'],
-    ['Vinc. Sedicesimi 13', 'Vinc. Sedicesimi 14'],
-    ['Vinc. Sedicesimi 15', 'Vinc. Sedicesimi 16']
+    [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ],
+    [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ],
+    [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ],
+    [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ],
+    [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ],
+    [ { dbString: 'R16_OTTAVI_V11', label: 'Vinc. Sedicesimi 11' }, { dbString: 'R16_OTTAVI_V12', label: 'Vinc. Sedicesimi 12' } ],
+    [ { dbString: 'R16_OTTAVI_V13', label: 'Vinc. Sedicesimi 13' }, { dbString: 'R16_OTTAVI_V14', label: 'Vinc. Sedicesimi 14' } ],
+    [ { dbString: 'R16_OTTAVI_V15', label: 'Vinc. Sedicesimi 15' }, { dbString: 'R16_OTTAVI_V16', label: 'Vinc. Sedicesimi 16' } ]
   ],
   QF: [
-    ['Vinc. Ottavi 1', 'Vinc. Ottavi 2'],
-    ['Vinc. Ottavi 3', 'Vinc. Ottavi 4'],
-    ['Vinc. Ottavi 5', 'Vinc. Ottavi 6'],
-    ['Vinc. Ottavi 7', 'Vinc. Ottavi 8']
+    [ { dbString: 'QF_QUARTI_V1', label: 'Vinc. Ottavi 1' }, { dbString: 'QF_QUARTI_V2', label: 'Vinc. Ottavi 2' } ],
+    [ { dbString: 'QF_QUARTI_V3', label: 'Vinc. Ottavi 3' }, { dbString: 'QF_QUARTI_V4', label: 'Vinc. Ottavi 4' } ],
+    [ { dbString: 'QF_QUARTI_V5', label: 'Vinc. Ottavi 5' }, { dbString: 'QF_QUARTI_V6', label: 'Vinc. Ottavi 6' } ],
+    [ { dbString: 'QF_QUARTI_V7', label: 'Vinc. Ottavi 7' }, { dbString: 'QF_QUARTI_V8', label: 'Vinc. Ottavi 8' } ]
   ],
   SF: [
-    ['Vinc. Quarti 1', 'Vinc. Quarti 2'],
-    ['Vinc. Quarti 3', 'Vinc. Quarti 4']
+    [ { dbString: 'SF_SEMIFINALI_V1', label: 'Vinc. Quarti 1' }, { dbString: 'SF_SEMIFINALI_V2', label: 'Vinc. Quarti 2' } ],
+    [ { dbString: 'SF_SEMIFINALI_V3', label: 'Vinc. Quarti 3' }, { dbString: 'SF_SEMIFINALI_V4', label: 'Vinc. Quarti 4' } ]
   ],
   F: [
-    ['Vinc. Semifinale 1', 'Vinc. Semifinale 2']
+    [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ]
   ]
 };
 
@@ -99,7 +99,6 @@ const normalizeStage = (s: string) => {
   return u;
 };
 
-// Funzione robusta per accorciare i nomi lunghi
 const formatTeamName = (teamName: string) => {
   if (!teamName) return '';
   const lowerName = teamName.toLowerCase().trim();
@@ -115,7 +114,6 @@ const formatTeamName = (teamName: string) => {
   return teamName;
 };
 
-// Normalizzazione estrema per far matchare Supabase con l'array
 const normalizeName = (name: string) => {
   let n = name.toLowerCase().trim();
   if (n === 'stati uniti') return 'usa';
@@ -134,7 +132,6 @@ export default function GroupsPage() {
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Recupera i risultati delle partite e il tabellone ufficiale dal DB
   useEffect(() => {
     const fetchData = async () => {
       const [matchesRes, bracketRes] = await Promise.all([
@@ -150,7 +147,6 @@ export default function GroupsPage() {
     fetchData();
   }, []);
 
-  // Calcola Classifiche in tempo reale in base alle partite terminate
   const standings = useMemo(() => {
     const stdMap: Record<string, any[]> = {};
 
@@ -213,7 +209,6 @@ export default function GroupsPage() {
     return stdMap;
   }, [matches]);
 
-  // Calcola le Migliori 8 Terze Live!
   const bestThirds = useMemo(() => {
     const thirds: any[] = [];
     Object.keys(standings).forEach(groupName => {
@@ -236,27 +231,24 @@ export default function GroupsPage() {
     return flagMap[team?.toLowerCase().trim()];
   };
 
-  // --- MOTORE DEL BRACKET ---
-  // Unisce le squadre inserite dall'Admin con i Segnaposti Ufficiali
-  const getTeamsForStage = (stageId: string, totalTeams: number) => {
-    const teams = officialBracket.filter(o => normalizeStage(o.stage) === stageId).map(o => o.team_name);
-    const pairs = [];
-    let teamIndex = 0;
+  // --- MOTORE DEL BRACKET COMPLETAMENTE FIXATO ---
+  // Ora cerca nel database le squadre usando la chiave esatta salvata dall'admin,
+  // invece di "buttarle dentro" in ordine casuale di rendering.
+  const getTeamsForStage = (stageId: string) => {
+    const pairs: {name: string | null, placeholder: string}[][] = [];
+    const placeholders = BRACKET_MATCHES[stageId] || [];
     
-    const placeholders = BRACKET_PLACEHOLDERS[stageId] || [];
-    
-    for (let i = 0; i < totalTeams / 2; i++) {
-       const p1 = placeholders[i]?.[0] || 'TBD';
-       const p2 = placeholders[i]?.[1] || 'TBD';
+    for (let i = 0; i < placeholders.length; i++) {
+       const p1 = placeholders[i][0];
+       const p2 = placeholders[i][1];
        
-       const t1 = teams[teamIndex] || null;
-       const t2 = teams[teamIndex + 1] || null;
+       const t1Obj = officialBracket.find(o => o.stage === p1.dbString);
+       const t2Obj = officialBracket.find(o => o.stage === p2.dbString);
        
        pairs.push([
-         { name: t1, placeholder: p1 }, 
-         { name: t2, placeholder: p2 }
+         { name: t1Obj?.team_name || null, placeholder: p1.label }, 
+         { name: t2Obj?.team_name || null, placeholder: p2.label }
        ]);
-       teamIndex += 2;
     }
     return pairs;
   };
@@ -424,7 +416,7 @@ export default function GroupsPage() {
                 <div className="flex flex-row items-stretch min-w-max gap-6 sm:gap-10 px-2 py-4 min-h-[500px]">
                   
                   {BRACKET_ROUNDS.map((round) => {
-                    const pairs = getTeamsForStage(round.id, round.matches * 2);
+                    const pairs = getTeamsForStage(round.id);
                     return (
                       <div key={round.id} className="flex flex-col justify-around w-40 sm:w-48 shrink-0 relative pt-8">
                          

@@ -79,6 +79,25 @@ const cleanString = (str: string) => {
   return formatTeamName(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
+const fetchAllRecords = async (table: string, orderCol1?: string, orderCol2?: string, orderCol3?: string) => {
+  let result: any[] = [];
+  let start = 0;
+  const limit = 1000;
+  while (true) {
+    let query = supabase.from(table).select('*');
+    if (orderCol1) query = query.order(orderCol1, { ascending: true });
+    if (orderCol2) query = query.order(orderCol2, { ascending: true });
+    if (orderCol3) query = query.order(orderCol3, { ascending: true });
+    
+    const { data, error } = await query.range(start, start + limit - 1);
+    if (error || !data || data.length === 0) break;
+    result.push(...data);
+    if (data.length < limit) break;
+    start += limit;
+  }
+  return result;
+};
+
 export default function TuttiPronosticiPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
@@ -103,33 +122,18 @@ export default function TuttiPronosticiPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/'); return; }
 
-        const { data: profile } = await supabase.from('profiles').select('full_name, username').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('full_name, username, id').eq('id', user.id).single();
         if (!profile || !profile.full_name) { router.push('/setup-profilo'); return; }
 
-        const fetchAll = async (table: string) => {
-          let all: any[] = [];
-          let from = 0;
-          const step = 1000;
-          while (true) {
-            const { data, error } = await supabase.from(table).select('*').range(from, from + step - 1);
-            if (error || !data) break;
-            all.push(...data);
-            if (data.length < step) break;
-            from += step;
-          }
-          return all;
-        };
+        const pData = await fetchAllRecords('profiles', 'id');
+        const mData = await fetchAllRecords('matches', 'match_date');
+        const obData = await fetchAllRecords('official_bracket', 'id');
+        const ubData = await fetchAllRecords('user_bonus_answers', 'user_id');
+        
+        const prData = await fetchAllRecords('predictions', 'user_id', 'match_id');
+        const brData = await fetchAllRecords('brackets', 'user_id', 'stage', 'team_name');
 
-        const [p, m, off, offBo, usrBo] = await Promise.all([
-          supabase.from('profiles').select('*').order('username'),
-          supabase.from('matches').select('*').order('match_date', { ascending: true }),
-          supabase.from('official_bracket').select('*'),
-          supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
-          supabase.from('user_bonus_answers').select('*'),
-        ]);
-
-        const prData = await fetchAll('predictions');
-        const brData = await fetchAll('brackets');
+        const { data: offBo } = await supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle();
 
         const predMap: any = {};
         prData.forEach(pred => {
@@ -144,12 +148,12 @@ export default function TuttiPronosticiPage() {
         });
 
         const bMap: any = {};
-        usrBo.data?.forEach(b => bMap[b.user_id] = b);
+        ubData.forEach(b => bMap[b.user_id] = b);
 
         setData({
           currentUserUsername: profile.username,
-          profiles: p.data || [], matches: m.data || [], predictionsMap: predMap,
-          bracketMap: brackMap, officialResults: off.data || [], officialBonus: offBo.data || null, bonusMap: bMap,
+          profiles: pData || [], matches: mData || [], predictionsMap: predMap,
+          bracketMap: brackMap, officialResults: obData || [], officialBonus: offBo || null, bonusMap: bMap,
         });
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
@@ -160,8 +164,6 @@ export default function TuttiPronosticiPage() {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
   };
 
-  // UX OPTIMIZATION: Raggruppamento in Tendine per Giorno
-  // Ordine CRESCENTE: Dalla data più vecchia alla più recente.
   const groupedByDay = useMemo(() => {
     const groupsMap: { [key: string]: { dateVal: number, matches: any[] } } = {};
     data.matches.forEach((m: any) => {
@@ -217,18 +219,29 @@ export default function TuttiPronosticiPage() {
   };
 
   const getAggregatedBracketPicks = (stageId: string) => {
-    const agg: Record<string, string[]> = {};
+    const agg: Record<string, Set<string>> = {}; // Usiamo Set per evitare doppioni
     data.profiles.forEach((p: any) => {
       const picks = (data.bracketMap[p.id] || []).filter((b: any) => normalizeStage(b.stage) === stageId);
+      
+      const uniqueTeams = new Set<string>();
       picks.forEach((pick: any) => {
-        const team = formatTeamName(pick.team_name);
-        if (team) {
-          if (!agg[team]) agg[team] = [];
-          agg[team].push(p.username);
+         const cleanTeamName = cleanString(pick.team_name);
+         if(cleanTeamName) uniqueTeams.add(cleanTeamName);
+      });
+
+      uniqueTeams.forEach(cleanTeamName => {
+        const teamForDisplay = formatTeamName(cleanTeamName);
+        if (teamForDisplay) {
+            if (!agg[teamForDisplay]) agg[teamForDisplay] = new Set();
+            agg[teamForDisplay].add(p.username);
         }
       });
     });
-    return Object.entries(agg).sort((a, b) => b[1].length - a[1].length);
+    
+    // Trasformiamo i Set in array per il rendering
+    return Object.entries(agg)
+       .map(([team, usersSet]) => [team, Array.from(usersSet)])
+       .sort((a: any, b: any) => b[1].length - a[1].length);
   };
 
   const getAggregatedBonusPicks = (bonusKey: string, isNumeric: boolean = false) => {
@@ -258,16 +271,16 @@ export default function TuttiPronosticiPage() {
     const counts: any = {};
     winners.forEach(w => {
       const t = formatTeamName(w.team_name);
-      if (!counts[t]) counts[t] = { count: 0, users: [] };
+      if (!counts[t]) counts[t] = { count: 0, users: new Set() };
       counts[t].count += 1;
       
       const p = data.profiles.find((prof: any) => prof.id === w.user_id);
-      if (p && p.username) counts[t].users.push(p.username);
+      if (p && p.username) counts[t].users.add(p.username);
     });
     
     return Object.entries(counts)
       .map(([team, info]: any) => ({ 
-        team, count: info.count, pct: Math.round((info.count / total) * 100), users: info.users
+        team, count: info.count, pct: Math.round((info.count / total) * 100), users: Array.from(info.users)
       }))
       .sort((a, b) => b.count - a.count || a.team.localeCompare(b.team));
   };
@@ -282,24 +295,26 @@ export default function TuttiPronosticiPage() {
       const uBrackets = data.bracketMap[p.id] || [];
       if (uBrackets.length === 0) return;
       
-      const r32 = uBrackets.filter((b: any) => b.stage === 'R32').map((b: any) => formatTeamName(b.team_name).toLowerCase());
-      const r16 = uBrackets.filter((b: any) => b.stage === 'R16').map((b: any) => formatTeamName(b.team_name).toLowerCase());
-      const qf = uBrackets.filter((b: any) => b.stage === 'QF').map((b: any) => formatTeamName(b.team_name).toLowerCase());
+      // Mappatura sicura delle scelte per fase usando Set per unicità
+      const r32 = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'R32').map((b: any) => cleanString(b.team_name)));
+      const r16 = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'R16').map((b: any) => cleanString(b.team_name)));
+      const qf = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'QF').map((b: any) => cleanString(b.team_name)));
       
-      const hasR32 = r32.length >= 32;
-      const hasR16 = r16.length >= 16;
-      const hasQF = qf.length >= 8;
+      const hasR32 = r32.size >= 32;
+      const hasR16 = r16.size >= 16;
+      const hasQF = qf.size >= 8;
 
       allTeams.forEach(t => {
-          const teamF = formatTeamName(t).toLowerCase();
+          const teamF = cleanString(t);
           const originalTeam = formatTeamName(t);
           
-          const inR32 = r32.includes(teamF);
-          const inR16 = r16.includes(teamF);
-          const inQF = qf.includes(teamF);
-          const inSF = uBrackets.filter((b: any) => ['SF', 'F', 'WINNER'].includes(b.stage)).map((b: any) => formatTeamName(b.team_name).toLowerCase()).includes(teamF);
-          const inF = uBrackets.filter((b: any) => ['F', 'WINNER'].includes(b.stage)).map((b: any) => formatTeamName(b.team_name).toLowerCase()).includes(teamF);
-          const inWinner = uBrackets.filter((b: any) => b.stage === 'WINNER').map((b: any) => formatTeamName(b.team_name).toLowerCase()).includes(teamF);
+          const inR32 = r32.has(teamF);
+          const inR16 = r16.has(teamF);
+          const inQF = qf.has(teamF);
+          
+          const inSF = uBrackets.some((b: any) => ['SF', 'F', 'WINNER'].includes(normalizeStage(b.stage)) && cleanString(b.team_name) === teamF);
+          const inF = uBrackets.some((b: any) => ['F', 'WINNER'].includes(normalizeStage(b.stage)) && cleanString(b.team_name) === teamF);
+          const inWinner = uBrackets.some((b: any) => normalizeStage(b.stage) === 'WINNER' && cleanString(b.team_name) === teamF);
 
           if (TOP_TEAMS.includes(t)) {
               if (hasR32 && !inR32) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'Gironi', phaseWeight: 1 });
@@ -329,15 +344,18 @@ export default function TuttiPronosticiPage() {
 
     const groupedObj = anomalies.reduce((acc, ano) => {
       const key = `${acc.phaseWeight || 0}-${ano.type}-${ano.team}-${ano.msg}`;
-      if (!acc[key]) acc[key] = { ...ano, users: [ano.user] };
-      else if (!acc[key].users.includes(ano.user)) acc[key].users.push(ano.user);
+      if (!acc[key]) acc[key] = { ...ano, users: new Set([ano.user]) };
+      else acc[key].users.add(ano.user);
       return acc;
     }, {} as any);
     
-    return Object.values(groupedObj).sort((a: any, b: any) => a.phaseWeight - b.phaseWeight || a.type.localeCompare(b.type) || a.team.localeCompare(b.team));
+    return Object.values(groupedObj).map((o: any) => ({ ...o, users: Array.from(o.users) })).sort((a: any, b: any) => a.phaseWeight - b.phaseWeight || a.type.localeCompare(b.type) || a.team.localeCompare(b.team));
   };
 
   const topCecchini = (data.profiles || []).filter((p: any) => (p.exact_matches || 0) > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
+
+  const isGroupsClosed = data.officialBonus && !!data.officialBonus.high_scoring_match;
+  const isTournamentFinished = data.officialBonus && !!data.officialBonus.mvp_world_cup;
 
   const renderMatchCard = (match: any) => {
     const hFlag = getFlagUrl(match.home_team);
@@ -509,7 +527,7 @@ export default function TuttiPronosticiPage() {
              {gironiViewMode === 'GROUP' && TOURNAMENT_GROUPS.map((group) => {
                 const groupMatches = data.matches.filter((m: any) => 
                    group.teams.some(t => formatTeamName(t).toLowerCase() === formatTeamName(m.home_team).toLowerCase() || formatTeamName(t).toLowerCase() === formatTeamName(m.away_team).toLowerCase())
-                ); // Ordine cronologico standard
+                ); 
                 if (groupMatches.length === 0) return null;
 
                 return (
@@ -547,7 +565,7 @@ export default function TuttiPronosticiPage() {
                 {isExpanded && (
                   <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
                     {getAggregatedBracketPicks(stg.id).map(([team, users]: any, idx) => {
-                      const isCorrect = officialTeamsInStage.some((off: any) => formatTeamName(off.team_name).toLowerCase() === formatTeamName(team).toLowerCase());
+                      const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
                       const isWrong = isStageFull && !isCorrect;
                       const isMe = users.includes(data.currentUserUsername);
                       const flag = getFlagUrl(team);
@@ -585,130 +603,145 @@ export default function TuttiPronosticiPage() {
             );
           })}
 
-        {/* --- 3. BONUS --- */}
+        {/* --- 3. BONUS (GESTIONE A SCAGLIONI CON LUCCHETTO) --- */}
         {activeTab === 'BONUS' &&
           [
-            { id: 'mvp_world_cup', label: 'MVP Mondiale', icon: <Trophy size={16}/>, pts: 10, type: 'PLAYER' },
-            { id: 'top_scorer', label: 'Capocannoniere', icon: <Award size={16}/>, pts: 10, type: 'PLAYER' },
-            { id: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={16}/>, pts: 10, type: 'PLAYER' },
-            { id: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={16}/>, pts: 5, type: 'MATCH' },
-            { id: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={16}/>, pts: 5, type: 'GROUP' },
-            { id: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={16}/>, pts: 5, type: 'GROUP' },
-            { id: 'total_own_goals', label: 'Totale Autogol', icon: <Target size={16}/>, pts: 3, type: 'NUMBER' },
-            { id: 'total_penalties', label: 'Totale Rigori', icon: <Goal size={16}/>, pts: 3, type: 'NUMBER' },
-            { id: 'total_red_cards', label: 'Totale Rossi', icon: <Zap size={16}/>, pts: 3, type: 'NUMBER' },
+            { id: 'mvp_world_cup', label: 'MVP Mondiale', icon: <Trophy size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
+            { id: 'top_scorer', label: 'Capocannoniere', icon: <Award size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
+            { id: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
+            { id: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={16}/>, pts: 5, type: 'MATCH', phase: 'GROUPS' },
+            { id: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={16}/>, pts: 5, type: 'GROUP', phase: 'GROUPS' },
+            { id: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={16}/>, pts: 5, type: 'GROUP', phase: 'GROUPS' },
+            { id: 'total_own_goals', label: 'Totale Autogol', icon: <Target size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
+            { id: 'total_penalties', label: 'Totale Rigori', icon: <Goal size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
+            { id: 'total_red_cards', label: 'Totale Rossi', icon: <Zap size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
           ].map((bonus) => {
             const isExpanded = expandedBonus === bonus.id;
             const offVal = data.officialBonus?.[bonus.id];
             
+            const isGroupsClosed = data.officialBonus && data.officialBonus.high_scoring_match && data.officialBonus.high_scoring_match !== 'TBD';
+            const isTournamentFinished = data.officialBonus && data.officialBonus.mvp_world_cup && data.officialBonus.mvp_world_cup !== 'TBD';
+            const isPhaseUnlocked = bonus.phase === 'GROUPS' ? isGroupsClosed : isTournamentFinished;
+
             return (
               <div key={bonus.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
                 <button onClick={() => setExpandedBonus(isExpanded ? null : bonus.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                      {bonus.icon}
+                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isPhaseUnlocked ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                      {isPhaseUnlocked ? bonus.icon : <Lock size={16} />}
                     </div>
-                    <span className="font-black uppercase italic text-sm text-left">{bonus.label}</span>
+                    <span className={`font-black uppercase italic text-sm text-left ${isPhaseUnlocked ? 'text-white' : 'text-slate-500'}`}>{bonus.label}</span>
                   </div>
-                  <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-purple-500' : 'text-slate-500'}`} />
+                  <ChevronDown className={`transition-transform ${isExpanded ? (isPhaseUnlocked ? 'rotate-180 text-purple-500' : 'rotate-180 text-slate-500') : 'text-slate-500'}`} />
                 </button>
                 
                 {isExpanded && (
                   <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                    {offVal && (
-                       <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-                          <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale Live</span>
-                          <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
+                    {!isPhaseUnlocked ? (
+                       <div className="flex flex-col items-center justify-center py-6 px-4 text-slate-500">
+                          <Lock size={24} className="mb-3 text-slate-600" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-center leading-relaxed">
+                            Contenuto Segreto <br/> <span className="text-purple-500 opacity-80">Si sbloccherà al termine della fase</span>
+                          </p>
                        </div>
-                    )}
-                    {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
-                      const isUnset = ans === 'Nessuna Scelta';
-                      
-                      const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
-                      
-                      const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
-                      const isMe = users.includes(data.currentUserUsername);
+                    ) : (
+                      <>
+                        {offVal && (
+                           <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                              <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale</span>
+                              <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
+                           </div>
+                        )}
+                        {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
+                          const isUnset = ans === 'Nessuna Scelta';
+                          
+                          const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
+                          
+                          const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
+                          const isMe = users.includes(data.currentUserUsername);
 
-                      let flagElement = null;
-                      if (!isUnset) {
-                        if (bonus.type === 'PLAYER') {
-                          const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
-                          const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
-                          const f = player ? getFlagUrl(player.country) : null;
-                          flagElement = f ? <img src={f} className="w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0" alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
-                        } 
-                        else if (bonus.type === 'MATCH' && ans.includes('-')) {
-                          const [t1, t2] = ans.split(/\s*-\s*/);
-                          const f1 = getFlagUrl(t1);
-                          const f2 = getFlagUrl(t2);
-                          flagElement = (
-                            <div className="flex items-center gap-1 shrink-0">
-                               {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                               <span className="text-[8px] text-slate-500">-</span>
-                               {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                          let flagElement = null;
+                          if (!isUnset) {
+                            if (bonus.type === 'PLAYER') {
+                              const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
+                              const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
+                              const f = player ? getFlagUrl(player.country) : null;
+                              flagElement = f ? <img src={f} className="w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0" alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
+                            } 
+                            else if (bonus.type === 'MATCH' && ans.includes('-')) {
+                              const [t1, t2] = ans.split(/\s*-\s*/);
+                              const f1 = getFlagUrl(t1);
+                              const f2 = getFlagUrl(t2);
+                              flagElement = (
+                                <div className="flex items-center gap-1 shrink-0">
+                                   {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                                   <span className="text-[8px] text-slate-500">-</span>
+                                   {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                                </div>
+                              );
+                            } 
+                            else if (bonus.type === 'GROUP') {
+                              const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
+                              if (group) {
+                                flagElement = (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                     {group.teams.map((t, i) => {
+                                        const f = getFlagUrl(t);
+                                        return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
+                                     })}
+                                  </div>
+                                );
+                              }
+                            }
+                          }
+
+                          return (
+                            <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                              isCorrect 
+                                ? 'bg-emerald-500/10 border-emerald-500/50' 
+                                : isUnset 
+                                  ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
+                                  : isMathematicallyWrong
+                                    ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner'
+                                    : 'bg-slate-900 border-slate-800'
+                            } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                              
+                              {isMe && !isUnset && (
+                                 <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
+                              )}
+
+                              <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
+                                 <div className="flex items-center gap-2.5">
+                                   {flagElement}
+                                   <span className={`text-sm font-black uppercase italic tracking-tight ${
+                                     isCorrect 
+                                       ? 'text-emerald-400' 
+                                       : isUnset 
+                                         ? 'text-slate-500' 
+                                         : isMathematicallyWrong 
+                                           ? 'text-slate-600 line-through decoration-rose-500/50'
+                                           : 'text-white'
+                                   }`}>{ans}</span>
+                                   
+                                   {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
+                                   {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
+                                    <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
+                                 </div>
+                              </div>
+                              <p className={`text-[11px] font-medium leading-relaxed capitalize-first ${isMathematicallyWrong ? 'text-slate-600 font-normal line-through opacity-70' : 'text-slate-400'}`}>
+                                 {users.map((u: string, i: number) => (
+                                   <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
+                                     {u}{i < users.length - 1 ? ', ' : ''}
+                                   </span>
+                                 ))}
+                              </p>
                             </div>
                           );
-                        } 
-                        else if (bonus.type === 'GROUP') {
-                          const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
-                          if (group) {
-                            flagElement = (
-                              <div className="flex items-center gap-0.5 shrink-0">
-                                 {group.teams.map((t, i) => {
-                                    const f = getFlagUrl(t);
-                                    return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
-                                 })}
-                              </div>
-                            );
-                          }
-                        }
-                      }
-
-                      return (
-                        <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
-                          isCorrect 
-                            ? 'bg-emerald-500/10 border-emerald-500/50' 
-                            : isUnset 
-                              ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
-                              : isMathematicallyWrong
-                                ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner'
-                                : 'bg-slate-900 border-slate-800'
-                        } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                          
-                          {isMe && !isUnset && (
-                             <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
-                          )}
-
-                          <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
-                             <div className="flex items-center gap-2.5">
-                               {flagElement}
-                               <span className={`text-sm font-black uppercase italic tracking-tight ${
-                                 isCorrect 
-                                   ? 'text-emerald-400' 
-                                   : isUnset 
-                                     ? 'text-slate-500' 
-                                     : isMathematicallyWrong 
-                                       ? 'text-slate-600 line-through decoration-rose-500/50'
-                                       : 'text-white'
-                               }`}>{ans}</span>
-                               
-                               {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
-                               {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
-                             </div>
-                             <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
-                                <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
-                             </div>
-                          </div>
-                          <p className={`text-[11px] font-medium leading-relaxed capitalize-first ${isMathematicallyWrong ? 'text-slate-600 font-normal line-through opacity-70' : 'text-slate-400'}`}>
-                             {users.map((u: string, i: number) => (
-                               <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                                 {u}{i < users.length - 1 ? ', ' : ''}
-                               </span>
-                             ))}
-                          </p>
-                        </div>
-                      );
-                    })}
+                        })}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
