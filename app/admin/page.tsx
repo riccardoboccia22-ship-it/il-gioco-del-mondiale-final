@@ -407,9 +407,25 @@ export default function AdminPage() {
   const addScorer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newScorerName.trim() || !newScorerTeam) return toast.error('Compila tutti i campi');
-    const { data, error } = await supabase.from('top_scorers').insert([{ name: newScorerName.trim(), team_code: newScorerTeam, goals: 1 }]).select();
+    
+    const cleanName = newScorerName.trim();
+    
+    // Controlla se il marcatore è già presente nella lista (ignorando maiuscole/minuscole)
+    const existingScorer = topScorers.find(s => s.name.toLowerCase() === cleanName.toLowerCase());
+
+    if (existingScorer) {
+      // Se esiste già, aggiungi 1 gol al suo conteggio attuale
+      await updateScorerGoals(existingScorer.id, existingScorer.goals, 1);
+      setNewScorerName('');
+      setNewScorerTeam('');
+      toast.success('Giocatore già in lista, aggiunto +1 gol!');
+      return;
+    }
+
+    // Se non esiste, crea un nuovo record
+    const { data, error } = await supabase.from('top_scorers').insert([{ name: cleanName, team_code: newScorerTeam, goals: 1 }]).select();
     if (error) {
-      toast.error('Errore');
+      toast.error('Errore durante l\'aggiunta');
     } else if (data) {
       setTopScorers([...topScorers, data[0]].sort((a,b) => b.goals - a.goals));
       setNewScorerName('');
@@ -674,7 +690,8 @@ export default function AdminPage() {
       best_goalkeeper: bonusData.best_goalkeeper.trim() || null
   });
 
-  const saveLiveStats = async () => {
+  const saveLiveStats = async (e: React.FormEvent) => {
+    e.preventDefault();
     const { error } = await supabase.from('official_bonuses').upsert(getFullBonusPayload(), { onConflict: 'id' });
     if (!error) toast.success('Statistiche aggiornate sulla Dashboard!');
   };
@@ -1124,6 +1141,23 @@ export default function AdminPage() {
   const paidUsers = profiles.filter(p => p.is_paid).length;
   const unpaidUsers = totalUsers - paidUsers;
 
+  // Raggruppamento Utenti per Metodo di Pagamento
+  const unpaidUsersList = profiles.filter(p => !p.is_paid);
+  const satispayUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Satispay');
+  const paypalUsers = profiles.filter(p => p.is_paid && p.payment_method === 'PayPal');
+  const contantiUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Contanti');
+  const bonificoUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Bonifico');
+  const otherPaidUsers = profiles.filter(p => p.is_paid && !['Satispay', 'PayPal', 'Contanti', 'Bonifico'].includes(p.payment_method));
+
+  const paymentGroups = [
+    { label: '⏳ DA PAGARE', users: unpaidUsersList, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: '💙 SATISPAY', users: satispayUsers, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { label: '🔵 PAYPAL', users: paypalUsers, color: 'text-sky-500', bg: 'bg-sky-500/10' },
+    { label: '💵 CONTANTI', users: contantiUsers, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: '🏦 BONIFICO', users: bonificoUsers, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+    { label: '✅ ALTRI PAGAMENTI', users: otherPaidUsers, color: 'text-teal-400', bg: 'bg-teal-500/10' }
+  ].filter(g => g.users.length > 0);
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 pb-40 font-sans overflow-x-hidden relative">
       <button onClick={() => router.push('/profile')} className="absolute top-6 left-4 text-slate-500 hover:text-yellow-500 transition-colors flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest z-10">
@@ -1357,61 +1391,72 @@ export default function AdminPage() {
                     <span className="text-orange-400">⏳ Da Pagare: {unpaidUsers}</span>
                  </div>
               </div>
-              <div className="divide-y divide-slate-800/50">
-                {[...profiles].sort((a, b) => (a.is_paid === b.is_paid ? 0 : a.is_paid ? 1 : -1)).map(p => (
-                  <div key={p.id} className="p-4 flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex items-start gap-2">
-                      <div className="mt-1">
-                        {p.is_paid ? (
-                          <span className="text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Quota pagata">💰</span>
-                        ) : (
-                          <span className="text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Da pagare">⏳</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-black text-xs uppercase truncate italic">
-                          {p.username}
-                          {p.full_name ? (
-                            <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
-                              ({p.full_name})
-                            </span>
-                          ) : (
-                            <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
-                              (Nessun Nome)
-                            </span>
-                          )}
-                          <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
-                        </p>
-                        <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
-                      </div>
+
+              <div className="flex flex-col space-y-4 p-4">
+                {paymentGroups.map((group) => (
+                  <div key={group.label} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+                    <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-800 ${group.bg}`}>
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${group.color}`}>{group.label}</span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border border-current ${group.color}`}>{group.users.length} Utent{group.users.length === 1 ? 'e' : 'i'}</span>
                     </div>
-                    
-                    <div className="flex gap-2 shrink-0 self-center">
-                      <div className="relative">
-                        <select 
-                          value={p.payment_method || (p.is_paid ? 'Pagato' : '')} 
-                          onChange={(e) => updatePaymentMethod(p.id, e.target.value)} 
-                          className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-orange-500 border border-orange-500/30 hover:bg-orange-500/10'}`}
-                        >
-                          <option value="">⏳ NON PAGATO</option>
-                          <option value="Pagato" hidden>💰 PAGATO ✓</option>
-                          <option value="Satispay">SATISPAY</option>
-                          <option value="PayPal">PAYPAL</option>
-                          <option value="Contanti">CONTANTI</option>
-                          <option value="Bonifico">BONIFICO</option>
-                        </select>
-                        <ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-orange-500'}`} />
-                      </div>
-                      <button 
-                        onClick={() => handleResetPassword(p.id, p.username)} 
-                        className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
-                        title="Resetta Password"
-                      >
-                        <Key size={16} />
-                      </button>
-                      <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="divide-y divide-slate-800/50">
+                      {group.users.sort((a, b) => a.username.localeCompare(b.username)).map(p => (
+                        <div key={p.id} className="p-4 flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex items-start gap-2">
+                            <div className="mt-1">
+                              {p.is_paid ? (
+                                <span className="text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Quota pagata">💰</span>
+                              ) : (
+                                <span className="text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Da pagare">⏳</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-black text-xs uppercase truncate italic">
+                                {p.username}
+                                {p.full_name ? (
+                                  <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
+                                    ({p.full_name})
+                                  </span>
+                                ) : (
+                                  <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
+                                    (Nessun Nome)
+                                  </span>
+                                )}
+                                <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
+                              </p>
+                              <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 shrink-0 self-center">
+                            <div className="relative">
+                              <select 
+                                value={p.payment_method || (p.is_paid ? 'Pagato' : '')} 
+                                onChange={(e) => updatePaymentMethod(p.id, e.target.value)} 
+                                className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-orange-500 border border-orange-500/30 hover:bg-orange-500/10'}`}
+                              >
+                                <option value="">⏳ NON PAGATO</option>
+                                <option value="Pagato" hidden>💰 PAGATO ✓</option>
+                                <option value="Satispay">SATISPAY</option>
+                                <option value="PayPal">PAYPAL</option>
+                                <option value="Contanti">CONTANTI</option>
+                                <option value="Bonifico">BONIFICO</option>
+                              </select>
+                              <ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-orange-500'}`} />
+                            </div>
+                            <button 
+                              onClick={() => handleResetPassword(p.id, p.username)} 
+                              className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
+                              title="Resetta Password"
+                            >
+                              <Key size={16} />
+                            </button>
+                            <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
