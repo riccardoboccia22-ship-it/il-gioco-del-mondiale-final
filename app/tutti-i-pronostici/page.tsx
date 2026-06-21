@@ -103,7 +103,6 @@ export default function TuttiPronosticiPage() {
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
   
-  // STATO PER LA BARRA DI RICERCA
   const [searchQuery, setSearchQuery] = useState('');
 
   const [data, setData] = useState<any>({
@@ -115,6 +114,9 @@ export default function TuttiPronosticiPage() {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [expandedBonus, setExpandedBonus] = useState<string | null>(null);
   const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>({});
+  
+  // STATO PER IL GIORNO CORRENTE
+  const [todayKey, setTodayKey] = useState<string | null>(null);
 
   const isStarted = new Date() > WORLD_CUP_START_DATE;
 
@@ -158,10 +160,51 @@ export default function TuttiPronosticiPage() {
           profiles: pData || [], matches: mData || [], predictionsMap: predMap,
           bracketMap: brackMap, officialResults: obData || [], officialBonus: offBo || null, bonusMap: bMap,
         });
+
+        // Configurazione per aprire ed evidenziare le partite di "Oggi"
+        const today = new Date();
+        const initialOpenDays: { [key: string]: boolean } = {};
+        let foundTodayKey: string | null = null;
+        
+        mData?.forEach((m: any) => {
+          if (m.match_date) {
+            const d = new Date(m.match_date);
+            const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+            const dayName = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+            
+            if (
+              d.getFullYear() === today.getFullYear() &&
+              d.getMonth() === today.getMonth() &&
+              d.getDate() === today.getDate()
+            ) {
+              initialOpenDays[dayName] = true;
+              foundTodayKey = dayName;
+            }
+          }
+        });
+        
+        setOpenDays(initialOpenDays);
+        if (foundTodayKey) setTodayKey(foundTodayKey);
+
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
     fetchData();
   }, [router]);
+
+  // EFFETTO PER L'AUTO-SCROLL ALLA GIORNATA ODIERNA
+  useEffect(() => {
+    if (!loading && activeTab === 'GIRONI' && gironiViewMode === 'CHRONO' && todayKey) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`day-${todayKey}`);
+        if (el) {
+          // Aggiunge un offset in modo che l'header non copra il div
+          const y = el.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, activeTab, gironiViewMode, todayKey, data.matches]);
 
   const toggleDay = (dayName: string) => {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
@@ -210,7 +253,6 @@ export default function TuttiPronosticiPage() {
     return { pts: 0, color: 'text-rose-500', bg: 'bg-rose-950/20 border-rose-900/30 opacity-70' };
   };
 
-  // --- FILTRO GLOBALE PROFILI ---
   const filteredProfiles = useMemo(() => {
     if (!searchQuery.trim()) return data.profiles;
     const q = searchQuery.toLowerCase();
@@ -430,7 +472,6 @@ export default function TuttiPronosticiPage() {
                         <Users size={12} /> <span className="text-[10px] font-black">{group.users.length}</span>
                      </div>
                   </div>
-                  {/* FIX: full_name va a capo fluidamente senza spaccare il layout */}
                   <div className="flex flex-wrap gap-2 pt-1">
                      {group.users.map((u: any, i: number) => (
                        <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
@@ -525,19 +566,28 @@ export default function TuttiPronosticiPage() {
 
              {gironiViewMode === 'CHRONO' && groupedByDay.map(({ dayName, matchesArray }) => {
                const isOpen = openDays[dayName];
+               const isToday = dayName === todayKey;
+
                return (
-                 <div key={dayName} className={`bg-slate-900/40 border-2 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${isOpen ? 'border-yellow-500/20 bg-slate-900/80 shadow-2xl' : 'border-slate-800'}`}>
+                 <div 
+                   key={dayName} 
+                   id={`day-${dayName}`} 
+                   className={`bg-slate-900/40 border-2 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${isOpen ? 'bg-slate-900/80 shadow-2xl' : ''} ${isToday ? 'border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/50' : isOpen ? 'border-yellow-500/20' : 'border-slate-800'}`}
+                 >
                    <button onClick={() => toggleDay(dayName)} className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-800/40 transition-colors">
                      <div className="flex items-center gap-4">
-                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${isOpen ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${isToday ? 'bg-emerald-500 text-slate-950' : isOpen ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
                          <CalendarDays size={18} />
                        </div>
-                       <h2 className="font-black text-base sm:text-lg uppercase italic text-white tracking-tight text-left">{dayName}</h2>
+                       <div className="flex flex-col items-start">
+                         <h2 className="font-black text-base sm:text-lg uppercase italic text-white tracking-tight text-left">{dayName}</h2>
+                         {isToday && <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">Partite di Oggi</span>}
+                       </div>
                      </div>
                      <div className="flex items-center gap-3">
                        <span className="text-[10px] font-black text-slate-500 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 hidden sm:block">{matchesArray.length} Match</span>
                        <div className="p-2 sm:p-3">
-                         {isOpen ? <ChevronUp className="text-yellow-500" /> : <ChevronDown className="text-slate-600" />}
+                         {isOpen ? <ChevronUp className={isToday ? "text-emerald-500" : "text-yellow-500"} /> : <ChevronDown className="text-slate-600" />}
                        </div>
                      </div>
                    </button>
@@ -614,7 +664,6 @@ export default function TuttiPronosticiPage() {
                                 <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                              </div>
                           </div>
-                          {/* FIX: full_name nel tabellone */}
                           <div className="flex flex-wrap gap-2 pt-1">
                              {users.map((u: any, i: number) => (
                                <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
@@ -759,7 +808,6 @@ export default function TuttiPronosticiPage() {
                                     <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                                  </div>
                               </div>
-                              {/* FIX: full_name nel bonus */}
                               <div className="flex flex-wrap gap-2 pt-1">
                                  {users.map((u: any, i: number) => (
                                    <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
@@ -804,7 +852,6 @@ export default function TuttiPronosticiPage() {
                            </div>
                            <span className="text-cyan-500">{w.pct}% <span className="text-[9px] text-slate-500 ml-1">({w.count} voti)</span></span>
                          </div>
-                         {/* FIX: full_name nel vincitore */}
                          <div className="flex flex-wrap gap-2 pt-1">
                             {w.users.map((u: any, i: number) => (
                                <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
@@ -829,7 +876,6 @@ export default function TuttiPronosticiPage() {
                   <div key={p.id} className={`flex justify-between items-center p-3 rounded-xl border ${p.username === data.currentUserUsername ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500' : 'bg-slate-950 border-slate-800'}`}>
                     <div className="flex flex-col">
                        <span className={`text-xs font-black uppercase italic truncate pr-2 ${p.username === data.currentUserUsername ? 'text-emerald-400' : 'text-white'}`}>{p.username} {p.username === data.currentUserUsername && '(TU)'}</span>
-                       {/* FIX: full_name nei Cecchini */}
                        {p.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{p.full_name}</span>}
                     </div>
                     <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-inner shrink-0">
@@ -880,7 +926,6 @@ export default function TuttiPronosticiPage() {
                               <div className="pt-2 border-t border-slate-800/50">
                                  <div className="flex flex-wrap gap-2 pt-1 items-center">
                                     <span className="text-slate-500 mr-1 uppercase font-black text-[8px] tracking-widest">Colpevoli:</span> 
-                                    {/* FIX: full_name nel Radar Anomalie */}
                                     {usersArray.map((u: any, index: number) => (
                                        <div key={index} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
                                          <span className="text-[10px] font-bold uppercase leading-none">{u.username}{index < usersArray.length - 1 ? ',' : ''}</span>
