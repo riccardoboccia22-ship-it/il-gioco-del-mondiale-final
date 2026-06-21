@@ -102,6 +102,8 @@ export default function TuttiPronosticiPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
+  
+  // STATO PER LA BARRA DI RICERCA
   const [searchQuery, setSearchQuery] = useState('');
 
   const [data, setData] = useState<any>({
@@ -428,11 +430,12 @@ export default function TuttiPronosticiPage() {
                         <Users size={12} /> <span className="text-[10px] font-black">{group.users.length}</span>
                      </div>
                   </div>
+                  {/* FIX: full_name va a capo fluidamente senza spaccare il layout */}
                   <div className="flex flex-wrap gap-2 pt-1">
                      {group.users.map((u: any, i: number) => (
                        <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
                          <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < group.users.length - 1 ? ',' : ''}</span>
-                         {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                        </div>
                      ))}
                   </div>
@@ -611,11 +614,12 @@ export default function TuttiPronosticiPage() {
                                 <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                              </div>
                           </div>
+                          {/* FIX: full_name nel tabellone */}
                           <div className="flex flex-wrap gap-2 pt-1">
                              {users.map((u: any, i: number) => (
                                <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
                                  <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
-                                 {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                                 {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                                </div>
                              ))}
                           </div>
@@ -755,11 +759,12 @@ export default function TuttiPronosticiPage() {
                                     <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                                  </div>
                               </div>
+                              {/* FIX: full_name nel bonus */}
                               <div className="flex flex-wrap gap-2 pt-1">
                                  {users.map((u: any, i: number) => (
                                    <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
                                      <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
-                                     {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                                     {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                                    </div>
                                  ))}
                               </div>
@@ -799,11 +804,12 @@ export default function TuttiPronosticiPage() {
                            </div>
                            <span className="text-cyan-500">{w.pct}% <span className="text-[9px] text-slate-500 ml-1">({w.count} voti)</span></span>
                          </div>
+                         {/* FIX: full_name nel vincitore */}
                          <div className="flex flex-wrap gap-2 pt-1">
                             {w.users.map((u: any, i: number) => (
                                <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
                                  <span className="text-[10px] font-bold uppercase leading-none">{u.username}{i < w.users.length - 1 ? ',' : ''}</span>
-                                 {u.full_name && <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                                 {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                                </div>
                             ))}
                          </div>
@@ -823,7 +829,8 @@ export default function TuttiPronosticiPage() {
                   <div key={p.id} className={`flex justify-between items-center p-3 rounded-xl border ${p.username === data.currentUserUsername ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500' : 'bg-slate-950 border-slate-800'}`}>
                     <div className="flex flex-col">
                        <span className={`text-xs font-black uppercase italic truncate pr-2 ${p.username === data.currentUserUsername ? 'text-emerald-400' : 'text-white'}`}>{p.username} {p.username === data.currentUserUsername && '(TU)'}</span>
-                       {p.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{p.full_name}</span>}
+                       {/* FIX: full_name nei Cecchini */}
+                       {p.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{p.full_name}</span>}
                     </div>
                     <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-inner shrink-0">
                       {p.exact_matches || 0} presi
@@ -873,10 +880,11 @@ export default function TuttiPronosticiPage() {
                               <div className="pt-2 border-t border-slate-800/50">
                                  <div className="flex flex-wrap gap-2 pt-1 items-center">
                                     <span className="text-slate-500 mr-1 uppercase font-black text-[8px] tracking-widest">Colpevoli:</span> 
+                                    {/* FIX: full_name nel Radar Anomalie */}
                                     {usersArray.map((u: any, index: number) => (
                                        <div key={index} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
                                          <span className="text-[10px] font-bold uppercase leading-none">{u.username}{index < usersArray.length - 1 ? ',' : ''}</span>
-                                         {u.full_name && <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                                        </div>
                                     ))}
                                  </div>

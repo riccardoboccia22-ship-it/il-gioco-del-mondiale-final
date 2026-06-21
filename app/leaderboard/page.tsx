@@ -306,7 +306,7 @@ export default function LeaderboardPage() {
       if (!user) { router.push('/'); return; }
 
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-      if (!profile || !profile.full_name) { router.push('/setup-profilo'); return; return; }
+      if (!profile || !profile.full_name) { router.push('/setup-profilo'); return; }
 
       const [profRes, offBracketRes, offBonusRes] = await Promise.all([
         supabase.from('profiles').select('*'),
@@ -460,10 +460,11 @@ export default function LeaderboardPage() {
     return <ChevronDown className="text-rose-500" size={16} strokeWidth={3} />;
   };
 
-  const filteredLeaderboard = leaderboard.filter(player => 
-    player.username?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    player.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLeaderboard = leaderboard.filter(player => {
+    const query = searchQuery.toLowerCase();
+    return (player.username?.toLowerCase().includes(query)) || 
+           (player.full_name?.toLowerCase().includes(query));
+  });
 
   const isGroupsClosed = officialBonuses && officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD';
   const isTournamentFinished = officialBonuses && officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD';
@@ -495,7 +496,7 @@ export default function LeaderboardPage() {
           </div>
           <input
             type="text"
-            placeholder="Cerca giocatore..."
+            placeholder="Cerca giocatore o nome..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm font-black uppercase text-white placeholder-slate-600 outline-none focus:border-yellow-500 transition-colors shadow-inner"
@@ -521,19 +522,19 @@ export default function LeaderboardPage() {
             return (
               <div key={player.id} onClick={() => handlePlayerClick(player)} className={`flex items-center p-4 sm:p-5 rounded-[2rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${isPodium ? 'bg-gradient-to-r from-yellow-500/10 to-slate-900/40 border-yellow-500/40 shadow-2xl shadow-yellow-500/5 hover:scale-[1.02]' : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/80 hover:border-slate-700'}`}>
                 <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
-                  <div className="w-12 sm:w-14 flex items-center justify-between shrink-0 bg-slate-950/50 p-2 rounded-xl border border-slate-800/80 shadow-inner">
+                  <div className="w-12 sm:w-14 flex items-center justify-between shrink-0 bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 shadow-inner">
                     <div className="flex-1 flex justify-center">{getRankIcon(player.ranking)}</div>
                     <div className="flex-1 flex justify-center">{getTrendIcon(player.ranking, player.previous_ranking)}</div>
                   </div>
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-3 min-w-0 flex-1 pr-1">
                     <div className={`w-8 sm:w-10 h-8 sm:h-10 shrink-0 rounded-full flex items-center justify-center text-lg sm:text-xl shadow-inner overflow-hidden bg-gradient-to-br ${currentAvatar.color} border border-slate-800`} title={currentAvatar.name}>
                       {currentAvatar.flagCode ? <img src={`https://flagcdn.com/w80/${currentAvatar.flagCode}.png`} alt={currentAvatar.name} className="w-full h-full object-cover" /> : <span className="drop-shadow-md">{currentAvatar.emoji}</span>}
                     </div>
                     <div className="flex flex-col justify-center min-w-0">
                       <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>{player.username}</p>
-                      {/* MODIFICA 1: Inserimento Nome e Cognome sotto il Nickname in classifica */}
+                      {/* FIX: Nome e Cognome con wrapping fluido su mobile invece di truncate */}
                       {player.full_name && (
-                        <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate mt-1">
+                        <p className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">
                           {player.full_name}
                         </p>
                       )}
@@ -567,9 +568,8 @@ export default function LeaderboardPage() {
                 <h3 className="text-yellow-500 font-black uppercase italic tracking-tighter text-lg truncate pr-2">
                   {selectedPlayer.username}
                 </h3>
-                {/* MODIFICA 2: Inserimento Nome e Cognome dentro l'header del modale dettagli punti */}
                 {selectedPlayer.full_name && (
-                  <p className="text-[10px] text-slate-300 uppercase tracking-widest font-bold mt-0.5">{selectedPlayer.full_name}</p>
+                   <p className="text-[10px] text-slate-300 uppercase tracking-wider font-bold leading-tight line-clamp-2 break-words mt-0.5">{selectedPlayer.full_name}</p>
                 )}
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Dettaglio Punti Riscossi</p>
               </div>
@@ -606,7 +606,7 @@ export default function LeaderboardPage() {
                           const isZeroPoints = pred.points === 0;
                           
                           return (
-                            <div key={idx} className={`bg-slate-950 border rounded-xl p-3 flex flex-col gap-2 transition-colors ${isPerfectMatch ? 'border-emerald-500/30' : 'isZeroPoints' ? 'border-slate-800/50 opacity-60' : 'border-slate-800'}`}>
+                            <div key={idx} className={`bg-slate-950 border rounded-xl p-3 flex flex-col gap-2 transition-colors ${isPerfectMatch ? 'border-emerald-500/30' : isZeroPoints ? 'border-slate-800/50 opacity-60' : 'border-slate-800'}`}>
                                <div className="flex justify-between items-center text-xs font-black uppercase text-slate-300">
                                   <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                                      <span className="truncate text-right">{formatMatchName(pred.matches.home_team)}</span>
