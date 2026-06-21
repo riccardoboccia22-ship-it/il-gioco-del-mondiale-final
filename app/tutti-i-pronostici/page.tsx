@@ -102,6 +102,7 @@ export default function TuttiPronosticiPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [data, setData] = useState<any>({
     currentUserUsername: '', profiles: [], matches: [], predictionsMap: {}, bracketMap: {}, bonusMap: {}, officialBonus: null, officialResults: [],
@@ -207,20 +208,30 @@ export default function TuttiPronosticiPage() {
     return { pts: 0, color: 'text-rose-500', bg: 'bg-rose-950/20 border-rose-900/30 opacity-70' };
   };
 
+  // --- FILTRO GLOBALE PROFILI ---
+  const filteredProfiles = useMemo(() => {
+    if (!searchQuery.trim()) return data.profiles;
+    const q = searchQuery.toLowerCase();
+    return data.profiles.filter((p: any) =>
+      p.username?.toLowerCase().includes(q) ||
+      p.full_name?.toLowerCase().includes(q)
+    );
+  }, [data.profiles, searchQuery]);
+
   const getAggregatedMatchPicks = (matchId: number) => {
-    const agg: Record<string, { users: string[], predObj: any }> = {};
-    data.profiles.forEach((p: any) => {
+    const agg: Record<string, { users: any[], predObj: any }> = {};
+    filteredProfiles.forEach((p: any) => {
       const pred = data.predictionsMap[matchId]?.[p.id];
       const resKey = (pred && pred.home_score !== null && pred.away_score !== null) ? `${pred.home_score} - ${pred.away_score}` : 'Nessun pronostico';
       if (!agg[resKey]) agg[resKey] = { users: [], predObj: pred };
-      agg[resKey].users.push(p.username);
+      agg[resKey].users.push(p);
     });
     return Object.entries(agg).sort((a, b) => b[1].users.length - a[1].users.length);
   };
 
   const getAggregatedBracketPicks = (stageId: string) => {
-    const agg: Record<string, Set<string>> = {}; // Usiamo Set per evitare doppioni
-    data.profiles.forEach((p: any) => {
+    const agg: Record<string, Set<any>> = {}; 
+    filteredProfiles.forEach((p: any) => {
       const picks = (data.bracketMap[p.id] || []).filter((b: any) => normalizeStage(b.stage) === stageId);
       
       const uniqueTeams = new Set<string>();
@@ -233,24 +244,23 @@ export default function TuttiPronosticiPage() {
         const teamForDisplay = formatTeamName(cleanTeamName);
         if (teamForDisplay) {
             if (!agg[teamForDisplay]) agg[teamForDisplay] = new Set();
-            agg[teamForDisplay].add(p.username);
+            agg[teamForDisplay].add(p);
         }
       });
     });
     
-    // Trasformiamo i Set in array per il rendering
     return Object.entries(agg)
        .map(([team, usersSet]) => [team, Array.from(usersSet)])
        .sort((a: any, b: any) => b[1].length - a[1].length);
   };
 
   const getAggregatedBonusPicks = (bonusKey: string, isNumeric: boolean = false) => {
-    const agg: Record<string, string[]> = {};
-    data.profiles.forEach((p: any) => {
+    const agg: Record<string, any[]> = {};
+    filteredProfiles.forEach((p: any) => {
       let val = data.bonusMap[p.id]?.[bonusKey];
       val = val !== null && val !== undefined && val !== '' ? String(val).trim() : 'Nessuna Scelta';
       if (!agg[val]) agg[val] = [];
-      agg[val].push(p.username);
+      agg[val].push(p);
     });
     return Object.entries(agg).sort((a, b) => {
       if (a[0] === 'Nessuna Scelta') return 1;
@@ -263,7 +273,8 @@ export default function TuttiPronosticiPage() {
   };
   
   const getWinnerStats = () => {
-    const allBrackets = Object.values(data.bracketMap).flat() as any[];
+    const filteredUserIds = new Set(filteredProfiles.map((p: any) => p.id));
+    const allBrackets = (Object.values(data.bracketMap).flat() as any[]).filter(b => filteredUserIds.has(b.user_id));
     const winners = allBrackets.filter(b => b.stage === 'WINNER' && b.team_name);
     const total = winners.length;
     if (total === 0) return [];
@@ -274,8 +285,8 @@ export default function TuttiPronosticiPage() {
       if (!counts[t]) counts[t] = { count: 0, users: new Set() };
       counts[t].count += 1;
       
-      const p = data.profiles.find((prof: any) => prof.id === w.user_id);
-      if (p && p.username) counts[t].users.add(p.username);
+      const p = filteredProfiles.find((prof: any) => prof.id === w.user_id);
+      if (p && p.username) counts[t].users.add(p);
     });
     
     return Object.entries(counts)
@@ -287,15 +298,14 @@ export default function TuttiPronosticiPage() {
 
   const getAnomalies = () => {
     const allTeams = [...TOP_TEAMS, ...MID_TEAMS, ...LOW_TEAMS, ...SUPER_LOW_TEAMS];
-    let anomalies: { user: string, type: string, team: string, msg: string, phase: string, phaseWeight: number }[] = [];
+    let anomalies: { user: any, type: string, team: string, msg: string, phase: string, phaseWeight: number }[] = [];
 
-    data.profiles.forEach((p: any) => {
+    filteredProfiles.forEach((p: any) => {
       if (!p || !p.id || !p.username) return;
 
       const uBrackets = data.bracketMap[p.id] || [];
       if (uBrackets.length === 0) return;
       
-      // Mappatura sicura delle scelte per fase usando Set per unicità
       const r32 = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'R32').map((b: any) => cleanString(b.team_name)));
       const r16 = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'R16').map((b: any) => cleanString(b.team_name)));
       const qf = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'QF').map((b: any) => cleanString(b.team_name)));
@@ -317,42 +327,42 @@ export default function TuttiPronosticiPage() {
           const inWinner = uBrackets.some((b: any) => normalizeStage(b.stage) === 'WINNER' && cleanString(b.team_name) === teamF);
 
           if (TOP_TEAMS.includes(t)) {
-              if (hasR32 && !inR32) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'Gironi', phaseWeight: 1 });
-              else if (hasR16 && inR32 && !inR16) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Sedicesimi 😱', phase: 'Sedicesimi', phaseWeight: 2 });
-              else if (hasQF && inR16 && !inQF) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori agli Ottavi 😱', phase: 'Ottavi di finale', phaseWeight: 3 });
+              if (hasR32 && !inR32) anomalies.push({ user: p, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'Gironi', phaseWeight: 1 });
+              else if (hasR16 && inR32 && !inR16) anomalies.push({ user: p, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Sedicesimi 😱', phase: 'Sedicesimi', phaseWeight: 2 });
+              else if (hasQF && inR16 && !inQF) anomalies.push({ user: p, type: 'FLOP', team: originalTeam, msg: 'Fuori agli Ottavi 😱', phase: 'Ottavi di finale', phaseWeight: 3 });
           }
           if (MID_TEAMS.includes(t)) {
-              if (hasR32 && !inR32) anomalies.push({ user: p.username, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'Gironi', phaseWeight: 1 });
+              if (hasR32 && !inR32) anomalies.push({ user: p, type: 'FLOP', team: originalTeam, msg: 'Fuori ai Gironi 📉', phase: 'Gironi', phaseWeight: 1 });
           }
           if (LOW_TEAMS.includes(t)) {
-              if (inWinner) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Campione del Mondo! 🏆🦄', phase: 'Campione', phaseWeight: 7 });
-              else if (inF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Finale! 🤯', phase: 'Finale', phaseWeight: 6 });
-              else if (inSF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale! 🚀', phase: 'Semifinale', phaseWeight: 5 });
-              else if (inQF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🍷', phase: 'Quarti di finale', phaseWeight: 4 });
+              if (inWinner) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'Campione del Mondo! 🏆🦄', phase: 'Campione', phaseWeight: 7 });
+              else if (inF) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'In Finale! 🤯', phase: 'Finale', phaseWeight: 6 });
+              else if (inSF) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale! 🚀', phase: 'Semifinale', phaseWeight: 5 });
+              else if (inQF) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🍷', phase: 'Quarti di finale', phaseWeight: 4 });
           }
           if (SUPER_LOW_TEAMS.includes(t)) {
               if (teamF === 'curacao' || teamF === 'r.d. congo' || teamF === 'bosnia') return;
-              if (inWinner) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Campione del Mondo! 🏆🦄', phase: 'Campione', phaseWeight: 7 });
-              else if (inF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Finale! 🤯', phase: 'Finale', phaseWeight: 6 });
-              else if (inSF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale! 🚀', phase: 'Semifinale', phaseWeight: 5 });
-              else if (inQF) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🍷', phase: 'Quarti di finale', phaseWeight: 4 });
-              else if (inR16) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Arriva agli Ottavi! 🍿', phase: 'Ottavi di finale', phaseWeight: 3 });
-              else if (inR32) anomalies.push({ user: p.username, type: 'FAVOLA', team: originalTeam, msg: 'Supera i Gironi! 🎉', phase: 'Sedicesimi', phaseWeight: 2 });
+              if (inWinner) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'Campione del Mondo! 🏆🦄', phase: 'Campione', phaseWeight: 7 });
+              else if (inF) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'In Finale! 🤯', phase: 'Finale', phaseWeight: 6 });
+              else if (inSF) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'In Semifinale! 🚀', phase: 'Semifinale', phaseWeight: 5 });
+              else if (inQF) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'Raggiunge i Quarti! 🍷', phase: 'Quarti di finale', phaseWeight: 4 });
+              else if (inR16) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'Arriva agli Ottavi! 🍿', phase: 'Ottavi di finale', phaseWeight: 3 });
+              else if (inR32) anomalies.push({ user: p, type: 'FAVOLA', team: originalTeam, msg: 'Supera i Gironi! 🎉', phase: 'Sedicesimi', phaseWeight: 2 });
           }
       });
     });
 
     const groupedObj = anomalies.reduce((acc, ano) => {
       const key = `${acc.phaseWeight || 0}-${ano.type}-${ano.team}-${ano.msg}`;
-      if (!acc[key]) acc[key] = { ...ano, users: new Set([ano.user]) };
-      else acc[key].users.add(ano.user);
+      if (!acc[key]) acc[key] = { ...ano, users: new Set([JSON.stringify(ano.user)]) };
+      else acc[key].users.add(JSON.stringify(ano.user));
       return acc;
     }, {} as any);
     
-    return Object.values(groupedObj).map((o: any) => ({ ...o, users: Array.from(o.users) })).sort((a: any, b: any) => a.phaseWeight - b.phaseWeight || a.type.localeCompare(b.type) || a.team.localeCompare(b.team));
+    return Object.values(groupedObj).map((o: any) => ({ ...o, users: Array.from(o.users).map((u:any) => JSON.parse(u)) })).sort((a: any, b: any) => a.phaseWeight - b.phaseWeight || a.type.localeCompare(b.type) || a.team.localeCompare(b.team));
   };
 
-  const topCecchini = (data.profiles || []).filter((p: any) => (p.exact_matches || 0) > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
+  const topCecchini = filteredProfiles.filter((p: any) => (p.exact_matches || 0) > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
 
   const isGroupsClosed = data.officialBonus && !!data.officialBonus.high_scoring_match;
   const isTournamentFinished = data.officialBonus && !!data.officialBonus.mvp_world_cup;
@@ -396,7 +406,7 @@ export default function TuttiPronosticiPage() {
             {getAggregatedMatchPicks(match.id).map(([resKey, group]: any, idx) => {
               const info = getMatchResultInfo(group.predObj, match);
               const isUnset = resKey === 'Nessun pronostico';
-              const isMe = group.users.includes(data.currentUserUsername);
+              const isMe = group.users.some((u: any) => u.username === data.currentUserUsername);
               
               return (
                 <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${isUnset ? 'bg-slate-900/50 border-slate-800/50 opacity-60' : info.bg} ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
@@ -418,13 +428,14 @@ export default function TuttiPronosticiPage() {
                         <Users size={12} /> <span className="text-[10px] font-black">{group.users.length}</span>
                      </div>
                   </div>
-                  <p className="text-[11px] font-medium text-slate-400 leading-relaxed capitalize-first">
-                     {group.users.map((u: string, i: number) => (
-                       <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                         {u}{i < group.users.length - 1 ? ', ' : ''}
-                       </span>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                     {group.users.map((u: any, i: number) => (
+                       <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < group.users.length - 1 ? ',' : ''}</span>
+                         {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                       </div>
                      ))}
-                  </p>
+                  </div>
                 </div>
               );
             })}
@@ -458,6 +469,19 @@ export default function TuttiPronosticiPage() {
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans">
       <header className="text-center mb-8 pt-4">
         <h1 className="text-4xl font-black text-yellow-500 uppercase italic">Scouting Globale</h1>
+        
+        {/* BARRA DI RICERCA */}
+        <div className="relative max-w-sm mx-auto mt-6 px-4 sm:px-0">
+          <Search className="absolute left-8 sm:left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+          <input
+            type="text"
+            placeholder="Cerca utente o nome..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 rounded-2xl py-3 pl-10 pr-4 text-xs font-black uppercase text-white placeholder-slate-600 outline-none focus:border-yellow-500 transition-colors shadow-inner"
+          />
+        </div>
+
         <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mt-6 max-w-[400px] mx-auto overflow-x-auto custom-scrollbar">
           {[
             { id: 'GIRONI', icon: <LayoutGrid size={14} /> },
@@ -567,7 +591,7 @@ export default function TuttiPronosticiPage() {
                     {getAggregatedBracketPicks(stg.id).map(([team, users]: any, idx) => {
                       const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
                       const isWrong = isStageFull && !isCorrect;
-                      const isMe = users.includes(data.currentUserUsername);
+                      const isMe = users.some((u: any) => u.username === data.currentUserUsername);
                       const flag = getFlagUrl(team);
 
                       return (
@@ -587,13 +611,14 @@ export default function TuttiPronosticiPage() {
                                 <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                              </div>
                           </div>
-                          <p className="text-[11px] font-medium text-slate-400 leading-relaxed capitalize-first">
-                             {users.map((u: string, i: number) => (
-                               <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                                 {u}{i < users.length - 1 ? ', ' : ''}
-                               </span>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                             {users.map((u: any, i: number) => (
+                               <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                 <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
+                                 {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                               </div>
                              ))}
-                          </p>
+                          </div>
                         </div>
                       );
                     })}
@@ -658,7 +683,7 @@ export default function TuttiPronosticiPage() {
                           const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
                           
                           const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
-                          const isMe = users.includes(data.currentUserUsername);
+                          const isMe = users.some((u: any) => u.username === data.currentUserUsername);
 
                           let flagElement = null;
                           if (!isUnset) {
@@ -730,13 +755,14 @@ export default function TuttiPronosticiPage() {
                                     <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
                                  </div>
                               </div>
-                              <p className={`text-[11px] font-medium leading-relaxed capitalize-first ${isMathematicallyWrong ? 'text-slate-600 font-normal line-through opacity-70' : 'text-slate-400'}`}>
-                                 {users.map((u: string, i: number) => (
-                                   <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                                     {u}{i < users.length - 1 ? ', ' : ''}
-                                   </span>
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                 {users.map((u: any, i: number) => (
+                                   <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                     <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
+                                     {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                                   </div>
                                  ))}
-                              </p>
+                              </div>
                             </div>
                           );
                         })}
@@ -762,7 +788,7 @@ export default function TuttiPronosticiPage() {
                   if (winnerStats.length === 0) return <p className="text-xs text-slate-500 font-bold uppercase italic text-center py-4">Nessun dato disponibile</p>;
                   
                   return winnerStats.map((w: any) => {
-                    const isMe = w.users.includes(data.currentUserUsername);
+                    const isMe = w.users.some((u: any) => u.username === data.currentUserUsername);
                     return (
                       <div key={w.team} className={`flex flex-col border-b border-slate-800/50 pb-3 last:border-0 last:pb-0 relative ${isMe ? 'bg-yellow-500/5 -mx-2 px-2 rounded-lg' : ''}`}>
                          {isMe && <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-yellow-500"></span>}
@@ -773,14 +799,14 @@ export default function TuttiPronosticiPage() {
                            </div>
                            <span className="text-cyan-500">{w.pct}% <span className="text-[9px] text-slate-500 ml-1">({w.count} voti)</span></span>
                          </div>
-                         <p className="text-[9px] text-slate-400 leading-tight">
-                            <span className="text-slate-600">Scelto da: </span> 
-                            {w.users.map((u: string, i: number) => (
-                               <span key={i} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                                 {u}{i < w.users.length - 1 ? ', ' : ''}
-                               </span>
-                             ))}
-                         </p>
+                         <div className="flex flex-wrap gap-2 pt-1">
+                            {w.users.map((u: any, i: number) => (
+                               <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                 <span className="text-[10px] font-bold uppercase leading-none">{u.username}{i < w.users.length - 1 ? ',' : ''}</span>
+                                 {u.full_name && <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                               </div>
+                            ))}
+                         </div>
                       </div>
                     );
                   });
@@ -795,7 +821,10 @@ export default function TuttiPronosticiPage() {
               <div className="space-y-2">
                 {topCecchini.length > 0 ? topCecchini.map((p: any) => (
                   <div key={p.id} className={`flex justify-between items-center p-3 rounded-xl border ${p.username === data.currentUserUsername ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500' : 'bg-slate-950 border-slate-800'}`}>
-                    <span className={`text-xs font-black uppercase italic truncate pr-2 ${p.username === data.currentUserUsername ? 'text-emerald-400' : 'text-white'}`}>{p.username} {p.username === data.currentUserUsername && '(TU)'}</span>
+                    <div className="flex flex-col">
+                       <span className={`text-xs font-black uppercase italic truncate pr-2 ${p.username === data.currentUserUsername ? 'text-emerald-400' : 'text-white'}`}>{p.username} {p.username === data.currentUserUsername && '(TU)'}</span>
+                       {p.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{p.full_name}</span>}
+                    </div>
                     <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shadow-inner shrink-0">
                       {p.exact_matches || 0} presi
                     </span>
@@ -825,7 +854,7 @@ export default function TuttiPronosticiPage() {
                         {phaseAnos.map((ano: any, i: number) => {
                           const isFlop = ano.type === 'FLOP';
                           const usersArray = ano.users || [];
-                          const isMeReal = usersArray.includes(data.currentUserUsername);
+                          const isMeReal = usersArray.some((u: any) => u.username === data.currentUserUsername);
 
                           return (
                             <div key={i} className={`flex flex-col p-3 rounded-2xl border relative overflow-hidden ${isFlop ? 'bg-rose-950/20 border-rose-900/30' : 'bg-indigo-950/20 border-indigo-900/30'} ${isMeReal ? 'ring-1 ring-yellow-500/50' : ''}`}>
@@ -842,14 +871,15 @@ export default function TuttiPronosticiPage() {
                                  </div>
                               </div>
                               <div className="pt-2 border-t border-slate-800/50">
-                                 <p className="text-[10px] text-slate-300 font-medium leading-relaxed">
+                                 <div className="flex flex-wrap gap-2 pt-1 items-center">
                                     <span className="text-slate-500 mr-1 uppercase font-black text-[8px] tracking-widest">Colpevoli:</span> 
-                                    {usersArray.map((u: string, index: number) => (
-                                       <span key={index} className={u === data.currentUserUsername ? 'text-yellow-500 font-bold' : ''}>
-                                         {u}{index < usersArray.length - 1 ? ', ' : ''}
-                                       </span>
+                                    {usersArray.map((u: any, index: number) => (
+                                       <div key={index} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                         <span className="text-[10px] font-bold uppercase leading-none">{u.username}{index < usersArray.length - 1 ? ',' : ''}</span>
+                                         {u.full_name && <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest">{u.full_name}</span>}
+                                       </div>
                                     ))}
-                                 </p>
+                                 </div>
                               </div>
                             </div>
                           );
