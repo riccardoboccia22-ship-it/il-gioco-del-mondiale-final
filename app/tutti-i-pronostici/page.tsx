@@ -115,7 +115,6 @@ export default function TuttiPronosticiPage() {
   const [expandedBonus, setExpandedBonus] = useState<string | null>(null);
   const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>({});
   
-  // STATO PER IL GIORNO CORRENTE
   const [todayKey, setTodayKey] = useState<string | null>(null);
 
   const isStarted = new Date() > WORLD_CUP_START_DATE;
@@ -161,7 +160,6 @@ export default function TuttiPronosticiPage() {
           bracketMap: brackMap, officialResults: obData || [], officialBonus: offBo || null, bonusMap: bMap,
         });
 
-        // Configurazione per aprire ed evidenziare le partite di "Oggi"
         const today = new Date();
         const initialOpenDays: { [key: string]: boolean } = {};
         let foundTodayKey: string | null = null;
@@ -191,13 +189,11 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
-  // EFFETTO PER L'AUTO-SCROLL ALLA GIORNATA ODIERNA
   useEffect(() => {
     if (!loading && activeTab === 'GIRONI' && gironiViewMode === 'CHRONO' && todayKey) {
       const timer = setTimeout(() => {
         const el = document.getElementById(`day-${todayKey}`);
         if (el) {
-          // Aggiunge un offset in modo che l'header non copra il div
           const y = el.getBoundingClientRect().top + window.scrollY - 100;
           window.scrollTo({ top: y, behavior: 'smooth' });
         }
@@ -407,9 +403,6 @@ export default function TuttiPronosticiPage() {
   };
 
   const topCecchini = filteredProfiles.filter((p: any) => (p.exact_matches || 0) > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
-
-  const isGroupsClosed = data.officialBonus && !!data.officialBonus.high_scoring_match;
-  const isTournamentFinished = data.officialBonus && !!data.officialBonus.mvp_world_cup;
 
   const renderMatchCard = (match: any) => {
     const hFlag = getFlagUrl(match.home_team);
@@ -681,151 +674,139 @@ export default function TuttiPronosticiPage() {
             );
           })}
 
-        {/* --- 3. BONUS (GESTIONE A SCAGLIONI CON LUCCHETTO) --- */}
-        {activeTab === 'BONUS' &&
-          [
-            { id: 'mvp_world_cup', label: 'MVP Mondiale', icon: <Trophy size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
-            { id: 'top_scorer', label: 'Capocannoniere', icon: <Award size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
-            { id: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
-            { id: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={16}/>, pts: 5, type: 'MATCH', phase: 'GROUPS' },
-            { id: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={16}/>, pts: 5, type: 'GROUP', phase: 'GROUPS' },
-            { id: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={16}/>, pts: 5, type: 'GROUP', phase: 'GROUPS' },
-            { id: 'total_own_goals', label: 'Totale Autogol', icon: <Target size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
-            { id: 'total_penalties', label: 'Totale Rigori', icon: <Goal size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
-            { id: 'total_red_cards', label: 'Totale Rossi', icon: <Zap size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
-          ].map((bonus) => {
-            const isExpanded = expandedBonus === bonus.id;
-            const offVal = data.officialBonus?.[bonus.id];
-            
-            const isGroupsClosed = data.officialBonus && data.officialBonus.high_scoring_match && data.officialBonus.high_scoring_match !== 'TBD';
-            const isTournamentFinished = data.officialBonus && data.officialBonus.mvp_world_cup && data.officialBonus.mvp_world_cup !== 'TBD';
-            const isPhaseUnlocked = bonus.phase === 'GROUPS' ? isGroupsClosed : isTournamentFinished;
-
-            return (
-              <div key={bonus.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
-                <button onClick={() => setExpandedBonus(isExpanded ? null : bonus.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isPhaseUnlocked ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                      {isPhaseUnlocked ? bonus.icon : <Lock size={16} />}
+        {/* --- 3. BONUS (SEMPRE VISIBILI E APERTI) --- */}
+        {activeTab === 'BONUS' && (
+          <div className="space-y-6">
+            {[
+              { id: 'mvp_world_cup', label: 'MVP Mondiale', icon: <Trophy size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
+              { id: 'top_scorer', label: 'Capocannoniere', icon: <Award size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
+              { id: 'best_goalkeeper', label: 'Miglior Portiere', icon: <ShieldCheck size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
+              { id: 'high_scoring_match', label: 'Match + Gol', icon: <Flame size={16}/>, pts: 5, type: 'MATCH', phase: 'GROUPS' },
+              { id: 'highest_scoring_group', label: 'Girone + Gol', icon: <ArrowUpToLine size={16}/>, pts: 5, type: 'GROUP', phase: 'GROUPS' },
+              { id: 'lowest_scoring_group', label: 'Girone - Gol', icon: <ArrowDownToLine size={16}/>, pts: 5, type: 'GROUP', phase: 'GROUPS' },
+              { id: 'total_own_goals', label: 'Totale Autogol', icon: <Target size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
+              { id: 'total_penalties', label: 'Totale Rigori', icon: <Goal size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
+              { id: 'total_red_cards', label: 'Totale Rossi', icon: <Zap size={16}/>, pts: 3, type: 'NUMBER', phase: 'FINAL' },
+            ].map((bonus) => {
+              const isExpanded = expandedBonus === bonus.id;
+              const offVal = data.officialBonus?.[bonus.id];
+              
+              return (
+                <div key={bonus.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
+                  <button onClick={() => setExpandedBonus(isExpanded ? null : bonus.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        {bonus.icon}
+                      </div>
+                      <span className="font-black uppercase italic text-sm text-left text-white">{bonus.label}</span>
                     </div>
-                    <span className={`font-black uppercase italic text-sm text-left ${isPhaseUnlocked ? 'text-white' : 'text-slate-500'}`}>{bonus.label}</span>
-                  </div>
-                  <ChevronDown className={`transition-transform ${isExpanded ? (isPhaseUnlocked ? 'rotate-180 text-purple-500' : 'rotate-180 text-slate-500') : 'text-slate-500'}`} />
-                </button>
-                
-                {isExpanded && (
-                  <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                    {!isPhaseUnlocked ? (
-                       <div className="flex flex-col items-center justify-center py-6 px-4 text-slate-500">
-                          <Lock size={24} className="mb-3 text-slate-600" />
-                          <p className="text-[10px] font-black uppercase tracking-widest text-center leading-relaxed">
-                            Contenuto Segreto <br/> <span className="text-purple-500 opacity-80">Si sbloccherà al termine della fase</span>
-                          </p>
-                       </div>
-                    ) : (
-                      <>
+                    <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-purple-500' : 'text-slate-500'}`} />
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
                         {offVal && (
-                           <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-                              <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale</span>
-                              <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
-                           </div>
+                             <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                                <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale</span>
+                                <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
+                             </div>
                         )}
                         {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
-                          const isUnset = ans === 'Nessuna Scelta';
-                          
-                          const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
-                          
-                          const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
-                          const isMe = users.some((u: any) => u.username === data.currentUserUsername);
+                            const isUnset = ans === 'Nessuna Scelta';
+                            
+                            const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
+                            
+                            const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
+                            const isMe = users.some((u: any) => u.username === data.currentUserUsername);
 
-                          let flagElement = null;
-                          if (!isUnset) {
-                            if (bonus.type === 'PLAYER') {
-                              const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
-                              const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
-                              const f = player ? getFlagUrl(player.country) : null;
-                              flagElement = f ? <img src={f} className="w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0" alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
-                            } 
-                            else if (bonus.type === 'MATCH' && ans.includes('-')) {
-                              const [t1, t2] = ans.split(/\s*-\s*/);
-                              const f1 = getFlagUrl(t1);
-                              const f2 = getFlagUrl(t2);
-                              flagElement = (
-                                <div className="flex items-center gap-1 shrink-0">
-                                   {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                   <span className="text-[8px] text-slate-500">-</span>
-                                   {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                </div>
-                              );
-                            } 
-                            else if (bonus.type === 'GROUP') {
-                              const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
-                              if (group) {
+                            let flagElement = null;
+                            if (!isUnset) {
+                              if (bonus.type === 'PLAYER') {
+                                const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
+                                const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
+                                const f = player ? getFlagUrl(player.country) : null;
+                                flagElement = f ? <img src={f} className="w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0" alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
+                              } 
+                              else if (bonus.type === 'MATCH' && ans.includes('-')) {
+                                const [t1, t2] = ans.split(/\s*-\s*/);
+                                const f1 = getFlagUrl(t1);
+                                const f2 = getFlagUrl(t2);
                                 flagElement = (
-                                  <div className="flex items-center gap-0.5 shrink-0">
-                                     {group.teams.map((t, i) => {
-                                        const f = getFlagUrl(t);
-                                        return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
-                                     })}
-                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                     {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                                     <span className="text-[8px] text-slate-500">-</span>
+                                     {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                                 </div>
                                 );
+                              } 
+                              else if (bonus.type === 'GROUP') {
+                                const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
+                                if (group) {
+                                  flagElement = (
+                                    <div className="flex items-center gap-0.5 shrink-0">
+                                       {group.teams.map((t, i) => {
+                                          const f = getFlagUrl(t);
+                                          return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
+                                       })}
+                                    </div>
+                                  );
+                                }
                               }
                             }
-                          }
 
-                          return (
-                            <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
-                              isCorrect 
-                                ? 'bg-emerald-500/10 border-emerald-500/50' 
-                                : isUnset 
-                                  ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
-                                  : isMathematicallyWrong
-                                    ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner'
-                                    : 'bg-slate-900 border-slate-800'
-                            } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                              
-                              {isMe && !isUnset && (
-                                 <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
-                              )}
+                            return (
+                              <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                                isCorrect 
+                                  ? 'bg-emerald-500/10 border-emerald-500/50' 
+                                  : isUnset 
+                                    ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
+                                    : isMathematicallyWrong
+                                      ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner'
+                                      : 'bg-slate-900 border-slate-800'
+                              } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                                
+                                {isMe && !isUnset && (
+                                   <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
+                                )}
 
-                              <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
-                                 <div className="flex items-center gap-2.5">
-                                   {flagElement}
-                                   <span className={`text-sm font-black uppercase italic tracking-tight ${
-                                     isCorrect 
-                                       ? 'text-emerald-400' 
-                                       : isUnset 
-                                         ? 'text-slate-500' 
-                                         : isMathematicallyWrong 
-                                           ? 'text-slate-600 line-through decoration-rose-500/50'
-                                           : 'text-white'
-                                   }`}>{ans}</span>
-                                   
-                                   {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
-                                   {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
-                                 </div>
-                                 <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
-                                    <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
-                                 </div>
-                              </div>
-                              <div className="flex flex-wrap gap-2 pt-1">
-                                 {users.map((u: any, i: number) => (
-                                   <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                     <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
-                                     {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
+                                   <div className="flex items-center gap-2.5">
+                                     {flagElement}
+                                     <span className={`text-sm font-black uppercase italic tracking-tight ${
+                                       isCorrect 
+                                         ? 'text-emerald-400' 
+                                         : isUnset 
+                                           ? 'text-slate-500' 
+                                           : isMathematicallyWrong 
+                                             ? 'text-slate-600 line-through decoration-rose-500/50'
+                                             : 'text-white'
+                                     }`}>{ans}</span>
+                                     
+                                     {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
+                                     {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
                                    </div>
-                                 ))}
+                                   <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
+                                      <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
+                                   </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                   {users.map((u: any, i: number) => (
+                                     <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                       <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
+                                       {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                     </div>
+                                   ))}
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
                         })}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* --- 4. STATS --- */}
         {activeTab === 'STATS' && (
