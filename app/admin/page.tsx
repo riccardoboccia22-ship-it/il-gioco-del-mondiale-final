@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -8,7 +8,7 @@ import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
   User, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, 
-  Shield, Download, Gift, Activity, Key, Gamepad2, ListOrdered, Flag
+  Shield, Download, Gift, Activity, Key, Gamepad2, ListOrdered, Flag, CalendarDays
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -305,7 +305,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
-  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, liveStats: false, bonus: false, statistiche: true, marcatori: false });
+  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, liveStats: false, bonus: false, statistiche: false, marcatori: false });
   
   const [matches, setMatches] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -326,6 +326,9 @@ export default function AdminPage() {
   const [bonusData, setBonusData] = useState({ red: '', top: '', penalties: '', own_goals: '', mvp_world_cup: '', best_goalkeeper: '', high: '', high_group: '', low_group: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
+  
+  // STATO PER IL GIORNO CORRENTE DA AUTOSCROLLARE
+  const [todayKey, setTodayKey] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -335,6 +338,20 @@ export default function AdminPage() {
     }
     init();
   }, []);
+
+  // EFFETTO PER L'AUTO-SCROLL AI RISULTATI ODIERNI
+  useEffect(() => {
+    if (openSection.risultati && todayKey) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`admin-day-${todayKey}`);
+        if (el) {
+          const y = el.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [openSection.risultati, todayKey]);
 
   async function fetchData() {
     const [mRes, bRes, obRes, scorersRes, settingsRes] = await Promise.all([
@@ -377,6 +394,24 @@ export default function AdminPage() {
         tempGroups[groupName].push(fullMatchString);
     });
     setGroupedMatches(tempGroups);
+    
+    // Individuo la giornata di oggi per lo scroll
+    const today = new Date();
+    let foundTodayKey: string | null = null;
+    fetchedMatches.forEach((m: any) => {
+      if (m.match_date) {
+        const d = new Date(m.match_date);
+        if (
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate()
+        ) {
+          const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+          foundTodayKey = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+        }
+      }
+    });
+    if (foundTodayKey) setTodayKey(foundTodayKey);
 
     if (bRes.data) {
       setBonusData({
@@ -392,6 +427,47 @@ export default function AdminPage() {
       });
     }
   }
+
+  // --- LOGICA RAGGRUPPAMENTO PARTITE PER GIORNO ---
+  const groupedMatchesByDay = useMemo(() => {
+    const processed = matches
+      .map(m => {
+        const homeFormatted = formatMatchName(m.home_team);
+        const groupObj = TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === homeFormatted.toLowerCase()));
+        return { ...m, groupName: groupObj ? groupObj.name : 'Z - Altri' };
+      })
+      .filter(m =>
+        (m.home_team || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.away_team || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.groupName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+    const groupsMap: { [key: string]: { dateVal: number, matches: any[] } } = {};
+    processed.forEach(m => {
+      let dayName = "Data da definire";
+      let dVal = 0;
+      if (m.match_date) {
+        const d = new Date(m.match_date);
+        dVal = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        dayName = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+      } else if (m.id) {
+        dVal = m.id; // fallback per match senza data
+      }
+
+      if (!groupsMap[dayName]) {
+        groupsMap[dayName] = { dateVal: dVal, matches: [] };
+      }
+      groupsMap[dayName].matches.push(m);
+    });
+
+    return Object.entries(groupsMap)
+      .map(([dayName, info]) => {
+         const sortedMatches = info.matches.sort((a, b) => a.id - b.id);
+         return { dayName, dateVal: info.dateVal, matchesArray: sortedMatches };
+      })
+      .sort((a, b) => a.dateVal - b.dateVal);
+  }, [matches, searchTerm]);
 
   const saveAnnouncement = async (text: string) => {
     const { error } = await supabase.from('app_settings').upsert({ id: 1, announcement: text });
@@ -1358,7 +1434,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ... ALTRE SEZIONI RESTANO UGUALI */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, marcatori: !openSection.marcatori })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Award className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Top Marcatori Live</h2></div>
@@ -1512,7 +1587,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE RISULTATI (ORDINAMENTO CRONOLOGICO/ID + RICERCA GIRONE) ----- */}
+        {/* ----- SEZIONE RISULTATI (RAGGRUPPAMENTO PER GIORNO + SCROLL AUTOMATICO) ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
@@ -1520,44 +1595,56 @@ export default function AdminPage() {
           </button>
           {openSection.risultati && (
             <div className="p-4 space-y-6 bg-slate-950/30">
-              <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} /><input type="text" placeholder="CERCA SQUADRA O GRUPPO..." className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase outline-none focus:border-yellow-500" onChange={e => setSearchTerm(e.target.value)} /></div>
-              <div className="grid gap-4">
-                {matches
-                  .map(m => {
-                    const homeFormatted = formatMatchName(m.home_team);
-                    const groupObj = TOURNAMENT_GROUPS.find(g => g.teams.some(t => t.toLowerCase() === homeFormatted.toLowerCase()));
-                    return { ...m, groupName: groupObj ? groupObj.name : 'Z - Altri' };
-                  })
-                  .sort((a, b) => {
-                    const dateA = a.date || a.match_date || a.created_at || a.id;
-                    const dateB = b.date || b.match_date || b.created_at || b.id;
-                    if (dateA < dateB) return -1;
-                    if (dateA > dateB) return 1;
-                    return 0;
-                  })
-                  .filter(m => 
-                    (m.home_team || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                    (m.away_team || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    m.groupName.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map(m => {
-                    const hasR = m.is_finished && m.home_score_final !== null;
-                    return (
-                      <div key={m.id} className={`bg-slate-900 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] border transition-all ${hasR ? 'border-emerald-500/40 shadow-xl' : 'border-slate-800 shadow-md'}`}>
-                        <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2">
-                           <span className="text-[9px] font-black text-slate-500 uppercase italic">
-                             Match #{m.id} <span className="ml-1 opacity-70">({m.groupName})</span>
-                           </span>
-                           {hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
-                        </div>
-                        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
-                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.home_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
-                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /><span className="text-slate-700 font-black">-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-950 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /></div>
-                          <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.away_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
-                        </div>
-                        <button onClick={() => updateScore(m.id)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${hasR ? 'bg-emerald-600 text-white' : 'bg-yellow-500 text-slate-950'}`}>{hasR ? 'Aggiorna' : 'Conferma'}</button>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="CERCA SQUADRA O GRUPPO..." 
+                  className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase outline-none focus:border-yellow-500 text-white" 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                />
+              </div>
+              
+              <div className="space-y-6">
+                {groupedMatchesByDay.map(({ dayName, matchesArray }) => {
+                  const isToday = dayName === todayKey;
+                  return (
+                    <div 
+                      key={dayName} 
+                      id={`admin-day-${dayName}`} 
+                      className={`space-y-3 p-4 rounded-[2rem] border transition-all ${isToday ? 'bg-slate-900/80 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/30' : 'bg-slate-900/30 border-slate-800'}`}
+                    >
+                      <div className="flex items-center gap-3 mb-2 px-2">
+                        <CalendarDays size={18} className={isToday ? "text-emerald-500" : "text-slate-500"} />
+                        <h3 className={`font-black uppercase italic tracking-tight ${isToday ? "text-emerald-400" : "text-slate-400"}`}>
+                          {dayName}
+                          {isToday && <span className="ml-2 text-[9px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full not-italic tracking-widest shadow-md">Oggi</span>}
+                        </h3>
                       </div>
-                    );
+                      
+                      <div className="grid gap-3">
+                        {matchesArray.map(m => {
+                          const hasR = m.is_finished && m.home_score_final !== null;
+                          return (
+                            <div key={m.id} className={`bg-slate-950 p-4 sm:p-5 rounded-[1.5rem] border transition-all ${hasR ? 'border-emerald-500/30' : 'border-slate-800'}`}>
+                              <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2">
+                                 <span className="text-[9px] font-black text-slate-500 uppercase italic">
+                                   Match #{m.id} <span className="ml-1 opacity-70">({m.groupName})</span>
+                                 </span>
+                                 {hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
+                              </div>
+                              <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
+                                <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.home_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 bg-slate-900 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /><span className="text-slate-700 font-black">-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-900 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /></div>
+                                <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.away_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
+                              </div>
+                              <button onClick={() => updateScore(m.id)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${hasR ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400'}`}>{hasR ? 'Aggiorna Risultato' : 'Conferma'}</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )
                 })}
               </div>
             </div>
