@@ -43,25 +43,28 @@ const BRACKET_ROUNDS = [
   { id: 'F', title: 'Finale', matches: 1 }
 ];
 
-// FIX: LA NUOVA STRUTTURA AD INCASTRO CON GLI SLOT UFFICIALI DELL'ADMIN
+// FIX: ACCOPPIAMENTI R32 CORRETTI SECONDO IL REGOLAMENTO UFFICIALE FIFA 2026
+// Ordinati visivamente per incastrarsi in modo perfetto in ottavi e quarti
 const BRACKET_MATCHES: Record<string, { dbString: string, label: string }[][]> = {
   R32: [
-    [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore (Slot 1)' } ],
-    [ { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ],
-    [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore (Slot 2)' } ],
-    [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ],
-    [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore (Slot 3)' } ],
-    [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ],
-    [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore (Slot 4)' } ],
-    [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ],
-    [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore (Slot 5)' } ],
-    [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ],
-    [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore (Slot 6)' } ],
-    [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ],
-    [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore (Slot 7)' } ],
-    [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ],
-    [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore (Slot 8)' } ],
-    [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' } ],
+    // --- PARTE ALTA DEL TABELLONE ---
+    [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore (Slot 1)' } ], // Match 74
+    [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore (Slot 2)' } ], // Match 77
+    [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' } ], // Match 73
+    [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ], // Match 75
+    [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ], // Match 83
+    [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ], // Match 84
+    [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore (Slot 5)' } ], // Match 81
+    [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore (Slot 6)' } ], // Match 82
+    // --- PARTE BASSA DEL TABELLONE ---
+    [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ], // Match 76
+    [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ], // Match 78
+    [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore (Slot 3)' } ], // Match 79
+    [ { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore (Slot 4)' } ], // Match 80
+    [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ], // Match 86
+    [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ], // Match 88
+    [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore (Slot 7)' } ], // Match 85
+    [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore (Slot 8)' } ], // Match 87
   ],
   R16: [
     [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ],
@@ -231,9 +234,6 @@ export default function GroupsPage() {
     return flagMap[team?.toLowerCase().trim()];
   };
 
-  // --- MOTORE DEL BRACKET COMPLETAMENTE FIXATO ---
-  // Ora cerca nel database le squadre usando la chiave esatta salvata dall'admin,
-  // invece di "buttarle dentro" in ordine casuale di rendering.
   const getTeamsForStage = (stageId: string) => {
     const pairs: {name: string | null, placeholder: string}[][] = [];
     const placeholders = BRACKET_MATCHES[stageId] || [];
