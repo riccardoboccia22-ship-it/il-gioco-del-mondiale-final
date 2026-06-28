@@ -50,7 +50,7 @@ const MID_TEAMS = ['Austria', 'Colombia', 'C. Avorio', 'Croazia', 'Egitto', 'Gia
 const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea Sud', 'Ecuador', 'Iran', 'Iraq', 'N. Zelanda', 'Panama', 'Paraguay', 'Rep. Ceca', 'Scozia', 'Svezia', 'Sudafrica', 'Tunisia'];
 const SUPER_LOW_TEAMS = ['Arabia S.', 'Bosnia', 'Capo Verde', 'R.D. Congo', 'Curacao', 'Ghana', 'Giordania', 'Haiti', 'Qatar', 'Uzbekistan'];
 
-type BracketStageType = 'R32' | 'R16' | 'QF' | 'SF' | 'F';
+type BracketStageType = 'R32' | 'R16' | 'QF' | 'SF' | 'F' | 'WINNER';
 type BracketMatch = { dbString: string, label: string }[];
 
 const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
@@ -58,10 +58,11 @@ const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
   { id: 'R16', title: 'OTTAVI' },
   { id: 'QF', title: 'QUARTI' },
   { id: 'SF', title: 'SEMIFINALI' },
-  { id: 'F', title: 'FINALE' }
+  { id: 'F', title: 'FINALE' },
+  { id: 'WINNER', title: 'CAMPIONE' }
 ];
 
-const BRACKET_MATCHES: Record<BracketStageType, BracketMatch[]> = {
+const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch[]> = {
   R32: [
     [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ],
     [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore' } ],
@@ -157,6 +158,7 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
+  const [bracketScale, setBracketScale] = useState(1);
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
@@ -209,20 +211,25 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
-  // EFFETTO CENTRATURA TABELLONE ALBERO: AUTO-SCROLL ORIZZONTALE AL CENTRO
   useEffect(() => {
-     if (!loading && activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
-        const timer = setTimeout(() => {
-           if (bracketContainerRef.current) {
-              const el = bracketContainerRef.current;
-              el.scrollTo({
-                 left: (el.scrollWidth - el.clientWidth) / 2,
-                 behavior: 'smooth'
-              });
-           }
-        }, 200); 
-        return () => clearTimeout(timer);
-     }
+    const handleResize = () => {
+      if (activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
+        const screenWidth = window.innerWidth;
+        const targetWidth = 1350; 
+        
+        if (screenWidth < targetWidth) {
+          setBracketScale((screenWidth - 8) / targetWidth); 
+        } else {
+          setBracketScale(1);
+        }
+      }
+    };
+    
+    if (!loading && activeTab === 'BRACKET') {
+        handleResize();
+        window.addEventListener('resize', handleResize);
+    }
+    return () => window.removeEventListener('resize', handleResize);
   }, [activeTab, bracketViewMode, loading]);
 
   const toggleDay = (dayName: string) => {
@@ -335,6 +342,11 @@ export default function TuttiPronosticiPage() {
     });
   };
 
+  const splitArrayInHalf = (arr: any[]) => {
+     const mid = Math.ceil(arr.length / 2);
+     return [arr.slice(0, mid), arr.slice(mid)];
+  };
+
   const getWinnerStats = () => {
     const filteredUserIds = new Set(filteredProfiles.map((p: any) => p.id));
     const allBrackets = (Object.values(data.bracketMap).flat() as any[]).filter(b => filteredUserIds.has(b.user_id));
@@ -445,7 +457,6 @@ export default function TuttiPronosticiPage() {
       setModalSearchQuery(''); 
   };
 
-  // SLOT DESIGN VERTICALE: Bandiera al centro, testo wrap in basso
   const renderSlot = (pool: { dbString: string, label: string }, stage: string, isTop: boolean) => {
     const offTeam = getOfficialTeamForSlot(pool.dbString);
     let correctUsers: any[] = [];
@@ -537,7 +548,7 @@ export default function TuttiPronosticiPage() {
             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">
               {match.match_date ? new Date(match.match_date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : `#${match.id}`}
             </span>
-            {isFinished && <span className="text-[8px] text-emerald-400 font-black uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full sm:hidden">FINITA</span>}
+            {isFinished && <span className="text-[8px] text-emerald-400 font-black uppercase italic bg-emerald-500/10 px-2 py-0.5 rounded-full sm:hidden">FINITA</span>}
           </div>
 
           <div className="flex-1 flex items-center justify-center gap-2 sm:gap-4 w-full">
@@ -554,7 +565,7 @@ export default function TuttiPronosticiPage() {
             </div>
           </div>
           <div className="hidden sm:flex w-16 justify-end">
-            {isFinished && <span className="text-[8px] text-emerald-400 font-black uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full">FINITA</span>}
+            {isFinished && <span className="text-[8px] text-emerald-400 font-black uppercase italic bg-emerald-500/10 px-2 py-0.5 rounded-full">FINITA</span>}
           </div>
         </button>
 
@@ -757,39 +768,46 @@ export default function TuttiPronosticiPage() {
                 </button>
              </div>
 
-             {/* VISTA 1: ALBERO CON CARD VERTICALI E TEXT-WRAP E SCROLL CENTRATO */}
+             {/* VISTA 1: ALBERO CON SCALING PERFETTO */}
              {bracketViewMode === 'TREE' && (
                <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
                  
                  <div className="text-center mb-6 px-4">
                     <h2 className="text-2xl font-black text-blue-400 italic tracking-tight uppercase">Tabellone Reale</h2>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 leading-relaxed">
-                      Scorri lateralmente per esplorare l&apos;albero. <br className="sm:hidden" />Clicca su un pronostico per i dettagli! ⚽
+                      Il colpo d&apos;occhio su tutti i pronostici! ⚽
                     </p>
                  </div>
 
-                 <div 
-                   ref={bracketContainerRef}
-                   className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
-                 >
-                    <div className="flex flex-row items-stretch justify-start min-w-max gap-3 sm:gap-4 pb-4 px-4 mx-auto">
+                 <div className="w-full flex justify-center overflow-hidden px-1" style={{ height: `${1000 * bracketScale}px` }}>
+                    <div 
+                      style={{ 
+                        transform: `scale(${bracketScale})`, 
+                        transformOrigin: 'top center', 
+                        width: '1350px', 
+                        height: '1000px' 
+                      }} 
+                      className="flex flex-row items-stretch justify-center gap-4 pt-4"
+                    >
                        
                        {/* LATO SINISTRO */}
-                       <div className="flex gap-3 sm:gap-4">
+                       <div className="flex gap-4 h-full">
                          {leftStages.map(stage => (
-                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
-                             <div className="absolute top-0 left-0 w-full text-center z-10">
-                                <h3 className="text-[8px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-2 py-1 rounded-md border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`left-${stage.id}`} className="flex flex-col w-[130px] shrink-0 h-full">
+                             <div className="h-14 flex flex-col items-center justify-center shrink-0 mb-2">
+                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md text-center leading-tight">
+                                  {stage.title} <br/><span className="text-[8px] opacity-70 block mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
-                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
+                             <div className="flex-1 flex flex-col justify-around gap-2 pb-2">
+                               {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
+                             </div>
                            </div>
                          ))}
                        </div>
 
                        {/* COLONNA CENTRALE (FINALE E VINCITORE) */}
-                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-16 pb-8 gap-8 z-20">
+                       <div className="flex flex-col items-center w-[160px] shrink-0 h-full gap-10 pt-16">
                           {/* CAMPIONE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
@@ -797,15 +815,15 @@ export default function TuttiPronosticiPage() {
                                 <Trophy size={18} className="text-yellow-500 drop-shadow-md mb-0.5" />
                                 <span className="text-[8px] font-black uppercase text-yellow-500 tracking-[0.2em]">Campione <span className="opacity-70 ml-1">(+{STAGE_POINTS.WINNER} PT)</span></span>
                               </div>
-                              {renderSlot({ dbString: 'WINNER_VINCITORE_1', label: 'Vincitore' }, 'WINNER', false)}
+                              {renderSlot({ dbString: 'WINNER', label: 'Vincitore' }, 'WINNER', false)}
                             </div>
                           </div>
 
                           {/* FINALE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="text-center mb-2 z-10">
-                               <h3 className="text-[8px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-2 py-1 rounded-md border border-blue-500/30 shadow-md">
-                                 FINALE <span className="opacity-70 ml-1">(+{STAGE_POINTS.F} PT)</span>
+                               <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md text-center leading-tight">
+                                 FINALE <br/><span className="opacity-70 text-[8px] mt-0.5 block">(+{STAGE_POINTS.F} PT)</span>
                                </h3>
                             </div>
                             <div className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-xl overflow-hidden shadow-xl flex flex-col transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
@@ -817,15 +835,17 @@ export default function TuttiPronosticiPage() {
                        </div>
 
                        {/* LATO DESTRO */}
-                       <div className="flex gap-3 sm:gap-4">
+                       <div className="flex gap-4 h-full">
                          {rightStages.map(stage => (
-                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
-                             <div className="absolute top-0 left-0 w-full text-center z-10">
-                                <h3 className="text-[8px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-2 py-1 rounded-md border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`right-${stage.id}`} className="flex flex-col w-[130px] shrink-0 h-full">
+                             <div className="h-14 flex flex-col items-center justify-center shrink-0 mb-2">
+                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md text-center leading-tight">
+                                  {stage.title} <br/><span className="opacity-70 text-[8px] mt-0.5 block">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
-                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
+                             <div className="flex-1 flex flex-col justify-around gap-2 pb-2">
+                               {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
+                             </div>
                            </div>
                          ))}
                        </div>
@@ -835,7 +855,7 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: LISTE (DETTAGLIO COMPLETO CON SBAGLIATE) */}
+             {/* VISTA 2: LISTE (ACCORDION) */}
              {bracketViewMode === 'LIST' && (
                <div className="max-w-2xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.map((stg) => {
@@ -844,9 +864,7 @@ export default function TuttiPronosticiPage() {
                     
                     const expectedCapacity = STAGE_CAPACITY[stg.id] || 99;
                     let isStageFull = false;
-                    if (officialTeamsInStage.length === expectedCapacity) {
-                       isStageFull = true;
-                    } else if (officialTeamsInStage.length > expectedCapacity) {
+                    if (officialTeamsInStage.length >= expectedCapacity) {
                        isStageFull = true;
                     }
 
@@ -871,7 +889,7 @@ export default function TuttiPronosticiPage() {
                             <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 border border-blue-500/20">
                               <Trophy size={18} />
                             </div>
-                            <span className="font-black uppercase italic text-sm text-left">{stg.title} (+{STAGE_POINTS[stg.id]} PT)</span>
+                            <span className="font-black uppercase italic text-sm text-left">{stg.title} <span className="opacity-70 ml-1 text-[10px]">(+{STAGE_POINTS[stg.id]} PT)</span></span>
                           </div>
                           <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-blue-500' : 'text-slate-500'}`} />
                         </button>
@@ -921,7 +939,7 @@ export default function TuttiPronosticiPage() {
           </div>
         )}
 
-        {/* --- 3. BONUS --- */}
+        {/* --- 3. BONUS (ACCORDION SENZA LUCCHETTI) --- */}
         {activeTab === 'BONUS' && (
           <div className="space-y-6 max-w-2xl mx-auto">
             {[
@@ -937,141 +955,135 @@ export default function TuttiPronosticiPage() {
             ].map((bonus) => {
               const isExpanded = expandedBonus === bonus.id;
               const offVal = data.officialBonus?.[bonus.id];
-              
-              const isGroupsClosedPhase = data.officialBonus && data.officialBonus.high_scoring_match && data.officialBonus.high_scoring_match !== 'TBD';
-              const isTournamentFinishedPhase = data.officialBonus && data.officialBonus.mvp_world_cup && data.officialBonus.mvp_world_cup !== 'TBD';
-              const isPhaseUnlocked = bonus.phase === 'GROUPS' ? isGroupsClosedPhase : isTournamentFinishedPhase;
 
               return (
                 <div key={bonus.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
                   <button onClick={() => setExpandedBonus(isExpanded ? null : bonus.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isPhaseUnlocked ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                        {isPhaseUnlocked ? bonus.icon : <Lock size={16} />}
+                      <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        {bonus.icon}
                       </div>
-                      <span className={`font-black uppercase italic text-sm text-left ${isPhaseUnlocked ? 'text-white' : 'text-slate-500'}`}>{bonus.label}</span>
+                      <span className="font-black uppercase italic text-sm text-left text-white">{bonus.label} <span className="opacity-70 ml-1 text-[10px]">(+{bonus.pts} PT)</span></span>
                     </div>
-                    <ChevronDown className={`transition-transform ${isExpanded ? (isPhaseUnlocked ? 'rotate-180 text-purple-500' : 'rotate-180 text-slate-500') : 'text-slate-500'}`} />
+                    <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-purple-500' : 'text-slate-500'}`} />
                   </button>
                   
                   {isExpanded && (
                     <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                        {!isPhaseUnlocked ? (
-                             <div className="flex flex-col items-center justify-center py-6 px-4 text-slate-500">
-                                <Lock size={24} className="mb-3 text-slate-600" />
-                                <p className="text-[10px] font-black uppercase tracking-widest text-center leading-relaxed">
-                                  {"Contenuto Segreto"} <br/> <span className="text-purple-500 opacity-80">{"Si sbloccherà al termine della fase"}</span>
-                                </p>
-                             </div>
-                        ) : (
-                          <>
-                            {offVal && (
-                               <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center shadow-inner">
-                                  <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Ufficiale</span>
-                                  <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
-                               </div>
-                            )}
-                            {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
-                              const isUnset = ans === 'Nessuna Scelta';
-                              
-                              let isMathematicallyWrong = false;
-                              if (bonus.type === 'NUMBER' && offVal != null && !isUnset) {
-                                 const numOff = Number(offVal);
-                                 const numAns = Number(ans);
-                                 if (numOff > numAns) {
-                                    isMathematicallyWrong = true;
-                                 }
-                              }
-                              
-                              const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
-                              const isWrong = offVal && !isCorrect && !isUnset;
-                              
-                              const isMe = users.some((u: any) => u.username === data.currentUserUsername);
+                        {offVal && (
+                           <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center shadow-inner">
+                              <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Ufficiale</span>
+                              <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
+                           </div>
+                        )}
+                        {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
+                          const isUnset = ans === 'Nessuna Scelta';
+                          
+                          let isMathematicallyWrong = false;
+                          let isCorrect = false;
 
-                              let flagElement = null;
-                              if (!isUnset) {
-                                if (bonus.type === 'PLAYER') {
-                                  const allPlayers = [...(WORLD_CUP_PLAYERS || []), ...(WORLD_CUP_GOALKEEPERS || [])];
-                                  const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
-                                  const f = player ? getFlagUrl(player.country) : null;
-                                  flagElement = f ? <img src={f} className={`w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`} alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
-                                } 
-                                else if (bonus.type === 'MATCH' && ans.includes('-')) {
-                                  const [t1, t2] = ans.split(/\s*-\s*/);
-                                  const f1 = getFlagUrl(t1);
-                                  const f2 = getFlagUrl(t2);
-                                  flagElement = (
-                                    <div className={`flex items-center gap-1 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`}>
-                                       {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                       <span className="text-[8px] text-slate-500">-</span>
-                                       {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                    </div>
-                                  );
-                                } 
-                                else if (bonus.type === 'GROUP') {
-                                  const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
-                                  if (group) {
-                                    flagElement = (
-                                      <div className={`flex items-center gap-0.5 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`}>
-                                         {group.teams.map((t, i) => {
-                                            const f = getFlagUrl(t);
-                                            return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
-                                         })}
-                                      </div>
-                                    );
-                                  }
+                          if (!isUnset && offVal != null && offVal !== 'TBD' && String(offVal).trim() !== '') {
+                             if (bonus.type === 'NUMBER') {
+                                const numOff = Number(offVal);
+                                const numAns = Number(ans);
+                                if (numAns === numOff) {
+                                   isCorrect = true;
+                                } else if (numOff > numAns) {
+                                   isMathematicallyWrong = true;
                                 }
-                              }
+                             } else {
+                                if (cleanString(String(ans)) === cleanString(String(offVal))) {
+                                   isCorrect = true;
+                                }
+                             }
+                          }
+                          
+                          const isWrong = offVal != null && offVal !== 'TBD' && String(offVal).trim() !== '' && !isCorrect && !isUnset;
+                          
+                          const isMe = users.some((u: any) => u.username === data.currentUserUsername);
 
-                              return (
-                                <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
-                                  isCorrect 
-                                    ? 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
-                                    : isUnset 
-                                      ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
-                                      : (isWrong || isMathematicallyWrong)
-                                        ? 'bg-rose-950/10 border-rose-950/40 opacity-70'
-                                        : 'bg-slate-900 border-slate-800'
-                                } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                                  
-                                  {isMe && !isUnset && (
-                                     <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
-                                  )}
-
-                                  <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
-                                     <div className="flex items-center gap-2.5 min-w-0">
-                                       {flagElement}
-                                       <span className={`text-[11px] font-black uppercase italic tracking-tight truncate ${
-                                         isCorrect 
-                                           ? 'text-emerald-400' 
-                                           : isUnset 
-                                             ? 'text-slate-500' 
-                                             : (isWrong || isMathematicallyWrong)
-                                               ? 'text-rose-400 line-through decoration-rose-500/50'
-                                               : 'text-white'
-                                       }`}>{ans}</span>
-                                       
-                                       {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)] whitespace-nowrap">🎯 +{bonus.pts} PT</span>}
-                                       {(isWrong || isMathematicallyWrong) && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap">Sbagliato ❌</span>}
-                                       {!offVal && !isUnset && <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap border border-slate-700">IN ATTESA ⏳</span>}
-                                     </div>
-                                     <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner shrink-0 ml-2">
-                                        <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
-                                     </div>
-                                  </div>
-                                  <div className="flex flex-wrap gap-2 pt-1">
-                                     {users.map((u: any, i: number) => (
-                                       <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(users.length - 1) > i ? ',' : ''}</span>
-                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
-                                       </div>
-                                     ))}
-                                  </div>
+                          let flagElement = null;
+                          if (!isUnset) {
+                            if (bonus.type === 'PLAYER') {
+                              const allPlayers = [...(WORLD_CUP_PLAYERS || []), ...(WORLD_CUP_GOALKEEPERS || [])];
+                              const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
+                              const f = player ? getFlagUrl(player.country) : null;
+                              flagElement = f ? <img src={f} className={`w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`} alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
+                            } 
+                            else if (bonus.type === 'MATCH' && ans.includes('-')) {
+                              const [t1, t2] = splitArrayInHalf(ans.split(/\s*-\s*/));
+                              const f1 = getFlagUrl(t1[0]);
+                              const f2 = getFlagUrl(t2[0]);
+                              flagElement = (
+                                <div className={`flex items-center gap-1 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+                                   {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                                   <span className="text-[8px] text-slate-500">-</span>
+                                   {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
                                 </div>
                               );
-                            })}
-                          </>
-                        )}
+                            } 
+                            else if (bonus.type === 'GROUP') {
+                              const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
+                              if (group) {
+                                flagElement = (
+                                  <div className={`flex items-center gap-0.5 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+                                     {group.teams.map((t, i) => {
+                                        const f = getFlagUrl(t);
+                                        return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
+                                     })}
+                                  </div>
+                                );
+                              }
+                            }
+                          }
+
+                          return (
+                            <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                              isCorrect 
+                                ? 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                                : isUnset 
+                                  ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
+                                  : (isWrong || isMathematicallyWrong)
+                                    ? 'bg-rose-950/10 border-rose-950/40 opacity-70'
+                                    : 'bg-slate-900 border-slate-800'
+                            } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                              
+                              {isMe && !isUnset && (
+                                 <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
+                              )}
+
+                              <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
+                                 <div className="flex items-center gap-2.5 min-w-0">
+                                   {flagElement}
+                                   <span className={`text-[11px] font-black uppercase italic tracking-tight truncate ${
+                                     isCorrect 
+                                       ? 'text-emerald-400' 
+                                       : isUnset 
+                                         ? 'text-slate-500' 
+                                         : (isWrong || isMathematicallyWrong)
+                                           ? 'text-rose-400 line-through decoration-rose-500/50'
+                                           : 'text-white'
+                                   }`}>{ans}</span>
+                                   
+                                   {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)] whitespace-nowrap">🎯 +{bonus.pts} PT</span>}
+                                   {(isWrong || isMathematicallyWrong) && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap">Sbagliato ❌</span>}
+                                   {offVal !== 'TBD' && !offVal && !isUnset && <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap border border-slate-700">IN ATTESA ⏳</span>}
+                                 </div>
+                                 <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner shrink-0 ml-2">
+                                    <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
+                                 </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                 {users.map((u: any, i: number) => (
+                                   <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                     <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(users.length - 1) > i ? ',' : ''}</span>
+                                     {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                   </div>
+                                 ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
