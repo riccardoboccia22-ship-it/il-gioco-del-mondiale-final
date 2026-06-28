@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame, CalendarDays,
-  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X
+  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X, Swords
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -51,7 +51,7 @@ const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea Sud', 'Ecuador', 'Ir
 const SUPER_LOW_TEAMS = ['Arabia S.', 'Bosnia', 'Capo Verde', 'R.D. Congo', 'Curacao', 'Ghana', 'Giordania', 'Haiti', 'Qatar', 'Uzbekistan'];
 
 type BracketStageType = 'R32' | 'R16' | 'QF' | 'SF' | 'F' | 'WINNER';
-type BracketMatch = { dbString: string, label: string }[];
+type BracketMatch = { date: string, teams: { dbString: string, label: string }[] }[];
 
 const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
   { id: 'R32', title: 'SEDICESIMI' },
@@ -62,29 +62,48 @@ const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
   { id: 'WINNER', title: 'CAMPIONE' }
 ];
 
-const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch[]> = {
+const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch> = {
   R32: [
-    [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' } ],
-    [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ],
-    [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ],
-    [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ],
-    [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ],
-    [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ],
-    [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ],
-    [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ],
-    [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore' } ],
-    [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ],
+    { date: '28 Giu - 18:00', teams: [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ] },
+    { date: '28 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore' } ] },
+    { date: '29 Giu - 18:00', teams: [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' } ] },
+    { date: '29 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ] },
+    { date: '30 Giu - 18:00', teams: [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ] },
+    { date: '30 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ] },
+    { date: '1 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore' } ] },
+    { date: '1 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore' } ] },
+    { date: '2 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ] },
+    { date: '2 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ] },
+    { date: '3 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore' } ] },
+    { date: '3 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore' } ] },
+    { date: '4 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ] },
+    { date: '4 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ] },
+    { date: '5 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore' } ] },
+    { date: '5 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ] },
   ],
-  R16: Array.from({length: 8}, (_, i) => [ { dbString: `R16_OTTAVI_V${(i*2)+1}`, label: `Vinc. Sedicesimi ${(i*2)+1}` }, { dbString: `R16_OTTAVI_V${(i*2)+2}`, label: `Vinc. Sedicesimi ${(i*2)+2}` } ]),
-  QF: Array.from({length: 4}, (_, i) => [ { dbString: `QF_QUARTI_V${(i*2)+1}`, label: `Vinc. Ottavi ${(i*2)+1}` }, { dbString: `QF_QUARTI_V${(i*2)+2}`, label: `Vinc. Ottavi ${(i*2)+2}` } ]),
-  SF: Array.from({length: 2}, (_, i) => [ { dbString: `SF_SEMIFINALI_V${(i*2)+1}`, label: `Vinc. Quarti ${(i*2)+1}` }, { dbString: `SF_SEMIFINALI_V${(i*2)+2}`, label: `Vinc. Quarti ${(i*2)+2}` } ]),
-  F: [ [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ] ]
+  R16: [
+    { date: '7 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ] },
+    { date: '7 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
+    { date: '8 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ] },
+    { date: '8 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ] },
+    { date: '9 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ] },
+    { date: '9 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V11', label: 'Vinc. Sedicesimi 11' }, { dbString: 'R16_OTTAVI_V12', label: 'Vinc. Sedicesimi 12' } ] },
+    { date: '10 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V13', label: 'Vinc. Sedicesimi 13' }, { dbString: 'R16_OTTAVI_V14', label: 'Vinc. Sedicesimi 14' } ] },
+    { date: '10 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V15', label: 'Vinc. Sedicesimi 15' }, { dbString: 'R16_OTTAVI_V16', label: 'Vinc. Sedicesimi 16' } ] },
+  ],
+  QF: [
+    { date: '13 Lug - 18:00', teams: [ { dbString: 'QF_QUARTI_V1', label: 'Vinc. Ottavi 1' }, { dbString: 'QF_QUARTI_V2', label: 'Vinc. Ottavi 2' } ] },
+    { date: '13 Lug - 21:00', teams: [ { dbString: 'QF_QUARTI_V3', label: 'Vinc. Ottavi 3' }, { dbString: 'QF_QUARTI_V4', label: 'Vinc. Ottavi 4' } ] },
+    { date: '14 Lug - 18:00', teams: [ { dbString: 'QF_QUARTI_V5', label: 'Vinc. Ottavi 5' }, { dbString: 'QF_QUARTI_V6', label: 'Vinc. Ottavi 6' } ] },
+    { date: '14 Lug - 21:00', teams: [ { dbString: 'QF_QUARTI_V7', label: 'Vinc. Ottavi 7' }, { dbString: 'QF_QUARTI_V8', label: 'Vinc. Ottavi 8' } ] },
+  ],
+  SF: [
+    { date: '17 Lug - 21:00', teams: [ { dbString: 'SF_SEMIFINALI_V1', label: 'Vinc. Quarti 1' }, { dbString: 'SF_SEMIFINALI_V2', label: 'Vinc. Quarti 2' } ] },
+    { date: '18 Lug - 21:00', teams: [ { dbString: 'SF_SEMIFINALI_V3', label: 'Vinc. Quarti 3' }, { dbString: 'SF_SEMIFINALI_V4', label: 'Vinc. Quarti 4' } ] },
+  ],
+  F: [
+    { date: '21 Lug - 21:00', teams: [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ] }
+  ]
 };
 
 const normalizeStage = (s: string) => {
@@ -96,6 +115,15 @@ const normalizeStage = (s: string) => {
   if (u.includes('VINCITOR') || u === 'WINNER') return 'WINNER';
   if (u.includes('FINAL') || u === 'F') return 'F';
   return u;
+};
+
+const getNextStage = (currentStage: string) => {
+  if (currentStage === 'R32') return 'R16';
+  if (currentStage === 'R16') return 'QF';
+  if (currentStage === 'QF') return 'SF';
+  if (currentStage === 'SF') return 'F';
+  if (currentStage === 'F') return 'WINNER';
+  return 'WINNER';
 };
 
 const formatTeamName = (name: string) => {
@@ -141,7 +169,7 @@ export default function TuttiPronosticiPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('BRACKET');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
-  const [bracketViewMode, setBracketViewMode] = useState<'TREE' | 'LIST'>('TREE');
+  const [bracketViewMode, setBracketViewMode] = useState<'TREE' | 'MATCHES' | 'LIST'>('TREE');
   
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -158,6 +186,7 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
+  const [bracketScale, setBracketScale] = useState(1);
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
@@ -451,7 +480,6 @@ export default function TuttiPronosticiPage() {
       setModalSearchQuery(''); 
   };
 
-  // SLOT DESIGN VERTICALE: Bandiera al centro, testo wrap in basso
   const renderSlot = (pool: { dbString: string, label: string }, stage: string, isTop: boolean) => {
     const offTeam = getOfficialTeamForSlot(pool.dbString);
     let correctUsers: any[] = [];
@@ -509,10 +537,13 @@ export default function TuttiPronosticiPage() {
     )
   };
 
-  const renderMatchBlock = (match: { dbString: string, label: string }[], stageId: string, mIdx: number) => (
+  const renderMatchBlock = (matchObj: { date: string, teams: { dbString: string, label: string }[] }, stageId: string, mIdx: number) => (
     <div key={mIdx} className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-2xl shadow-xl flex flex-col z-10 transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
-       {match[0] && renderSlot(match[0], stageId, match[1] !== undefined)}
-       {match[1] && renderSlot(match[1], stageId, false)}
+       <div className="bg-slate-950 py-1 text-center border-b border-slate-800 rounded-t-xl">
+         <span className="text-[6.5px] text-blue-400 font-black uppercase tracking-widest">{matchObj.date}</span>
+       </div>
+       {matchObj.teams[0] && renderSlot(matchObj.teams[0], stageId, matchObj.teams[1] !== undefined)}
+       {matchObj.teams[1] && renderSlot(matchObj.teams[1], stageId, false)}
     </div>
   );
 
@@ -741,7 +772,7 @@ export default function TuttiPronosticiPage() {
           </div>
         )}
 
-        {/* --- 2. BRACKET DOPPIA VISTA --- */}
+        {/* --- 2. BRACKET TRIPLICE VISTA --- */}
         {activeTab === 'BRACKET' && (
           <div className="space-y-6">
              <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 mb-6 max-w-sm mx-auto">
@@ -752,6 +783,14 @@ export default function TuttiPronosticiPage() {
                   }`}
                 >
                   <GitMerge size={16} /> Tabellone
+                </button>
+                <button
+                  onClick={() => setBracketViewMode('MATCHES')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
+                    bracketViewMode === 'MATCHES' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:text-white'
+                  }`}
+                >
+                  <Swords size={16} /> Partite
                 </button>
                 <button
                   onClick={() => setBracketViewMode('LIST')}
@@ -777,17 +816,17 @@ export default function TuttiPronosticiPage() {
                  {/* CONTENITORE CON SCROLL LATERALE NATIVO E CENTRATURA AUTOMATICA */}
                  <div 
                    ref={bracketContainerRef}
-                   className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
+                   className="w-full overflow-x-auto custom-scrollbar pb-10 px-4"
                  >
-                    <div className="flex flex-row items-stretch justify-start min-w-max gap-4 pt-16 pb-4 px-4 mx-auto">
+                    <div className="flex flex-row items-stretch justify-start min-w-max gap-3 sm:gap-4 pb-4 px-4 mx-auto">
                        
                        {/* LATO SINISTRO */}
-                       <div className="flex gap-4">
+                       <div className="flex gap-3 sm:gap-4">
                          {leftStages.map(stage => (
-                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
-                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
-                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
+                             <div className="absolute top-0 left-0 w-full text-center z-10">
+                                <h3 className="text-[8px] sm:text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-3 py-1.5 rounded-full border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
                              {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
@@ -796,7 +835,7 @@ export default function TuttiPronosticiPage() {
                        </div>
 
                        {/* COLONNA CENTRALE (FINALE E VINCITORE) */}
-                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-12 pb-4 gap-8 z-20">
+                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-16 pb-8 gap-8 z-20">
                           {/* CAMPIONE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
@@ -811,8 +850,8 @@ export default function TuttiPronosticiPage() {
                           {/* FINALE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="text-center mb-3 z-10">
-                               <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md">
-                                 FINALE <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS.F} PT)</span>
+                               <h3 className="text-[9px] sm:text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-3 py-1.5 rounded-full border border-blue-500/30 shadow-md">
+                                 FINALE <span className="opacity-70 ml-1">(+{STAGE_POINTS.F} PT)</span>
                                </h3>
                             </div>
                             <div className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-xl overflow-hidden shadow-xl flex flex-col transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
@@ -824,12 +863,12 @@ export default function TuttiPronosticiPage() {
                        </div>
 
                        {/* LATO DESTRO */}
-                       <div className="flex gap-4">
+                       <div className="flex gap-3 sm:gap-4">
                          {rightStages.map(stage => (
-                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
-                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
-                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
+                             <div className="absolute top-0 left-0 w-full text-center z-10">
+                                <h3 className="text-[8px] sm:text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-3 py-1.5 rounded-full border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
                              {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
@@ -842,7 +881,127 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: LISTE (ACCORDION) */}
+             {/* VISTA 2: PARTITE (Testa a Testa) */}
+             {bracketViewMode === 'MATCHES' && (
+               <div className="max-w-4xl mx-auto space-y-6">
+                 {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
+                   const isExpanded = expandedStage === stg.id;
+                   const nextStg = getNextStage(stg.id);
+                   const matches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
+                   
+                   return (
+                     <div key={stg.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
+                        <button onClick={() => setExpandedStage(isExpanded ? null : stg.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              <Swords size={18} />
+                            </div>
+                            <span className="font-black uppercase italic text-sm text-left">Accoppiamenti {stg.title}</span>
+                          </div>
+                          <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-purple-500' : 'text-slate-500'}`} />
+                        </button>
+
+                        {isExpanded && (
+                          <div className="p-4 sm:p-6 bg-slate-950/80 grid grid-cols-1 lg:grid-cols-2 gap-4 border-t border-slate-800/50">
+                             {matches.map((matchObj, idx) => {
+                                const teamA = getOfficialTeamForSlot(matchObj.teams[0].dbString);
+                                const teamB = getOfficialTeamForSlot(matchObj.teams[1].dbString);
+                                
+                                const labelA = teamA || matchObj.teams[0].label;
+                                const labelB = teamB || matchObj.teams[1].label;
+
+                                const isTBDA = !teamA;
+                                const isTBDB = !teamB;
+                                
+                                const usersA = isTBDA ? [] : getUsersWhoPickedTeam(nextStg, teamA);
+                                const usersB = isTBDB ? [] : getUsersWhoPickedTeam(nextStg, teamB);
+
+                                return (
+                                  <div key={idx} className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col relative overflow-hidden shadow-lg">
+                                    <div className="text-center mb-4 border-b border-slate-800/50 pb-2">
+                                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{matchObj.date}</span>
+                                       <div className="text-[7px] text-slate-600 mt-1 uppercase">Passaggio a {STAGE_LABELS[nextStg]}</div>
+                                    </div>
+
+                                    <div className="flex justify-between items-start gap-2 relative">
+                                       {/* TEAM A */}
+                                       <div className="flex-1 flex flex-col items-center">
+                                          {!isTBDA ? (
+                                             <>
+                                                {getFlagUrl(teamA) ? <img src={getFlagUrl(teamA)!} className="w-10 h-6 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={24} className="text-slate-500"/>}
+                                                <span className="mt-2 text-xs font-black uppercase text-white tracking-tight text-center">{formatTeamName(teamA)}</span>
+                                                
+                                                <div className="mt-3 w-full px-1">
+                                                   {usersA.length > 0 ? (
+                                                     <button onClick={() => handleNodeClick(teamA, usersA, nextStg)} className="group relative flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all w-full active:scale-95">
+                                                        <Users size={12} className="text-slate-500 group-hover:text-emerald-400 transition-colors shrink-0"/>
+                                                        <span className="text-[9px] font-black uppercase text-slate-400 group-hover:text-emerald-400 transition-colors">
+                                                          {usersA.length} scelte
+                                                        </span>
+                                                     </button>
+                                                   ) : (
+                                                     <div className="text-[9px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950 py-2 rounded-xl border border-slate-800/50">
+                                                       Nessuno
+                                                     </div>
+                                                   )}
+                                                </div>
+                                             </>
+                                          ) : (
+                                             <div className="flex flex-col items-center justify-center h-full opacity-50">
+                                               <div className="w-10 h-6 bg-slate-800 rounded border border-slate-700 mb-2"></div>
+                                               <span className="text-[9px] text-slate-500 uppercase font-black text-center mt-2">{labelA}</span>
+                                             </div>
+                                          )}
+                                       </div>
+
+                                       {/* VS */}
+                                       <div className="flex flex-col items-center justify-center shrink-0 px-2 mt-4">
+                                          <span className="bg-slate-950 border border-slate-800 text-yellow-500 font-black text-[10px] px-2 py-1 rounded-lg shadow-inner">VS</span>
+                                       </div>
+
+                                       {/* TEAM B */}
+                                       <div className="flex-1 flex flex-col items-center">
+                                          {!isTBDB ? (
+                                             <>
+                                                {getFlagUrl(teamB) ? <img src={getFlagUrl(teamB)!} className="w-10 h-6 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={24} className="text-slate-500"/>}
+                                                <span className="mt-2 text-xs font-black uppercase text-white tracking-tight text-center">{formatTeamName(teamB)}</span>
+                                                
+                                                <div className="mt-3 w-full px-1">
+                                                   {usersB.length > 0 ? (
+                                                     <button onClick={() => handleNodeClick(teamB, usersB, nextStg)} className="group relative flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all w-full active:scale-95">
+                                                        <Users size={12} className="text-slate-500 group-hover:text-emerald-400 transition-colors shrink-0"/>
+                                                        <span className="text-[9px] font-black uppercase text-slate-400 group-hover:text-emerald-400 transition-colors">
+                                                          {usersB.length} scelte
+                                                        </span>
+                                                     </button>
+                                                   ) : (
+                                                     <div className="text-[9px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950 py-2 rounded-xl border border-slate-800/50">
+                                                       Nessuno
+                                                     </div>
+                                                   )}
+                                                </div>
+                                             </>
+                                          ) : (
+                                             <div className="flex flex-col items-center justify-center h-full opacity-50">
+                                               <div className="w-10 h-6 bg-slate-800 rounded border border-slate-700 mb-2"></div>
+                                               <span className="text-[9px] text-slate-500 uppercase font-black text-center mt-2">{labelB}</span>
+                                             </div>
+                                          )}
+                                       </div>
+
+                                    </div>
+                                  </div>
+                                )
+                             })}
+                          </div>
+                        )}
+                     </div>
+                   )
+                 })}
+               </div>
+             )}
+
+             {/* VISTA 3: LISTE (ACCORDION) */}
              {bracketViewMode === 'LIST' && (
                <div className="max-w-2xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.map((stg) => {
@@ -1025,7 +1184,7 @@ export default function TuttiPronosticiPage() {
                           }
 
                           return (
-                            <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                            <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden shadow-sm mb-3 ${
                               isCorrect 
                                 ? 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
                                 : isUnset 
@@ -1056,17 +1215,14 @@ export default function TuttiPronosticiPage() {
                                    {(isWrong || isMathematicallyWrong) && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap">Sbagliato ❌</span>}
                                    {offVal !== 'TBD' && !offVal && !isUnset && <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap border border-slate-700">IN ATTESA ⏳</span>}
                                  </div>
-                                 <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner shrink-0 ml-2">
-                                    <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
-                                 </div>
                               </div>
-                              <div className="flex flex-wrap gap-2 pt-1">
-                                 {users.map((u: any, i: number) => (
-                                   <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                     <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(users.length - 1) > i ? ',' : ''}</span>
-                                     {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
-                                   </div>
-                                 ))}
+                              <div className="flex flex-col items-center justify-center pt-1 w-full px-2">
+                                <button onClick={() => handleNodeClick(ans, users, bonus.id)} className="group relative flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all w-full active:scale-95">
+                                    <Users size={12} className="text-slate-500 group-hover:text-emerald-400 transition-colors shrink-0"/>
+                                    <span className="text-[9px] font-black uppercase text-slate-400 group-hover:text-emerald-400 transition-colors">
+                                      {users.length} scelte
+                                    </span>
+                                </button>
                               </div>
                             </div>
                           );
@@ -1215,7 +1371,7 @@ export default function TuttiPronosticiPage() {
                  <h3 className="text-xl font-black text-white uppercase italic tracking-tight leading-none">{selectedNode.team}</h3>
               </div>
               <span className="text-[9px] text-blue-400 font-black uppercase tracking-widest bg-blue-950/30 px-2 py-1 rounded-md border border-blue-500/20">
-                Fase: {STAGE_LABELS[selectedNode.stage]}
+                Fase: {STAGE_LABELS[selectedNode.stage] || 'Dettaglio Bonus'}
               </span>
             </div>
 
