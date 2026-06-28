@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame, CalendarDays,
-  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users
+  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 
+// Punteggi assegnati per ogni fase
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
 const STAGE_CAPACITY: { [key: string]: number } = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
+const STAGE_LABELS: Record<string, string> = { R32: 'Sedicesimi', R16: 'Ottavi', QF: 'Quarti', SF: 'Semifinali', F: 'Finale', WINNER: 'Campione' };
 
 const TOURNAMENT_GROUPS = [
   { name: 'Gruppo A', teams: ['Messico', 'Sudafrica', 'Corea Sud', 'Rep. Ceca'] },
@@ -47,6 +49,42 @@ const TOP_TEAMS = ['Argentina', 'Belgio', 'Brasile', 'Francia', 'Germania', 'Ing
 const MID_TEAMS = ['Austria', 'Colombia', 'C. Avorio', 'Croazia', 'Egitto', 'Giappone', 'Marocco', 'Messico', 'Norvegia', 'Senegal', 'Svizzera', 'Turchia', 'Uruguay', 'USA'];
 const LOW_TEAMS = ['Algeria', 'Australia', 'Canada', 'Corea Sud', 'Ecuador', 'Iran', 'Iraq', 'N. Zelanda', 'Panama', 'Paraguay', 'Rep. Ceca', 'Scozia', 'Svezia', 'Sudafrica', 'Tunisia'];
 const SUPER_LOW_TEAMS = ['Arabia S.', 'Bosnia', 'Capo Verde', 'R.D. Congo', 'Curacao', 'Ghana', 'Giordania', 'Haiti', 'Qatar', 'Uzbekistan'];
+
+type BracketStageType = 'R32' | 'R16' | 'QF' | 'SF' | 'F';
+type BracketMatch = { dbString: string, label: string }[];
+
+const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
+  { id: 'R32', title: 'SEDICESIMI' },
+  { id: 'R16', title: 'OTTAVI' },
+  { id: 'QF', title: 'QUARTI' },
+  { id: 'SF', title: 'SEMIFINALI' },
+  { id: 'F', title: 'FINALE' }
+];
+
+const BRACKET_MATCHES: Record<BracketStageType, BracketMatch[]> = {
+  R32: [
+    [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' } ],
+    [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ],
+    [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ],
+    [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ],
+    [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ],
+    [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ],
+    [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ],
+    [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ],
+    [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore' } ],
+    [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ],
+  ],
+  R16: Array.from({length: 8}, (_, i) => [ { dbString: `R16_OTTAVI_V${(i*2)+1}`, label: `Vinc. Sedicesimi ${(i*2)+1}` }, { dbString: `R16_OTTAVI_V${(i*2)+2}`, label: `Vinc. Sedicesimi ${(i*2)+2}` } ]),
+  QF: Array.from({length: 4}, (_, i) => [ { dbString: `QF_QUARTI_V${(i*2)+1}`, label: `Vinc. Ottavi ${(i*2)+1}` }, { dbString: `QF_QUARTI_V${(i*2)+2}`, label: `Vinc. Ottavi ${(i*2)+2}` } ]),
+  SF: Array.from({length: 2}, (_, i) => [ { dbString: `SF_SEMIFINALI_V${(i*2)+1}`, label: `Vinc. Quarti ${(i*2)+1}` }, { dbString: `SF_SEMIFINALI_V${(i*2)+2}`, label: `Vinc. Quarti ${(i*2)+2}` } ]),
+  F: [ [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ] ]
+};
 
 const normalizeStage = (s: string) => {
   const u = s?.toUpperCase().trim() || '';
@@ -102,6 +140,7 @@ export default function TuttiPronosticiPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('BRACKET');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
+  const [bracketViewMode, setBracketViewMode] = useState<'TREE' | 'LIST'>('TREE');
   
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -114,8 +153,13 @@ export default function TuttiPronosticiPage() {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [expandedBonus, setExpandedBonus] = useState<string | null>(null);
   const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>({});
+  
+  const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
+  const [modalSearchQuery, setModalSearchQuery] = useState(''); 
+  
+  const bracketContainerRef = useRef<HTMLDivElement>(null);
 
-  const isStarted = new Date() > WORLD_CUP_START_DATE;
+  const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
 
   useEffect(() => {
     async function fetchData() {
@@ -165,6 +209,22 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
+  // EFFETTO CENTRATURA TABELLONE ALBERO: AUTO-SCROLL ORIZZONTALE AL CENTRO
+  useEffect(() => {
+     if (!loading && activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
+        const timer = setTimeout(() => {
+           if (bracketContainerRef.current) {
+              const el = bracketContainerRef.current;
+              el.scrollTo({
+                 left: (el.scrollWidth - el.clientWidth) / 2,
+                 behavior: 'smooth'
+              });
+           }
+        }, 200); 
+        return () => clearTimeout(timer);
+     }
+  }, [activeTab, bracketViewMode, loading]);
+
   const toggleDay = (dayName: string) => {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
   };
@@ -202,8 +262,8 @@ export default function TuttiPronosticiPage() {
       
     const ph = Number(pred.home_score), pa = Number(pred.away_score);
     const mh = Number(match.home_score_final), ma = Number(match.away_score_final);
-    const pRes = ph > pa ? '1' : ph < pa ? '2' : 'X';
-    const mRes = mh > ma ? '1' : mh < ma ? '2' : 'X';
+    const pRes = ph > pa ? '1' : pa > ph ? '2' : 'X';
+    const mRes = mh > ma ? '1' : ma > mh ? '2' : 'X';
     
     if (ph === mh && pa === ma) return { pts: 10, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.2)]' };
     if (pRes === mRes && (ph === mh || pa === ma)) return { pts: 6, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/40' };
@@ -274,7 +334,7 @@ export default function TuttiPronosticiPage() {
       return b[1].length - a[1].length;
     });
   };
-  
+
   const getWinnerStats = () => {
     const filteredUserIds = new Set(filteredProfiles.map((p: any) => p.id));
     const allBrackets = (Object.values(data.bracketMap).flat() as any[]).filter(b => filteredUserIds.has(b.user_id));
@@ -313,9 +373,9 @@ export default function TuttiPronosticiPage() {
       const r16 = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'R16').map((b: any) => cleanString(b.team_name)));
       const qf = new Set(uBrackets.filter((b: any) => normalizeStage(b.stage) === 'QF').map((b: any) => cleanString(b.team_name)));
       
-      const hasR32 = r32.size >= 32;
-      const hasR16 = r16.size >= 16;
-      const hasQF = qf.size >= 8;
+      const hasR32 = r32.size > 31;
+      const hasR16 = r16.size > 15;
+      const hasQF = qf.size > 7;
 
       allTeams.forEach(t => {
           const teamF = cleanString(t);
@@ -356,7 +416,7 @@ export default function TuttiPronosticiPage() {
     });
 
     const groupedObj = anomalies.reduce((acc, ano) => {
-      const key = `${acc.phaseWeight || 0}-${ano.type}-${ano.team}-${ano.msg}`;
+      const key = `${ano.phaseWeight || 0}-${ano.type}-${ano.team}-${ano.msg}`;
       if (!acc[key]) acc[key] = { ...ano, users: new Set([JSON.stringify(ano.user)]) };
       else acc[key].users.add(JSON.stringify(ano.user));
       return acc;
@@ -366,6 +426,103 @@ export default function TuttiPronosticiPage() {
   };
 
   const topCecchini = filteredProfiles.filter((p: any) => (p.exact_matches || 0) > 0).sort((a: any, b: any) => b.exact_matches - a.exact_matches);
+
+  const getOfficialTeamForSlot = (dbString: string) => {
+     const off = data.officialResults.find((o: any) => o.stage === dbString);
+     return off ? formatTeamName(off.team_name) : null;
+  };
+
+  const getUsersWhoPickedTeam = (stage: string, teamName: string) => {
+     const cleanName = cleanString(teamName);
+     return filteredProfiles.filter((p: any) => {
+        const uBrackets = data.bracketMap[p.id] || [];
+        return uBrackets.some((b: any) => normalizeStage(b.stage) === stage && cleanString(b.team_name) === cleanName);
+     });
+  };
+
+  const handleNodeClick = (team: string, users: any[], stage: string) => {
+      setSelectedNode({ team, users, stage });
+      setModalSearchQuery(''); 
+  };
+
+  // SLOT DESIGN VERTICALE: Bandiera al centro, testo wrap in basso
+  const renderSlot = (pool: { dbString: string, label: string }, stage: string, isTop: boolean) => {
+    const offTeam = getOfficialTeamForSlot(pool.dbString);
+    let correctUsers: any[] = [];
+    if (offTeam) {
+       correctUsers = getUsersWhoPickedTeam(stage, offTeam);
+    }
+
+    return (
+      <div className={`p-2 flex flex-col justify-center min-h-[85px] relative ${isTop ? 'border-b-2 border-slate-800/80' : ''}`}>
+         {/* Squadra Ufficiale */}
+         <div className="flex flex-col items-center justify-center gap-1.5 mb-2 px-1 w-full">
+           {offTeam ? (
+             <>
+               <div className="relative">
+                 {getFlagUrl(offTeam) ? <img src={getFlagUrl(offTeam)!} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700 shrink-0" alt="" /> : <Shield size={20} className="text-slate-500 shrink-0"/>}
+                 <CheckCircle2 size={12} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+               </div>
+               <span className="text-[10px] sm:text-[11px] font-black uppercase text-emerald-400 text-center leading-tight tracking-tight w-full drop-shadow-md whitespace-normal break-words line-clamp-2 mt-1">
+                 {offTeam}
+               </span>
+             </>
+           ) : (
+             <>
+               <div className="w-8 h-5 bg-slate-800/50 rounded border border-slate-700/50 shrink-0 shadow-inner"></div>
+               <span className="text-[8px] font-bold uppercase text-slate-500 italic text-center leading-tight tracking-widest whitespace-normal break-words w-full mt-1">
+                 {pool.label}
+               </span>
+             </>
+           )}
+         </div>
+
+         {/* Pulsante Utenti */}
+         <div className="w-full px-1">
+           {offTeam ? (
+             correctUsers.length > 0 ? (
+               <button onClick={() => handleNodeClick(offTeam, correctUsers, stage)} className="group relative flex items-center justify-center gap-1.5 py-1 px-1 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all duration-300 w-full overflow-hidden active:scale-95">
+                  <div className="absolute inset-0 bg-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Users size={10} className="text-slate-400 group-hover:text-yellow-400 transition-colors shrink-0 z-10"/>
+                  <span className="text-[8px] font-black uppercase text-slate-300 group-hover:text-yellow-400 transition-colors z-10 tracking-wider">
+                    {correctUsers.length} <span className="hidden sm:inline">scelte</span>
+                  </span>
+               </button>
+             ) : (
+               <div className="text-[7px] text-slate-500 italic uppercase font-black text-center w-full bg-slate-950/80 py-1.5 rounded-lg border border-slate-800/80">
+                 Nessuno l&apos;ha presa
+               </div>
+             )
+           ) : (
+             <div className="text-[7px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950/50 py-1.5 rounded-lg border border-slate-800/50">
+               In attesa
+             </div>
+           )}
+         </div>
+      </div>
+    )
+  };
+
+  const renderMatchBlock = (match: { dbString: string, label: string }[], stageId: string, mIdx: number) => (
+    <div key={mIdx} className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-2xl shadow-xl flex flex-col z-10 transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
+       {match[0] && renderSlot(match[0], stageId, match[1] !== undefined)}
+       {match[1] && renderSlot(match[1], stageId, false)}
+    </div>
+  );
+
+  const leftStages = [
+    { id: 'R32', title: 'SEDICESIMI', matches: (BRACKET_MATCHES.R32 || []).slice(0, 8) },
+    { id: 'R16', title: 'OTTAVI', matches: (BRACKET_MATCHES.R16 || []).slice(0, 4) },
+    { id: 'QF', title: 'QUARTI', matches: (BRACKET_MATCHES.QF || []).slice(0, 2) },
+    { id: 'SF', title: 'SEMIFINALI', matches: (BRACKET_MATCHES.SF || []).slice(0, 1) },
+  ];
+
+  const rightStages = [
+    { id: 'SF', title: 'SEMIFINALI', matches: (BRACKET_MATCHES.SF || []).slice(1, 2) },
+    { id: 'QF', title: 'QUARTI', matches: (BRACKET_MATCHES.QF || []).slice(2, 4) },
+    { id: 'R16', title: 'OTTAVI', matches: (BRACKET_MATCHES.R16 || []).slice(4, 8) },
+    { id: 'R32', title: 'SEDICESIMI', matches: (BRACKET_MATCHES.R32 || []).slice(8, 16) },
+  ];
 
   const renderMatchCard = (match: any) => {
     const hFlag = getFlagUrl(match.home_team);
@@ -431,7 +588,7 @@ export default function TuttiPronosticiPage() {
                   <div className="flex flex-wrap gap-2 pt-1">
                      {group.users.map((u: any, i: number) => (
                        <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < group.users.length - 1 ? ',' : ''}</span>
+                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(group.users.length - 1) > i ? ',' : ''}</span>
                          {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                        </div>
                      ))}
@@ -459,14 +616,19 @@ export default function TuttiPronosticiPage() {
         </div>
         <h1 className="text-3xl font-black uppercase italic tracking-tighter mb-4 text-white">Pronostici Segreti</h1>
         <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-xs leading-relaxed">
-          I risultati aggregati saranno sbloccati al fischio d'inizio del Mondiale.
+          {"I risultati aggregati saranno sbloccati al fischio d'inizio del Mondiale."}
           <br/><br/><span className="text-yellow-500">11 Giugno 2026 ore 21:00</span>
         </p>
       </main>
   );
 
+  const filteredModalUsers = selectedNode?.users.filter((u: any) => 
+     u.username?.toLowerCase().includes(modalSearchQuery.toLowerCase()) || 
+     u.full_name?.toLowerCase().includes(modalSearchQuery.toLowerCase())
+  ) || [];
+
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans">
+    <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans overflow-x-hidden">
       <header className="text-center mb-8 pt-4">
         <h1 className="text-4xl font-black text-yellow-500 uppercase italic">Scouting Globale</h1>
         
@@ -496,11 +658,11 @@ export default function TuttiPronosticiPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         
         {/* --- 1. GIRONI --- */}
         {activeTab === 'GIRONI' && (
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-2xl mx-auto">
              <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 mb-6 mx-auto">
                 <button
                   onClick={() => setGironiViewMode('CHRONO')}
@@ -526,7 +688,6 @@ export default function TuttiPronosticiPage() {
                return (
                  <div 
                    key={dayName} 
-                   id={`day-${dayName}`} 
                    className={`bg-slate-900/40 border-2 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${isOpen ? 'bg-slate-900/80 shadow-2xl border-yellow-500/20' : 'border-slate-800'}`}
                  >
                    <button onClick={() => toggleDay(dayName)} className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-800/40 transition-colors">
@@ -574,82 +735,195 @@ export default function TuttiPronosticiPage() {
           </div>
         )}
 
-        {/* --- 2. BRACKET --- */}
-        {activeTab === 'BRACKET' &&
-          [{ id: 'WINNER', label: 'CAMPIONE DEL MONDO' }, { id: 'F', label: 'FINALISTE' }, { id: 'SF', label: 'SEMIFINALISTE' }, { id: 'QF', label: 'QUARTI DI FINALE' }, { id: 'R16', label: 'OTTAVI DI FINALE' }, { id: 'R32', label: 'SEDICESIMI' }].map((stg) => {
-            const isExpanded = expandedStage === stg.id;
-            const officialTeamsInStage = data.officialResults.filter((off: any) => normalizeStage(off.stage) === stg.id);
-            const isStageFull = officialTeamsInStage.length >= (STAGE_CAPACITY[stg.id] || 99);
-
-            const aggregatedPicks = getAggregatedBracketPicks(stg.id).map(([team, users]: any) => {
-               const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
-               const isWrong = isStageFull && !isCorrect;
-               return { team, users, isCorrect, isWrong };
-            });
-
-            aggregatedPicks.sort((a, b) => {
-               if (a.isCorrect && !b.isCorrect) return -1;
-               if (!a.isCorrect && b.isCorrect) return 1;
-               if (a.isWrong && !b.isWrong) return 1; 
-               if (!a.isWrong && b.isWrong) return -1;
-               return b.users.length - a.users.length;
-            });
-
-            return (
-              <div key={stg.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'border-slate-800'}`}>
-                <button onClick={() => setExpandedStage(isExpanded ? null : stg.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                      <Trophy size={18} />
-                    </div>
-                    <span className="font-black uppercase italic text-sm text-left">{stg.label}</span>
-                  </div>
-                  <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-blue-500' : 'text-slate-500'}`} />
+        {/* --- 2. BRACKET DOPPIA VISTA --- */}
+        {activeTab === 'BRACKET' && (
+          <div className="space-y-6">
+             <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 mb-6 max-w-sm mx-auto">
+                <button
+                  onClick={() => setBracketViewMode('TREE')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
+                    bracketViewMode === 'TREE' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:text-white'
+                  }`}
+                >
+                  <GitMerge size={16} /> Tabellone
                 </button>
-                
-                {isExpanded && (
-                  <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                    {aggregatedPicks.map(({ team, users, isCorrect, isWrong }: any, idx) => {
-                      const isMe = users.some((u: any) => u.username === data.currentUserUsername);
-                      const flag = getFlagUrl(team);
+                <button
+                  onClick={() => setBracketViewMode('LIST')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${
+                    bracketViewMode === 'LIST' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:text-white'
+                  }`}
+                >
+                  <List size={16} /> Liste
+                </button>
+             </div>
 
-                      return (
-                        <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${isCorrect ? 'bg-emerald-500/10 border-emerald-500/50' : isWrong ? 'bg-rose-950/20 border-rose-900/30 opacity-60' : 'bg-slate-900 border-slate-800'} ${isMe ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                          
-                          {isMe && (
-                             <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
-                          )}
+             {/* VISTA 1: ALBERO CON CARD VERTICALI E TEXT-WRAP E SCROLL CENTRATO */}
+             {bracketViewMode === 'TREE' && (
+               <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
+                 
+                 <div className="text-center mb-6 px-4">
+                    <h2 className="text-2xl font-black text-blue-400 italic tracking-tight uppercase">Tabellone Reale</h2>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 leading-relaxed">
+                      Scorri lateralmente per esplorare l&apos;albero. <br className="sm:hidden" />Clicca su un pronostico per i dettagli! ⚽
+                    </p>
+                 </div>
 
-                          <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
-                             <div className="flex items-center gap-3">
-                               {flag ? <img src={flag} className={`w-6 h-4 rounded-sm object-cover border border-slate-700 ${isWrong ? 'grayscale' : ''}`} alt=""/> : <Shield size={16} className="text-slate-500"/>}
-                               <span className={`text-sm font-black uppercase italic tracking-tight ${isCorrect ? 'text-emerald-400' : isWrong ? 'text-rose-400 line-through decoration-rose-500/50' : 'text-white'}`}>{team}</span>
-                               {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{STAGE_POINTS[stg.id]} PT</span>}
+                 <div 
+                   ref={bracketContainerRef}
+                   className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
+                 >
+                    <div className="flex flex-row items-stretch justify-start min-w-max gap-3 sm:gap-4 pb-4 px-4 mx-auto">
+                       
+                       {/* LATO SINISTRO */}
+                       <div className="flex gap-3 sm:gap-4">
+                         {leftStages.map(stage => (
+                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
+                             <div className="absolute top-0 left-0 w-full text-center z-10">
+                                <h3 className="text-[8px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-2 py-1 rounded-md border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
+                                </h3>
                              </div>
-                             <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
-                                <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
+                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
+                           </div>
+                         ))}
+                       </div>
+
+                       {/* COLONNA CENTRALE (FINALE E VINCITORE) */}
+                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-16 pb-8 gap-8 z-20">
+                          {/* CAMPIONE */}
+                          <div className="w-full flex flex-col items-center">
+                            <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
+                              <div className="bg-yellow-500/10 py-1.5 flex flex-col items-center border-b border-yellow-500/30">
+                                <Trophy size={18} className="text-yellow-500 drop-shadow-md mb-0.5" />
+                                <span className="text-[8px] font-black uppercase text-yellow-500 tracking-[0.2em]">Campione <span className="opacity-70 ml-1">(+{STAGE_POINTS.WINNER} PT)</span></span>
+                              </div>
+                              {renderSlot({ dbString: 'WINNER_VINCITORE_1', label: 'Vincitore' }, 'WINNER', false)}
+                            </div>
+                          </div>
+
+                          {/* FINALE */}
+                          <div className="w-full flex flex-col items-center">
+                            <div className="text-center mb-2 z-10">
+                               <h3 className="text-[8px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-2 py-1 rounded-md border border-blue-500/30 shadow-md">
+                                 FINALE <span className="opacity-70 ml-1">(+{STAGE_POINTS.F} PT)</span>
+                               </h3>
+                            </div>
+                            <div className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-xl overflow-hidden shadow-xl flex flex-col transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
+                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0][0]) ? renderSlot(BRACKET_MATCHES.F[0][0], 'F', true) : null}
+                               <div className="h-px w-full bg-slate-800"></div>
+                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0][1]) ? renderSlot(BRACKET_MATCHES.F[0][1], 'F', false) : null}
+                            </div>
+                          </div>
+                       </div>
+
+                       {/* LATO DESTRO */}
+                       <div className="flex gap-3 sm:gap-4">
+                         {rightStages.map(stage => (
+                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
+                             <div className="absolute top-0 left-0 w-full text-center z-10">
+                                <h3 className="text-[8px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-2 py-1 rounded-md border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
+                                </h3>
                              </div>
+                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
+                           </div>
+                         ))}
+                       </div>
+
+                    </div>
+                 </div>
+               </div>
+             )}
+
+             {/* VISTA 2: LISTE (DETTAGLIO COMPLETO CON SBAGLIATE) */}
+             {bracketViewMode === 'LIST' && (
+               <div className="max-w-2xl mx-auto space-y-6">
+                 {BRACKET_ROUNDS.map((stg) => {
+                    const isExpanded = expandedStage === stg.id;
+                    const officialTeamsInStage = data.officialResults.filter((off: any) => normalizeStage(off.stage) === stg.id);
+                    
+                    const expectedCapacity = STAGE_CAPACITY[stg.id] || 99;
+                    let isStageFull = false;
+                    if (officialTeamsInStage.length === expectedCapacity) {
+                       isStageFull = true;
+                    } else if (officialTeamsInStage.length > expectedCapacity) {
+                       isStageFull = true;
+                    }
+
+                    const aggregatedPicks = getAggregatedBracketPicks(stg.id).map(([team, users]: any) => {
+                       const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
+                       const isWrong = isStageFull && !isCorrect;
+                       return { team, users, isCorrect, isWrong };
+                    });
+
+                    aggregatedPicks.sort((a, b) => {
+                       if (a.isCorrect && !b.isCorrect) return -1;
+                       if (!a.isCorrect && b.isCorrect) return 1;
+                       if (a.isWrong && !b.isWrong) return 1; 
+                       if (!a.isWrong && b.isWrong) return -1;
+                       return b.users.length - a.users.length;
+                    });
+
+                    return (
+                      <div key={stg.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'border-slate-800'}`}>
+                        <button onClick={() => setExpandedStage(isExpanded ? null : stg.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                              <Trophy size={18} />
+                            </div>
+                            <span className="font-black uppercase italic text-sm text-left">{stg.title} (+{STAGE_POINTS[stg.id]} PT)</span>
                           </div>
-                          <div className="flex flex-wrap gap-2 pt-1">
-                             {users.map((u: any, i: number) => (
-                               <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                 <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
-                                 {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
-                               </div>
-                             ))}
+                          <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-blue-500' : 'text-slate-500'}`} />
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
+                            {aggregatedPicks.map(({ team, users, isCorrect, isWrong }: any, idx) => {
+                              const isMe = users.some((u: any) => u.username === data.currentUserUsername);
+                              const flag = getFlagUrl(team);
+
+                              return (
+                                <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${isCorrect ? 'bg-emerald-500/10 border-emerald-500/50' : isWrong ? 'bg-rose-950/20 border-rose-900/30 opacity-60' : 'bg-slate-900 border-slate-800'} ${isMe ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                                  
+                                  {isMe && (
+                                     <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
+                                  )}
+
+                                  <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
+                                     <div className="flex items-center gap-3">
+                                       {flag ? <img src={flag} className={`w-6 h-4 rounded-sm object-cover border border-slate-700 ${isWrong ? 'grayscale opacity-50 border-rose-500/50' : ''}`} alt=""/> : <Shield size={16} className={isWrong ? "text-rose-500/50" : "text-slate-500"}/>}
+                                       <span className={`text-sm font-black uppercase italic tracking-tight whitespace-normal break-words line-clamp-2 ${isCorrect ? 'text-emerald-400' : isWrong ? 'text-rose-400 line-through decoration-rose-500/50' : 'text-white'}`}>{team}</span>
+                                       {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{STAGE_POINTS[stg.id]} PT</span>}
+                                       {isWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 uppercase">Eliminata ❌</span>}
+                                     </div>
+                                     <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
+                                        <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
+                                     </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 pt-1">
+                                     {users.map((u: any, i: number) => (
+                                       <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(users.length - 1) > i ? ',' : ''}</span>
+                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                       </div>
+                                     ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                        )}
+                      </div>
+                    );
+                 })}
+               </div>
+             )}
+          </div>
+        )}
 
         {/* --- 3. BONUS --- */}
         {activeTab === 'BONUS' && (
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-2xl mx-auto">
             {[
               { id: 'mvp_world_cup', label: 'MVP Mondiale', icon: <Trophy size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
               { id: 'top_scorer', label: 'Capocannoniere', icon: <Award size={16}/>, pts: 10, type: 'PLAYER', phase: 'FINAL' },
@@ -682,112 +956,122 @@ export default function TuttiPronosticiPage() {
                   
                   {isExpanded && (
                     <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                      {!isPhaseUnlocked ? (
-                         <div className="flex flex-col items-center justify-center py-6 px-4 text-slate-500">
-                            <Lock size={24} className="mb-3 text-slate-600" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-center leading-relaxed">
-                              Contenuto Segreto <br/> <span className="text-purple-500 opacity-80">Si sbloccherà al termine della fase</span>
-                            </p>
-                         </div>
-                      ) : (
-                        <>
-                          {offVal && (
-                             <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-                                <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale</span>
-                                <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
+                        {!isPhaseUnlocked ? (
+                             <div className="flex flex-col items-center justify-center py-6 px-4 text-slate-500">
+                                <Lock size={24} className="mb-3 text-slate-600" />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-center leading-relaxed">
+                                  {"Contenuto Segreto"} <br/> <span className="text-purple-500 opacity-80">{"Si sbloccherà al termine della fase"}</span>
+                                </p>
                              </div>
-                          )}
-                          {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
-                            const isUnset = ans === 'Nessuna Scelta';
-                            
-                            const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
-                            
-                            const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
-                            const isMe = users.some((u: any) => u.username === data.currentUserUsername);
+                        ) : (
+                          <>
+                            {offVal && (
+                               <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center shadow-inner">
+                                  <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Ufficiale</span>
+                                  <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
+                               </div>
+                            )}
+                            {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
+                              const isUnset = ans === 'Nessuna Scelta';
+                              
+                              let isMathematicallyWrong = false;
+                              if (bonus.type === 'NUMBER' && offVal != null && !isUnset) {
+                                 const numOff = Number(offVal);
+                                 const numAns = Number(ans);
+                                 if (numOff > numAns) {
+                                    isMathematicallyWrong = true;
+                                 }
+                              }
+                              
+                              const isCorrect = bonus.type !== 'NUMBER' && offVal && cleanString(String(ans)) === cleanString(String(offVal));
+                              const isWrong = offVal && !isCorrect && !isUnset;
+                              
+                              const isMe = users.some((u: any) => u.username === data.currentUserUsername);
 
-                            let flagElement = null;
-                            if (!isUnset) {
-                              if (bonus.type === 'PLAYER') {
-                                const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
-                                const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
-                                const f = player ? getFlagUrl(player.country) : null;
-                                flagElement = f ? <img src={f} className="w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0" alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
-                              } 
-                              else if (bonus.type === 'MATCH' && ans.includes('-')) {
-                                const [t1, t2] = ans.split(/\s*-\s*/);
-                                const f1 = getFlagUrl(t1);
-                                const f2 = getFlagUrl(t2);
-                                flagElement = (
-                                  <div className="flex items-center gap-1 shrink-0">
-                                     {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                     <span className="text-[8px] text-slate-500">-</span>
-                                     {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                  </div>
-                                );
-                              } 
-                              else if (bonus.type === 'GROUP') {
-                                const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
-                                if (group) {
+                              let flagElement = null;
+                              if (!isUnset) {
+                                if (bonus.type === 'PLAYER') {
+                                  const allPlayers = [...(WORLD_CUP_PLAYERS || []), ...(WORLD_CUP_GOALKEEPERS || [])];
+                                  const player = allPlayers.find(p => cleanString(p.name) === cleanString(ans));
+                                  const f = player ? getFlagUrl(player.country) : null;
+                                  flagElement = f ? <img src={f} className={`w-5 h-3.5 object-cover rounded-[2px] border border-slate-700 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`} alt=""/> : <Shield size={14} className="text-slate-600 shrink-0"/>;
+                                } 
+                                else if (bonus.type === 'MATCH' && ans.includes('-')) {
+                                  const [t1, t2] = ans.split(/\s*-\s*/);
+                                  const f1 = getFlagUrl(t1);
+                                  const f2 = getFlagUrl(t2);
                                   flagElement = (
-                                    <div className="flex items-center gap-0.5 shrink-0">
-                                       {group.teams.map((t, i) => {
-                                          const f = getFlagUrl(t);
-                                          return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
-                                       })}
+                                    <div className={`flex items-center gap-1 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+                                       {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
+                                       <span className="text-[8px] text-slate-500">-</span>
+                                       {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
                                     </div>
                                   );
+                                } 
+                                else if (bonus.type === 'GROUP') {
+                                  const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(ans));
+                                  if (group) {
+                                    flagElement = (
+                                      <div className={`flex items-center gap-0.5 shrink-0 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+                                         {group.teams.map((t, i) => {
+                                            const f = getFlagUrl(t);
+                                            return f ? <img key={i} src={f} className="w-3.5 h-2.5 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield key={i} size={10} className="text-slate-600"/>;
+                                         })}
+                                      </div>
+                                    );
+                                  }
                                 }
                               }
-                            }
 
-                            return (
-                              <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
-                                isCorrect 
-                                  ? 'bg-emerald-500/10 border-emerald-500/50' 
-                                  : isUnset 
-                                    ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
-                                    : isMathematicallyWrong
-                                      ? 'bg-rose-950/5 border-rose-950/20 text-slate-500 opacity-40 shadow-inner'
-                                      : 'bg-slate-900 border-slate-800'
-                              } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                                
-                                {isMe && !isUnset && (
-                                   <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
-                                )}
+                              return (
+                                <div key={idx} className={`flex flex-col p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                                  isCorrect 
+                                    ? 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                                    : isUnset 
+                                      ? 'bg-slate-900/30 border-slate-800/50 opacity-60' 
+                                      : (isWrong || isMathematicallyWrong)
+                                        ? 'bg-rose-950/10 border-rose-950/40 opacity-70'
+                                        : 'bg-slate-900 border-slate-800'
+                                } ${isMe && !isUnset ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                                  
+                                  {isMe && !isUnset && (
+                                     <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua scelta</div>
+                                  )}
 
-                                <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
-                                   <div className="flex items-center gap-2.5">
-                                     {flagElement}
-                                     <span className={`text-sm font-black uppercase italic tracking-tight ${
-                                       isCorrect 
-                                         ? 'text-emerald-400' 
-                                         : isUnset 
-                                           ? 'text-slate-500' 
-                                           : isMathematicallyWrong 
-                                             ? 'text-slate-600 line-through decoration-rose-500/50'
-                                             : 'text-white'
-                                     }`}>{ans}</span>
-                                     
-                                     {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{bonus.pts} PT</span>}
-                                     {isMathematicallyWrong && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase">Eliminato ❌</span>}
-                                   </div>
-                                   <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
-                                      <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
-                                   </div>
-                                </div>
-                                <div className="flex flex-wrap gap-2 pt-1">
-                                   {users.map((u: any, i: number) => (
-                                     <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                       <span className="text-[11px] font-bold uppercase leading-none">{u.username}{i < users.length - 1 ? ',' : ''}</span>
-                                       {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                  <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
+                                     <div className="flex items-center gap-2.5 min-w-0">
+                                       {flagElement}
+                                       <span className={`text-[11px] font-black uppercase italic tracking-tight truncate ${
+                                         isCorrect 
+                                           ? 'text-emerald-400' 
+                                           : isUnset 
+                                             ? 'text-slate-500' 
+                                             : (isWrong || isMathematicallyWrong)
+                                               ? 'text-rose-400 line-through decoration-rose-500/50'
+                                               : 'text-white'
+                                       }`}>{ans}</span>
+                                       
+                                       {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)] whitespace-nowrap">🎯 +{bonus.pts} PT</span>}
+                                       {(isWrong || isMathematicallyWrong) && <span className="text-[8px] font-black bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap">Sbagliato ❌</span>}
+                                       {!offVal && !isUnset && <span className="text-[8px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-md ml-1 tracking-wider uppercase whitespace-nowrap border border-slate-700">IN ATTESA ⏳</span>}
                                      </div>
-                                   ))}
+                                     <div className="flex items-center gap-1.5 text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner shrink-0 ml-2">
+                                        <Users size={12} /> <span className="text-[10px] font-black">{users.length}</span>
+                                     </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 pt-1">
+                                     {users.map((u: any, i: number) => (
+                                       <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
+                                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(users.length - 1) > i ? ',' : ''}</span>
+                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                       </div>
+                                     ))}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
+                              );
+                            })}
+                          </>
+                        )}
                     </div>
                   )}
                 </div>
@@ -798,7 +1082,7 @@ export default function TuttiPronosticiPage() {
 
         {/* --- 4. STATS --- */}
         {activeTab === 'STATS' && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
             
             <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-5 shadow-2xl">
               <h2 className="text-sm font-black text-yellow-500 uppercase italic tracking-tight mb-4 flex items-center gap-2 border-b border-slate-800/50 pb-2">
@@ -824,7 +1108,7 @@ export default function TuttiPronosticiPage() {
                          <div className="flex flex-wrap gap-2 pt-1">
                             {w.users.map((u: any, i: number) => (
                                <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                 <span className="text-[10px] font-bold uppercase leading-none">{u.username}{i < w.users.length - 1 ? ',' : ''}</span>
+                                 <span className="text-[10px] font-bold uppercase leading-none">{u.username}{(w.users.length - 1) > i ? ',' : ''}</span>
                                  {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                                </div>
                             ))}
@@ -897,7 +1181,7 @@ export default function TuttiPronosticiPage() {
                                     <span className="text-slate-500 mr-1 uppercase font-black text-[8px] tracking-widest">Colpevoli:</span> 
                                     {usersArray.map((u: any, index: number) => (
                                        <div key={index} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                         <span className="text-[10px] font-bold uppercase leading-none">{u.username}{index < usersArray.length - 1 ? ',' : ''}</span>
+                                         <span className="text-[10px] font-bold uppercase leading-none">{u.username}{(usersArray.length - 1) > index ? ',' : ''}</span>
                                          {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
                                        </div>
                                     ))}
@@ -916,6 +1200,60 @@ export default function TuttiPronosticiPage() {
           </div>
         )}
       </div>
+
+      {/* --- MODAL DETTAGLIO UTENTI NEL TABELLONE --- */}
+      {selectedNode && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 relative">
+            
+            <button onClick={() => setSelectedNode(null)} className="absolute top-4 right-4 p-2 bg-slate-950 rounded-full text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors">
+              <X size={18} strokeWidth={3} />
+            </button>
+
+            <div className="flex flex-col items-start mb-4 border-b border-slate-800/50 pb-4 pr-8">
+              <div className="flex items-center gap-3 mb-2">
+                 {getFlagUrl(selectedNode.team) ? <img src={getFlagUrl(selectedNode.team)!} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={20} className="text-slate-500"/>}
+                 <h3 className="text-xl font-black text-white uppercase italic tracking-tight leading-none">{selectedNode.team}</h3>
+              </div>
+              <span className="text-[9px] text-blue-400 font-black uppercase tracking-widest bg-blue-950/30 px-2 py-1 rounded-md border border-blue-500/20">
+                Fase: {STAGE_LABELS[selectedNode.stage]}
+              </span>
+            </div>
+
+            {/* BARRA DI RICERCA NEL MODAL */}
+            <div className="mb-3 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+              <input
+                type="text"
+                placeholder="Cerca utente..."
+                value={modalSearchQuery}
+                onChange={(e) => setModalSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-[10px] font-black uppercase text-white placeholder-slate-600 outline-none focus:border-yellow-500 transition-colors shadow-inner"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 mb-3">
+               <Users size={14} className="text-slate-500" />
+               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                 {filteredModalUsers.length} Scelt{filteredModalUsers.length === 1 ? 'a' : 'e'}:
+               </p>
+            </div>
+            
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+              {filteredModalUsers.map((u: any, i: number) => (
+                <div key={i} className={`flex flex-col p-3 rounded-xl border transition-colors ${u.username === data.currentUserUsername ? 'bg-yellow-500/10 border-yellow-500/30 ring-1 ring-yellow-500/50' : 'bg-slate-950 border-slate-800 hover:border-slate-600'}`}>
+                  <span className={`text-sm font-black uppercase italic ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-white'}`}>{u.username}</span>
+                  {u.full_name && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{u.full_name}</span>}
+                </div>
+              ))}
+              
+              {filteredModalUsers.length === 0 && (
+                <p className="text-[10px] font-black uppercase text-slate-500 text-center py-4">Nessun utente trovato</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
