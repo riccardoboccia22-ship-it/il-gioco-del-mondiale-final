@@ -100,7 +100,7 @@ const fetchAllRecords = async (table: string, orderCol1?: string, orderCol2?: st
 
 export default function TuttiPronosticiPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('GIRONI');
+  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('BRACKET');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,8 +114,6 @@ export default function TuttiPronosticiPage() {
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [expandedBonus, setExpandedBonus] = useState<string | null>(null);
   const [openDays, setOpenDays] = useState<{ [key: string]: boolean }>({});
-  
-  const [todayKey, setTodayKey] = useState<string | null>(null);
 
   const isStarted = new Date() > WORLD_CUP_START_DATE;
 
@@ -160,47 +158,12 @@ export default function TuttiPronosticiPage() {
           bracketMap: brackMap, officialResults: obData || [], officialBonus: offBo || null, bonusMap: bMap,
         });
 
-        const today = new Date();
-        const initialOpenDays: { [key: string]: boolean } = {};
-        let foundTodayKey: string | null = null;
-        
-        mData?.forEach((m: any) => {
-          if (m.match_date) {
-            const d = new Date(m.match_date);
-            const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-            const dayName = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-            
-            if (
-              d.getFullYear() === today.getFullYear() &&
-              d.getMonth() === today.getMonth() &&
-              d.getDate() === today.getDate()
-            ) {
-              initialOpenDays[dayName] = true;
-              foundTodayKey = dayName;
-            }
-          }
-        });
-        
-        setOpenDays(initialOpenDays);
-        if (foundTodayKey) setTodayKey(foundTodayKey);
+        setOpenDays({});
 
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
     fetchData();
   }, [router]);
-
-  useEffect(() => {
-    if (!loading && activeTab === 'GIRONI' && gironiViewMode === 'CHRONO' && todayKey) {
-      const timer = setTimeout(() => {
-        const el = document.getElementById(`day-${todayKey}`);
-        if (el) {
-          const y = el.getBoundingClientRect().top + window.scrollY - 100;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, activeTab, gironiViewMode, todayKey, data.matches]);
 
   const toggleDay = (dayName: string) => {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
@@ -559,28 +522,26 @@ export default function TuttiPronosticiPage() {
 
              {gironiViewMode === 'CHRONO' && groupedByDay.map(({ dayName, matchesArray }) => {
                const isOpen = openDays[dayName];
-               const isToday = dayName === todayKey;
 
                return (
                  <div 
                    key={dayName} 
                    id={`day-${dayName}`} 
-                   className={`bg-slate-900/40 border-2 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${isOpen ? 'bg-slate-900/80 shadow-2xl' : ''} ${isToday ? 'border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/50' : isOpen ? 'border-yellow-500/20' : 'border-slate-800'}`}
+                   className={`bg-slate-900/40 border-2 rounded-[2.5rem] overflow-hidden transition-all duration-300 ${isOpen ? 'bg-slate-900/80 shadow-2xl border-yellow-500/20' : 'border-slate-800'}`}
                  >
                    <button onClick={() => toggleDay(dayName)} className="w-full p-5 sm:p-6 flex items-center justify-between hover:bg-slate-800/40 transition-colors">
                      <div className="flex items-center gap-4">
-                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${isToday ? 'bg-emerald-500 text-slate-950' : isOpen ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${isOpen ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
                          <CalendarDays size={18} />
                        </div>
                        <div className="flex flex-col items-start">
                          <h2 className="font-black text-base sm:text-lg uppercase italic text-white tracking-tight text-left">{dayName}</h2>
-                         {isToday && <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">Partite di Oggi</span>}
                        </div>
                      </div>
                      <div className="flex items-center gap-3">
                        <span className="text-[10px] font-black text-slate-500 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 hidden sm:block">{matchesArray.length} Match</span>
                        <div className="p-2 sm:p-3">
-                         {isOpen ? <ChevronUp className={isToday ? "text-emerald-500" : "text-yellow-500"} /> : <ChevronDown className="text-slate-600" />}
+                         {isOpen ? <ChevronUp className="text-yellow-500" /> : <ChevronDown className="text-slate-600" />}
                        </div>
                      </div>
                    </button>
@@ -620,6 +581,20 @@ export default function TuttiPronosticiPage() {
             const officialTeamsInStage = data.officialResults.filter((off: any) => normalizeStage(off.stage) === stg.id);
             const isStageFull = officialTeamsInStage.length >= (STAGE_CAPACITY[stg.id] || 99);
 
+            const aggregatedPicks = getAggregatedBracketPicks(stg.id).map(([team, users]: any) => {
+               const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
+               const isWrong = isStageFull && !isCorrect;
+               return { team, users, isCorrect, isWrong };
+            });
+
+            aggregatedPicks.sort((a, b) => {
+               if (a.isCorrect && !b.isCorrect) return -1;
+               if (!a.isCorrect && b.isCorrect) return 1;
+               if (a.isWrong && !b.isWrong) return 1; 
+               if (!a.isWrong && b.isWrong) return -1;
+               return b.users.length - a.users.length;
+            });
+
             return (
               <div key={stg.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'border-slate-800'}`}>
                 <button onClick={() => setExpandedStage(isExpanded ? null : stg.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
@@ -634,9 +609,7 @@ export default function TuttiPronosticiPage() {
                 
                 {isExpanded && (
                   <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                    {getAggregatedBracketPicks(stg.id).map(([team, users]: any, idx) => {
-                      const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
-                      const isWrong = isStageFull && !isCorrect;
+                    {aggregatedPicks.map(({ team, users, isCorrect, isWrong }: any, idx) => {
                       const isMe = users.some((u: any) => u.username === data.currentUserUsername);
                       const flag = getFlagUrl(team);
 
@@ -649,7 +622,7 @@ export default function TuttiPronosticiPage() {
 
                           <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2 mt-1">
                              <div className="flex items-center gap-3">
-                               {flag ? <img src={flag} className="w-6 h-4 rounded-sm object-cover border border-slate-700" alt=""/> : <Shield size={16} className="text-slate-500"/>}
+                               {flag ? <img src={flag} className={`w-6 h-4 rounded-sm object-cover border border-slate-700 ${isWrong ? 'grayscale' : ''}`} alt=""/> : <Shield size={16} className="text-slate-500"/>}
                                <span className={`text-sm font-black uppercase italic tracking-tight ${isCorrect ? 'text-emerald-400' : isWrong ? 'text-rose-400 line-through decoration-rose-500/50' : 'text-white'}`}>{team}</span>
                                {isCorrect && <span className="text-[9px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-md ml-1 flex items-center gap-0.5 shadow-[0_0_10px_rgba(16,185,129,0.5)]">🎯 +{STAGE_POINTS[stg.id]} PT</span>}
                              </div>
@@ -674,7 +647,7 @@ export default function TuttiPronosticiPage() {
             );
           })}
 
-        {/* --- 3. BONUS (SEMPRE VISIBILI E APERTI) --- */}
+        {/* --- 3. BONUS --- */}
         {activeTab === 'BONUS' && (
           <div className="space-y-6">
             {[
@@ -691,27 +664,40 @@ export default function TuttiPronosticiPage() {
               const isExpanded = expandedBonus === bonus.id;
               const offVal = data.officialBonus?.[bonus.id];
               
+              const isGroupsClosedPhase = data.officialBonus && data.officialBonus.high_scoring_match && data.officialBonus.high_scoring_match !== 'TBD';
+              const isTournamentFinishedPhase = data.officialBonus && data.officialBonus.mvp_world_cup && data.officialBonus.mvp_world_cup !== 'TBD';
+              const isPhaseUnlocked = bonus.phase === 'GROUPS' ? isGroupsClosedPhase : isTournamentFinishedPhase;
+
               return (
                 <div key={bonus.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
                   <button onClick={() => setExpandedBonus(isExpanded ? null : bonus.id)} className="w-full p-6 flex items-center justify-between hover:bg-slate-800/30 transition-all">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                        {bonus.icon}
+                      <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${isPhaseUnlocked ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                        {isPhaseUnlocked ? bonus.icon : <Lock size={16} />}
                       </div>
-                      <span className="font-black uppercase italic text-sm text-left text-white">{bonus.label}</span>
+                      <span className={`font-black uppercase italic text-sm text-left ${isPhaseUnlocked ? 'text-white' : 'text-slate-500'}`}>{bonus.label}</span>
                     </div>
-                    <ChevronDown className={`transition-transform ${isExpanded ? 'rotate-180 text-purple-500' : 'text-slate-500'}`} />
+                    <ChevronDown className={`transition-transform ${isExpanded ? (isPhaseUnlocked ? 'rotate-180 text-purple-500' : 'rotate-180 text-slate-500') : 'text-slate-500'}`} />
                   </button>
                   
                   {isExpanded && (
                     <div className="p-5 bg-slate-950/80 space-y-3 border-t border-slate-800/50">
-                        {offVal && (
+                      {!isPhaseUnlocked ? (
+                         <div className="flex flex-col items-center justify-center py-6 px-4 text-slate-500">
+                            <Lock size={24} className="mb-3 text-slate-600" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-center leading-relaxed">
+                              Contenuto Segreto <br/> <span className="text-purple-500 opacity-80">Si sbloccherà al termine della fase</span>
+                            </p>
+                         </div>
+                      ) : (
+                        <>
+                          {offVal && (
                              <div className="mb-4 bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl flex flex-col items-center justify-center text-center">
                                 <span className="text-[9px] text-purple-400 font-black uppercase tracking-widest mb-1">Dato Reale</span>
                                 <span className="text-white font-black uppercase italic">{offVal} {bonus.type === 'NUMBER' && 'Nel Torneo'}</span>
                              </div>
-                        )}
-                        {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
+                          )}
+                          {getAggregatedBonusPicks(bonus.id, bonus.type === 'NUMBER').map(([ans, users]: any, idx) => {
                             const isUnset = ans === 'Nessuna Scelta';
                             
                             const isMathematicallyWrong = bonus.type === 'NUMBER' && offVal != null && !isUnset && Number(ans) < Number(offVal);
@@ -736,7 +722,7 @@ export default function TuttiPronosticiPage() {
                                      {f1 ? <img src={f1} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
                                      <span className="text-[8px] text-slate-500">-</span>
                                      {f2 ? <img src={f2} className="w-4 h-3 object-cover rounded-[2px] border border-slate-700" alt=""/> : <Shield size={12} className="text-slate-600"/>}
-                                 </div>
+                                  </div>
                                 );
                               } 
                               else if (bonus.type === 'GROUP') {
@@ -799,7 +785,9 @@ export default function TuttiPronosticiPage() {
                                 </div>
                               </div>
                             );
-                        })}
+                          })}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

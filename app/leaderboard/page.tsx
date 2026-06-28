@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import { 
   Trophy, 
   Medal, 
@@ -39,6 +40,7 @@ const TOURNAMENT_GROUPS = [
 ];
 
 const STAGE_POINTS: Record<string, number> = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
+const STAGE_CAPACITY: Record<string, number> = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
 const STAGE_LABELS: Record<string, string> = { R32: 'Sedicesimi', R16: 'Ottavi', QF: 'Quarti', SF: 'Semifinale', F: 'Finalista', WINNER: 'Campione' };
 
 const normalizeStage = (s: string) => {
@@ -357,7 +359,8 @@ export default function LeaderboardPage() {
 
     try {
       // 1. CARICAMENTO GIRONI
-      const { data: preds } = await supabase.from('predictions').select('*').eq('user_id', player.id);
+      const { data: preds, error: e1 } = await supabase.from('predictions').select('*').eq('user_id', player.id);
+      if (e1) throw e1;
       let combinedMatches: any[] = [];
       
       if (preds && preds.length > 0) {
@@ -378,62 +381,110 @@ export default function LeaderboardPage() {
       }
       setPlayerPredictions(combinedMatches);
 
-      // 2. CARICAMENTO TABELLONE
-      const { data: bData } = await supabase.from('brackets').select('*').eq('user_id', player.id);
-      const correctBrackets: any[] = [];
-      const seenBrackets = new Set(); // Fix per evitare di calcolare la stessa squadra due volte
+      // 2. CARICAMENTO TABELLONE CON SQUADRE ELIMINATE O IN ATTESA
+      const { data: bData, error: e2 } = await supabase.from('brackets').select('*').eq('user_id', player.id);
+      if (e2) throw e2;
+      const processedBrackets: any[] = [];
+      const seenBrackets = new Set(); 
       
       bData?.forEach(b => {
          const uS = normalizeStage(b.stage);
          const cleanT = cleanString(b.team_name);
          const uniqueKey = `${uS}-${cleanT}`;
          
-         const isCorrect = officialBracket.some(ob => normalizeStage(ob.stage) === uS && cleanString(ob.team_name) === cleanT);
+         if (!cleanT) return;
          
-         if (isCorrect && !seenBrackets.has(uniqueKey)) {
+         // Cerco quali squadre sono classificate ufficialmente per questa fase
+         const officialTeamsInStage = officialBracket.filter(ob => normalizeStage(ob.stage) === uS);
+         const isCorrect = officialTeamsInStage.some(ob => cleanString(ob.team_name) === cleanT);
+         
+         // Se per la fase X ci sono già tutte le squadre qualificate previste (es. 16 per gli Ottavi)
+         // e la squadra utente non c'è, allora è eliminata.
+         const isStageFull = officialTeamsInStage.length >= (STAGE_CAPACITY[uS] || 99);
+         
+         if (!seenBrackets.has(uniqueKey)) {
             seenBrackets.add(uniqueKey);
             const pts = STAGE_POINTS[uS] || 0;
-            correctBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: pts });
+            
+            if (isCorrect) {
+               processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: pts, status: 'CORRECT', stageValue: pts });
+            } else if (isStageFull) {
+               processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: 0, status: 'WRONG', stageValue: pts });
+            } else {
+               processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: 0, status: 'PENDING', stageValue: pts });
+            }
          }
       });
-      setPlayerBrackets(correctBrackets.sort((a,b) => b.points - a.points));
-
-      // 3. CARICAMENTO BONUS (CON CONTROLLI RIGIDI)
-      const { data: uBonus } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
-      const correctBonuses: any[] = [];
       
-      // Controllo Rigido: il valore non deve essere vuoto né 'TBD'
-      const isGroupsClosed = officialBonuses && officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD';
-      const isTournamentFinished = officialBonuses && officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD';
+      setPlayerBrackets(processedBrackets.sort((a,b) => {
+         if (b.stageValue !== a.stageValue) return b.stageValue - a.stageValue;
+         if (a.status !== b.status) {
+           if (a.status === 'CORRECT') return -1;
+           if (b.status === 'CORRECT') return 1;
+           if (a.status === 'WRONG') return 1;
+           if (b.status === 'WRONG') return -1;
+         }
+         return 0;
+      }));
+
+      // 3. CARICAMENTO BONUS (CON CONTROLLI SICURI E RECUPERO PARZIALE)
+      const { data: uBonus, error: e3 } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
+      if (e3 && e3.code !== 'PGRST116') throw e3; // Ignoriamo errore riga non trovata se l'utente non ha salvato nulla
+      
+      const processedBonuses: any[] = [];
+      
+      // CONTROLLO PARZIALE DEI BONUS GIRONI: Verifico se almeno uno è stato valorizzato e non è TBD
+      const isGroupsClosed = !!(officialBonuses && (
+        (officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD' && officialBonuses.high_scoring_match.trim() !== '') ||
+        (officialBonuses.highest_scoring_group && officialBonuses.highest_scoring_group !== 'TBD' && officialBonuses.highest_scoring_group.trim() !== '') ||
+        (officialBonuses.lowest_scoring_group && officialBonuses.lowest_scoring_group !== 'TBD' && officialBonuses.lowest_scoring_group.trim() !== '')
+      ));
+
+      const isTournamentFinished = !!(officialBonuses && (
+        (officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD' && officialBonuses.mvp_world_cup.trim() !== '') ||
+        (officialBonuses.top_scorer && officialBonuses.top_scorer !== 'TBD' && officialBonuses.top_scorer.trim() !== '') ||
+        (officialBonuses.best_goalkeeper && officialBonuses.best_goalkeeper !== 'TBD' && officialBonuses.best_goalkeeper.trim() !== '')
+      ));
 
       if (uBonus) {
-         const checkBonus = (key: string, pts: number, label: string) => {
-            if (officialBonuses[key] && officialBonuses[key] !== 'TBD' && uBonus[key]) {
-               const offValues = String(officialBonuses[key]).split(',').map(v => cleanString(v));
-               const uVal = cleanString(String(uBonus[key]));
-               
-               if (offValues.includes(uVal) && uVal !== '') {
-                   correctBonuses.push({ answer: uBonus[key], points: pts, label });
+         const processBonus = (key: string, pts: number, label: string, isEvaluated: boolean) => {
+            const uVal = uBonus[key] != null ? String(uBonus[key]).trim() : '';
+            if (!uVal) return;
+            
+            let status = 'PENDING';
+            let earnedPts = 0;
+            const offVal = officialBonuses ? officialBonuses[key] : null;
+            
+            // Verifico che il bonus sia stato giudicato ufficialmente
+            if (isEvaluated && offVal != null && offVal !== 'TBD' && String(offVal).trim() !== '') {
+               const offValues = String(offVal).split(',').map(v => cleanString(v));
+               if (offValues.includes(cleanString(uVal))) {
+                   status = 'CORRECT';
+                   earnedPts = pts;
+               } else {
+                   status = 'WRONG';
                }
             }
+            processedBonuses.push({ answer: uVal, points: earnedPts, label, status, maxPts: pts, sortOrder: pts });
          };
          
-         if (isGroupsClosed) {
-           checkBonus('high_scoring_match', 5, 'Match + Gol');
-           checkBonus('highest_scoring_group', 5, 'Girone + Gol');
-           checkBonus('lowest_scoring_group', 5, 'Girone - Gol');
-         }
-
-         if (isTournamentFinished) {
-           checkBonus('mvp_world_cup', 10, 'MVP Mondiale');
-           checkBonus('top_scorer', 10, 'Capocannoniere');
-           checkBonus('best_goalkeeper', 10, 'Miglior Portiere');
-           checkBonus('total_own_goals', 3, 'Totale Autogol');
-           checkBonus('total_penalties', 3, 'Totale Rigori');
-           checkBonus('total_red_cards', 3, 'Totale Rossi');
-         }
+         processBonus('mvp_world_cup', 10, 'MVP Mondiale', isTournamentFinished);
+         processBonus('top_scorer', 10, 'Capocannoniere', isTournamentFinished);
+         processBonus('best_goalkeeper', 10, 'Miglior Portiere', isTournamentFinished);
+         processBonus('high_scoring_match', 5, 'Match + Gol', isGroupsClosed);
+         processBonus('highest_scoring_group', 5, 'Girone + Gol', isGroupsClosed);
+         processBonus('lowest_scoring_group', 5, 'Girone - Gol', isGroupsClosed);
+         processBonus('total_own_goals', 3, 'Totale Autogol', isTournamentFinished);
+         processBonus('total_penalties', 3, 'Totale Rigori', isTournamentFinished);
+         processBonus('total_red_cards', 3, 'Totale Rossi', isTournamentFinished);
       }
-      setPlayerBonuses(correctBonuses.sort((a,b) => b.points - a.points));
+      setPlayerBonuses(processedBonuses.sort((a,b) => {
+          if (b.status !== a.status) {
+             if (a.status === 'CORRECT') return -1;
+             if (b.status === 'CORRECT') return 1;
+          }
+          return b.sortOrder - a.sortOrder;
+      }));
 
     } catch (error) {
       console.error(error);
@@ -466,8 +517,77 @@ export default function LeaderboardPage() {
            (player.full_name?.toLowerCase().includes(query));
   });
 
-  const isGroupsClosed = officialBonuses && officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD';
-  const isTournamentFinished = officialBonuses && officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD';
+  // Helper function to render a bonus answer with flags and proper spacing
+  const renderBonusAnswer = (answer: string, label: string, status: string) => {
+    if (!answer) return null;
+    const isWrong = status === 'WRONG';
+    const textClass = `text-[11px] font-black uppercase italic truncate ${isWrong ? 'text-rose-500 line-through' : 'text-white'}`;
+    
+    // Gestione Partita con Più Gol
+    if (label === 'Match + Gol' && answer.includes('-')) {
+      const [t1, t2] = answer.split('-').map(s => s.trim());
+      const f1 = getTeamFlagCode(t1);
+      const f2 = getTeamFlagCode(t2);
+      return (
+        <div className={`flex items-center gap-1.5 mt-0.5 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+          {f1 && <img src={`https://flagcdn.com/w20/${f1}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px]" alt=""/>}
+          <span className={`${textClass} max-w-[85px] leading-none`}>{t1}</span>
+          <span className="text-slate-500 text-[9px] leading-none">-</span>
+          <span className={`${textClass} max-w-[85px] leading-none`}>{t2}</span>
+          {f2 && <img src={`https://flagcdn.com/w20/${f2}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px]" alt=""/>}
+        </div>
+      );
+    }
+    
+    // Gestione Gironi
+    if (label.includes('Girone')) {
+      const groupInfo = TOURNAMENT_GROUPS.find(g => g.name.toLowerCase() === answer.toLowerCase());
+      return (
+        <div className={`flex items-center gap-2 mt-0.5 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+          <span className={`${textClass} leading-none`}>{answer}</span>
+          {groupInfo && (
+            <div className="flex gap-1 ml-1">
+              {groupInfo.teams.map(t => {
+                const f = getTeamFlagCode(t);
+                return f ? <img key={t} src={`https://flagcdn.com/w20/${f}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px] shadow-sm" alt=""/> : null;
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Gestione Giocatori (MVP, Capocannoniere, Portiere)
+    if (['MVP Mondiale', 'Capocannoniere', 'Miglior Portiere'].includes(label)) {
+      const allPlayers = [...(WORLD_CUP_PLAYERS || []), ...(WORLD_CUP_GOALKEEPERS || [])];
+      const playerInfo = allPlayers.find(p => cleanString(p.name) === cleanString(answer));
+      const playerFlagCode = playerInfo ? getTeamFlagCode(playerInfo.country) : null;
+      
+      return (
+        <div className={`flex items-center gap-2 mt-0.5 ${isWrong ? 'grayscale opacity-60' : ''}`}>
+          <span className={`${textClass} leading-none`}>{answer}</span>
+          {playerFlagCode && (
+            <img src={`https://flagcdn.com/w20/${playerFlagCode}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px] shadow-sm" alt=""/>
+          )}
+        </div>
+      );
+    }
+    
+    // Base Case
+    return <span className={`${textClass} block mt-0.5 leading-none`}>{answer}</span>;
+  };
+
+  const isGroupsClosed = !!(officialBonuses && (
+    (officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD' && officialBonuses.high_scoring_match.trim() !== '') ||
+    (officialBonuses.highest_scoring_group && officialBonuses.highest_scoring_group !== 'TBD' && officialBonuses.highest_scoring_group.trim() !== '') ||
+    (officialBonuses.lowest_scoring_group && officialBonuses.lowest_scoring_group !== 'TBD' && officialBonuses.lowest_scoring_group.trim() !== '')
+  ));
+
+  const isTournamentFinished = !!(officialBonuses && (
+    (officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD' && officialBonuses.mvp_world_cup.trim() !== '') ||
+    (officialBonuses.top_scorer && officialBonuses.top_scorer !== 'TBD' && officialBonuses.top_scorer.trim() !== '') ||
+    (officialBonuses.best_goalkeeper && officialBonuses.best_goalkeeper !== 'TBD' && officialBonuses.best_goalkeeper.trim() !== '')
+  ));
 
   if (loading)
     return (
@@ -543,10 +663,10 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 sm:gap-6 md:gap-10 shrink-0 ml-2">
-                  <div className="w-6 sm:w-8 text-center text-[10px] sm:text-xs font-bold text-slate-500">{player.points_groups || 0}</div>
-                  <div className="w-6 sm:w-8 text-center text-[10px] sm:text-xs font-bold text-slate-500">{player.points_bracket || 0}</div>
-                  <div className={`w-6 sm:w-8 text-center text-[10px] sm:text-xs font-bold ${(player.points_bonus || 0) > 0 ? 'text-purple-400' : 'text-slate-500'}`}>{player.points_bonus || 0}</div>
-                  <div className={`w-10 sm:w-12 text-center font-black italic text-xl sm:text-2xl md:text-3xl ${isPodium ? 'text-yellow-500' : 'text-white'}`}>{player.points || 0}</div>
+                  <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">{player.points_groups || 0}</div>
+                  <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">{player.points_bracket || 0}</div>
+                  <div className={`w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold ${(player.points_bonus || 0) > 0 ? 'text-purple-400' : 'text-slate-500'}`}>{player.points_bonus || 0}</div>
+                  <div className={`w-10 sm:w-12 text-center font-black italic text-lg sm:text-xl md:text-3xl ${isPodium ? 'text-yellow-500' : 'text-white'}`}>{player.points || 0}</div>
                 </div>
               </div>
             );
@@ -637,45 +757,84 @@ export default function LeaderboardPage() {
                    {/* TAB TABELLONE FASE FINALE */}
                    {detailTab === 'BRACKET' && (
                      playerBrackets.length === 0 ? (
-                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun punto registrato sul Tabellone</p>
+                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun pronostico inserito</p>
                      ) : (
-                       playerBrackets.map((br, idx) => (
-                         <div key={idx} className="bg-blue-950/10 border border-blue-900/30 rounded-xl p-3 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                               {getTeamFlagCode(br.team) ? <img src={`https://flagcdn.com/w40/${getTeamFlagCode(br.team)}.png`} className="w-5 h-auto rounded-sm object-cover shadow-sm" alt=""/> : <Shield size={16} className="text-blue-500/50" />}
-                               <div className="flex flex-col">
-                                 <span className="text-[11px] font-black uppercase text-white">{br.team}</span>
-                                 <span className="text-[8px] font-bold uppercase text-blue-400 tracking-widest">{br.stageLabel}</span>
-                               </div>
-                            </div>
-                            <span className="text-xs font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-lg">+{br.points} PT</span>
-                         </div>
-                       ))
+                       playerBrackets.map((br, idx) => {
+                         const isCorrect = br.status === 'CORRECT';
+                         const isWrong = br.status === 'WRONG';
+                         const isPending = br.status === 'PENDING';
+                         
+                         return (
+                           <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center transition-colors ${
+                              isCorrect ? 'bg-blue-950/20 border-blue-500/30' : 
+                              isWrong ? 'bg-rose-950/10 border-rose-900/50' : 
+                              'bg-slate-900/30 border-slate-800/50'
+                           }`}>
+                              <div className="flex items-center gap-3">
+                                 {getTeamFlagCode(br.team) ? (
+                                   <img src={`https://flagcdn.com/w40/${getTeamFlagCode(br.team)}.png`} className={`w-5 h-auto rounded-sm object-cover shadow-sm ${isWrong && 'grayscale opacity-50 border border-rose-500/50'}`} alt=""/>
+                                 ) : (
+                                   <Shield size={16} className={isCorrect ? "text-blue-500" : isWrong ? "text-rose-500/50" : "text-slate-600"} />
+                                 )}
+                                 <div className="flex flex-col">
+                                   <span className={`text-[11px] font-black uppercase ${isCorrect ? 'text-white' : isWrong ? 'text-rose-500 line-through' : 'text-slate-300'}`}>{br.team}</span>
+                                   <span className={`text-[8px] font-bold uppercase tracking-widest ${isCorrect ? 'text-blue-400' : isWrong ? 'text-rose-500/70' : 'text-slate-500'}`}>{br.stageLabel}</span>
+                                 </div>
+                              </div>
+                              <div className="flex flex-col items-end shrink-0 ml-2">
+                                <span className={`text-xs font-black px-2 py-1 rounded-lg border ${
+                                   isCorrect ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' : 
+                                   isWrong ? 'text-rose-500 bg-rose-500/10 border-rose-500/20' : 
+                                   'text-slate-400 bg-slate-800/50 border-slate-700/50'
+                                }`}>
+                                  {isCorrect ? `+${br.points} PT` : isWrong ? 'Eliminata' : 'In attesa'}
+                                </span>
+                              </div>
+                           </div>
+                         );
+                       })
                      )
                    )}
 
-                   {/* TAB BONUS */}
+                   {/* TAB BONUS CORRETTA */}
                    {detailTab === 'BONUS' && (
-                     (!officialBonuses || !officialBonuses.mvp_world_cup) ? (
-                        <div className="flex flex-col items-center justify-center py-10 px-4 text-slate-500 h-full">
-                           <Lock size={36} className="mb-4 text-slate-700" />
-                           <p className="text-[11px] font-black uppercase tracking-widest text-center leading-relaxed">
-                             Bonus in attesa di <br/> <span className="text-purple-500">calcolo ufficiale</span>
-                           </p>
-                        </div>
-                     ) : playerBonuses.length === 0 ? (
-                       <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun bonus indovinato 🥲</p>
-                     ) : (
-                       playerBonuses.map((bo, idx) => (
-                         <div key={idx} className="bg-purple-950/10 border border-purple-900/30 rounded-xl p-3 flex justify-between items-center">
-                            <div className="flex flex-col">
-                               <span className="text-[11px] font-black uppercase text-white italic">{bo.answer}</span>
-                               <span className="text-[8px] font-bold uppercase text-purple-400 tracking-widest">{bo.label}</span>
-                            </div>
-                            <span className="text-xs font-black text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-1 rounded-lg">+{bo.points} PT</span>
+                     <div className="flex flex-col h-full">
+                       {playerBonuses.length === 0 ? (
+                         <p className="text-center text-slate-600 text-[10px] font-black uppercase pt-8 tracking-widest">Nessun pronostico inserito 🥲</p>
+                       ) : (
+                         playerBonuses.map((bo, idx) => {
+                           const isCorrect = bo.status === 'CORRECT';
+                           const isWrong = bo.status === 'WRONG';
+                           return (
+                             <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center mb-2 transition-colors ${
+                               isCorrect ? 'bg-emerald-950/20 border-emerald-900/30' :
+                               isWrong ? 'bg-rose-950/10 border-rose-900/30 opacity-70' :
+                               'bg-slate-900/30 border-slate-800/50'
+                             }`}>
+                                <div className="flex flex-col min-w-0">
+                                   <span className={`text-[8px] font-bold uppercase tracking-widest ${isCorrect ? 'text-emerald-400' : isWrong ? 'text-rose-400/70' : 'text-slate-500'}`}>{bo.label}</span>
+                                   {renderBonusAnswer(bo.answer, bo.label, bo.status)}
+                                </div>
+                                <div className="flex flex-col items-end shrink-0 ml-2">
+                                  <span className={`text-xs font-black px-2 py-1 rounded-lg border ${
+                                    isCorrect ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 
+                                    isWrong ? 'text-rose-400/60 bg-rose-500/5 border-rose-500/10' : 
+                                    'text-slate-500 bg-slate-800/50 border-slate-700/50'
+                                  }`}>
+                                    {isCorrect ? `+${bo.points} PT` : isWrong ? '0 PT' : 'In attesa'}
+                                  </span>
+                                </div>
+                             </div>
+                           );
+                         })
+                       )}
+                       
+                       {isGroupsClosed && !isTournamentFinished && (
+                         <div className="mt-6 mb-2 flex items-center justify-center gap-1.5 text-[9px] font-black text-slate-600 uppercase tracking-widest border-t border-slate-800/50 pt-4">
+                          
                          </div>
-                       ))
-                     )
+                       )}
+                     </div>
                    )}
                  </>
               )}
