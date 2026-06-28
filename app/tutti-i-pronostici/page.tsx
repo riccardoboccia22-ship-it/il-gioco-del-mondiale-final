@@ -62,47 +62,48 @@ const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
   { id: 'WINNER', title: 'CAMPIONE' }
 ];
 
+// Calendario Ufficiale FIFA 2026 (Orari e Date convertite in Italiano CEST)
 const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch> = {
   R32: [
-    { date: '28 Giu - 18:00', teams: [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ] },
-    { date: '28 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore' } ] },
-    { date: '29 Giu - 18:00', teams: [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' } ] },
-    { date: '29 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ] },
-    { date: '30 Giu - 18:00', teams: [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ] },
-    { date: '30 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ] },
-    { date: '1 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore' } ] },
-    { date: '1 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore' } ] },
-    { date: '2 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ] },
-    { date: '2 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ] },
-    { date: '3 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore' } ] },
-    { date: '3 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore' } ] },
-    { date: '4 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ] },
-    { date: '4 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ] },
-    { date: '5 Lug - 18:00',  teams: [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore' } ] },
-    { date: '5 Lug - 21:00',  teams: [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ] },
+    { date: '29 Giu - 22:30', teams: [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ] },
+    { date: '30 Giu - 23:00', teams: [ { dbString: 'R32_SEDICESIMI_1I', label: '1° Gruppo I' }, { dbString: 'R32_SEDICESIMI_3M2', label: '3° Migliore' } ] },
+    { date: '28 Giu - 21:00', teams: [ { dbString: 'R32_SEDICESIMI_2A', label: '2° Gruppo A' }, { dbString: 'R32_SEDICESIMI_2B', label: '2° Gruppo B' } ] },
+    { date: '30 Giu - 03:00', teams: [ { dbString: 'R32_SEDICESIMI_1F', label: '1° Gruppo F' }, { dbString: 'R32_SEDICESIMI_2C', label: '2° Gruppo C' } ] },
+    { date: '3 Lug - 01:30', teams: [ { dbString: 'R32_SEDICESIMI_2K', label: '2° Gruppo K' }, { dbString: 'R32_SEDICESIMI_2L', label: '2° Gruppo L' } ] },
+    { date: '3 Lug - 04:30', teams: [ { dbString: 'R32_SEDICESIMI_1H', label: '1° Gruppo H' }, { dbString: 'R32_SEDICESIMI_2J', label: '2° Gruppo J' } ] },
+    { date: '1 Lug - 23:00', teams: [ { dbString: 'R32_SEDICESIMI_1D', label: '1° Gruppo D' }, { dbString: 'R32_SEDICESIMI_3M5', label: '3° Migliore' } ] },
+    { date: '2 Lug - 04:00',  teams: [ { dbString: 'R32_SEDICESIMI_1G', label: '1° Gruppo G' }, { dbString: 'R32_SEDICESIMI_3M6', label: '3° Migliore' } ] },
+    { date: '29 Giu - 19:00',  teams: [ { dbString: 'R32_SEDICESIMI_1C', label: '1° Gruppo C' }, { dbString: 'R32_SEDICESIMI_2F', label: '2° Gruppo F' } ] },
+    { date: '30 Giu - 19:00',  teams: [ { dbString: 'R32_SEDICESIMI_2E', label: '2° Gruppo E' }, { dbString: 'R32_SEDICESIMI_2I', label: '2° Gruppo I' } ] },
+    { date: '1 Lug - 03:00',  teams: [ { dbString: 'R32_SEDICESIMI_1A', label: '1° Gruppo A' }, { dbString: 'R32_SEDICESIMI_3M3', label: '3° Migliore' } ] },
+    { date: '2 Lug - 01:30',  teams: [ { dbString: 'R32_SEDICESIMI_1L', label: '1° Gruppo L' }, { dbString: 'R32_SEDICESIMI_3M4', label: '3° Migliore' } ] },
+    { date: '4 Lug - 01:30',  teams: [ { dbString: 'R32_SEDICESIMI_1J', label: '1° Gruppo J' }, { dbString: 'R32_SEDICESIMI_2H', label: '2° Gruppo H' } ] },
+    { date: '4 Lug - 02:00',  teams: [ { dbString: 'R32_SEDICESIMI_2D', label: '2° Gruppo D' }, { dbString: 'R32_SEDICESIMI_2G', label: '2° Gruppo G' } ] },
+    { date: '3 Lug - 04:00',  teams: [ { dbString: 'R32_SEDICESIMI_1B', label: '1° Gruppo B' }, { dbString: 'R32_SEDICESIMI_3M7', label: '3° Migliore' } ] },
+    { date: '4 Lug - 02:00',  teams: [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ] },
   ],
   R16: [
-    { date: '7 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ] },
-    { date: '7 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
-    { date: '8 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ] },
-    { date: '8 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ] },
-    { date: '9 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ] },
-    { date: '9 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V11', label: 'Vinc. Sedicesimi 11' }, { dbString: 'R16_OTTAVI_V12', label: 'Vinc. Sedicesimi 12' } ] },
-    { date: '10 Lug - 18:00', teams: [ { dbString: 'R16_OTTAVI_V13', label: 'Vinc. Sedicesimi 13' }, { dbString: 'R16_OTTAVI_V14', label: 'Vinc. Sedicesimi 14' } ] },
-    { date: '10 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V15', label: 'Vinc. Sedicesimi 15' }, { dbString: 'R16_OTTAVI_V16', label: 'Vinc. Sedicesimi 16' } ] },
+    { date: '4 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ] },
+    { date: '5 Lug - 03:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
+    { date: '5 Lug - 22:00', teams: [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ] },
+    { date: '6 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ] },
+    { date: '6 Lug - 23:00', teams: [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ] },
+    { date: '7 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V11', label: 'Vinc. Sedicesimi 11' }, { dbString: 'R16_OTTAVI_V12', label: 'Vinc. Sedicesimi 12' } ] },
+    { date: '7 Lug - 22:00', teams: [ { dbString: 'R16_OTTAVI_V13', label: 'Vinc. Sedicesimi 13' }, { dbString: 'R16_OTTAVI_V14', label: 'Vinc. Sedicesimi 14' } ] },
+    { date: '8 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V15', label: 'Vinc. Sedicesimi 15' }, { dbString: 'R16_OTTAVI_V16', label: 'Vinc. Sedicesimi 16' } ] },
   ],
   QF: [
-    { date: '13 Lug - 18:00', teams: [ { dbString: 'QF_QUARTI_V1', label: 'Vinc. Ottavi 1' }, { dbString: 'QF_QUARTI_V2', label: 'Vinc. Ottavi 2' } ] },
-    { date: '13 Lug - 21:00', teams: [ { dbString: 'QF_QUARTI_V3', label: 'Vinc. Ottavi 3' }, { dbString: 'QF_QUARTI_V4', label: 'Vinc. Ottavi 4' } ] },
-    { date: '14 Lug - 18:00', teams: [ { dbString: 'QF_QUARTI_V5', label: 'Vinc. Ottavi 5' }, { dbString: 'QF_QUARTI_V6', label: 'Vinc. Ottavi 6' } ] },
-    { date: '14 Lug - 21:00', teams: [ { dbString: 'QF_QUARTI_V7', label: 'Vinc. Ottavi 7' }, { dbString: 'QF_QUARTI_V8', label: 'Vinc. Ottavi 8' } ] },
+    { date: '9 Lug - 22:00', teams: [ { dbString: 'QF_QUARTI_V1', label: 'Vinc. Ottavi 1' }, { dbString: 'QF_QUARTI_V2', label: 'Vinc. Ottavi 2' } ] },
+    { date: '10 Lug - 04:00', teams: [ { dbString: 'QF_QUARTI_V3', label: 'Vinc. Ottavi 3' }, { dbString: 'QF_QUARTI_V4', label: 'Vinc. Ottavi 4' } ] },
+    { date: '10 Lug - 22:00', teams: [ { dbString: 'QF_QUARTI_V5', label: 'Vinc. Ottavi 5' }, { dbString: 'QF_QUARTI_V6', label: 'Vinc. Ottavi 6' } ] },
+    { date: '11 Lug - 03:00', teams: [ { dbString: 'QF_QUARTI_V7', label: 'Vinc. Ottavi 7' }, { dbString: 'QF_QUARTI_V8', label: 'Vinc. Ottavi 8' } ] },
   ],
   SF: [
-    { date: '17 Lug - 21:00', teams: [ { dbString: 'SF_SEMIFINALI_V1', label: 'Vinc. Quarti 1' }, { dbString: 'SF_SEMIFINALI_V2', label: 'Vinc. Quarti 2' } ] },
-    { date: '18 Lug - 21:00', teams: [ { dbString: 'SF_SEMIFINALI_V3', label: 'Vinc. Quarti 3' }, { dbString: 'SF_SEMIFINALI_V4', label: 'Vinc. Quarti 4' } ] },
+    { date: '15 Lug - 02:00', teams: [ { dbString: 'SF_SEMIFINALI_V1', label: 'Vinc. Quarti 1' }, { dbString: 'SF_SEMIFINALI_V2', label: 'Vinc. Quarti 2' } ] },
+    { date: '16 Lug - 02:00', teams: [ { dbString: 'SF_SEMIFINALI_V3', label: 'Vinc. Quarti 3' }, { dbString: 'SF_SEMIFINALI_V4', label: 'Vinc. Quarti 4' } ] },
   ],
   F: [
-    { date: '21 Lug - 21:00', teams: [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ] }
+    { date: '19 Lug - 21:00', teams: [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ] }
   ]
 };
 
@@ -884,13 +885,28 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio) */}
+             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio, ORIDNE CRONOLOGICO) */}
              {bracketViewMode === 'MATCHES' && (
                <div className="max-w-4xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
                    const isExpanded = expandedStage === stg.id;
                    const nextStg = getNextStage(stg.id);
-                   const matches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
+                   
+                   // Qui ordiniamo dinamicamente i match in ordine cronologico solo per questa vista!
+                   const rawMatches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
+                   const matches = [...rawMatches].sort((a, b) => {
+                      const parseDate = (d: string) => {
+                         if (!d) return 0;
+                         const parts = d.split(' - ');
+                         if (parts.length !== 2) return 0;
+                         const [dayStr, monthStr] = parts[0].split(' ');
+                         // Riconosce "Giu" come giugno (mese 5 in js), altrimenti è luglio (mese 6)
+                         const m = monthStr.toLowerCase().startsWith('giu') ? 5 : 6;
+                         const [h, min] = parts[1].split(':');
+                         return new Date(2026, m, parseInt(dayStr), parseInt(h), parseInt(min)).getTime();
+                      };
+                      return parseDate(a.date) - parseDate(b.date);
+                   });
                    
                    return (
                      <div key={stg.id} className={`bg-slate-900/40 border rounded-[2rem] overflow-hidden transition-all shadow-xl ${isExpanded ? 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'border-slate-800'}`}>
