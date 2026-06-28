@@ -802,7 +802,7 @@ export default function TuttiPronosticiPage() {
                 </button>
              </div>
 
-             {/* VISTA 1: ALBERO CON SCORRIMENTO ORIZZONTALE NATIVO */}
+             {/* VISTA 1: ALBERO CON SCORRIMENTO ORIZZONTALE NATIVO E DATA */}
              {bracketViewMode === 'TREE' && (
                <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
                  
@@ -816,17 +816,17 @@ export default function TuttiPronosticiPage() {
                  {/* CONTENITORE CON SCROLL LATERALE NATIVO E CENTRATURA AUTOMATICA */}
                  <div 
                    ref={bracketContainerRef}
-                   className="w-full overflow-x-auto custom-scrollbar pb-10 px-4"
+                   className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
                  >
-                    <div className="flex flex-row items-stretch justify-start min-w-max gap-3 sm:gap-4 pb-4 px-4 mx-auto">
+                    <div className="flex flex-row items-stretch justify-start min-w-max gap-4 pt-16 pb-4 px-4 mx-auto">
                        
                        {/* LATO SINISTRO */}
-                       <div className="flex gap-3 sm:gap-4">
+                       <div className="flex gap-4">
                          {leftStages.map(stage => (
-                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
-                             <div className="absolute top-0 left-0 w-full text-center z-10">
-                                <h3 className="text-[8px] sm:text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-3 py-1.5 rounded-full border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
+                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
+                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
                              {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
@@ -835,7 +835,7 @@ export default function TuttiPronosticiPage() {
                        </div>
 
                        {/* COLONNA CENTRALE (FINALE E VINCITORE) */}
-                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-16 pb-8 gap-8 z-20">
+                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-12 pb-4 gap-8 z-20">
                           {/* CAMPIONE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
@@ -850,25 +850,28 @@ export default function TuttiPronosticiPage() {
                           {/* FINALE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="text-center mb-3 z-10">
-                               <h3 className="text-[9px] sm:text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-3 py-1.5 rounded-full border border-blue-500/30 shadow-md">
-                                 FINALE <span className="opacity-70 ml-1">(+{STAGE_POINTS.F} PT)</span>
+                               <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md">
+                                 FINALE <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS.F} PT)</span>
                                </h3>
                             </div>
                             <div className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-xl overflow-hidden shadow-xl flex flex-col transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
-                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0][0]) ? renderSlot(BRACKET_MATCHES.F[0][0], 'F', true) : null}
+                               <div className="bg-slate-950 py-1 text-center border-b border-slate-800 rounded-t-xl">
+                                 <span className="text-[6.5px] text-blue-400 font-black uppercase tracking-widest">{BRACKET_MATCHES.F[0]?.date}</span>
+                               </div>
+                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0].teams[0]) ? renderSlot(BRACKET_MATCHES.F[0].teams[0], 'F', true) : null}
                                <div className="h-px w-full bg-slate-800"></div>
-                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0][1]) ? renderSlot(BRACKET_MATCHES.F[0][1], 'F', false) : null}
+                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0].teams[1]) ? renderSlot(BRACKET_MATCHES.F[0].teams[1], 'F', false) : null}
                             </div>
                           </div>
                        </div>
 
                        {/* LATO DESTRO */}
-                       <div className="flex gap-3 sm:gap-4">
+                       <div className="flex gap-4">
                          {rightStages.map(stage => (
-                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-16 pb-8">
-                             <div className="absolute top-0 left-0 w-full text-center z-10">
-                                <h3 className="text-[8px] sm:text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md inline-block px-3 py-1.5 rounded-full border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 ml-1">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
+                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
+                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
                              {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
@@ -881,7 +884,7 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: PARTITE (Testa a Testa) */}
+             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio) */}
              {bracketViewMode === 'MATCHES' && (
                <div className="max-w-4xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
