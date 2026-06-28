@@ -158,7 +158,6 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
-  const [bracketScale, setBracketScale] = useState(1);
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
@@ -211,25 +210,20 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
+  // CENTRATURA AUTOMATICA DELLO SCROLL SULLA FINALE
   useEffect(() => {
-    const handleResize = () => {
-      if (activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
-        const screenWidth = window.innerWidth;
-        const targetWidth = 1350; 
-        
-        if (screenWidth < targetWidth) {
-          setBracketScale((screenWidth - 8) / targetWidth); 
-        } else {
-          setBracketScale(1);
+    if (!loading && activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
+      const timer = setTimeout(() => {
+        if (bracketContainerRef.current) {
+          const el = bracketContainerRef.current;
+          el.scrollTo({
+            left: (el.scrollWidth - el.clientWidth) / 2,
+            behavior: 'smooth'
+          });
         }
-      }
-    };
-    
-    if (!loading && activeTab === 'BRACKET') {
-        handleResize();
-        window.addEventListener('resize', handleResize);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-    return () => window.removeEventListener('resize', handleResize);
   }, [activeTab, bracketViewMode, loading]);
 
   const toggleDay = (dayName: string) => {
@@ -457,6 +451,7 @@ export default function TuttiPronosticiPage() {
       setModalSearchQuery(''); 
   };
 
+  // SLOT DESIGN VERTICALE: Bandiera al centro, testo wrap in basso
   const renderSlot = (pool: { dbString: string, label: string }, stage: string, isTop: boolean) => {
     const offTeam = getOfficialTeamForSlot(pool.dbString);
     let correctUsers: any[] = [];
@@ -768,62 +763,56 @@ export default function TuttiPronosticiPage() {
                 </button>
              </div>
 
-             {/* VISTA 1: ALBERO CON SCALING PERFETTO */}
+             {/* VISTA 1: ALBERO CON SCORRIMENTO ORIZZONTALE NATIVO */}
              {bracketViewMode === 'TREE' && (
                <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
                  
                  <div className="text-center mb-6 px-4">
                     <h2 className="text-2xl font-black text-blue-400 italic tracking-tight uppercase">Tabellone Reale</h2>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 leading-relaxed">
-                      Il colpo d&apos;occhio su tutti i pronostici! ⚽
+                      {"Scorri ai lati per esplorare l'albero."} <br className="sm:hidden" />{"Clicca su un pronostico per vedere i dettagli! ⚽"}
                     </p>
                  </div>
 
-                 <div className="w-full flex justify-center overflow-hidden px-1" style={{ height: `${1000 * bracketScale}px` }}>
-                    <div 
-                      style={{ 
-                        transform: `scale(${bracketScale})`, 
-                        transformOrigin: 'top center', 
-                        width: '1350px', 
-                        height: '1000px' 
-                      }} 
-                      className="flex flex-row items-stretch justify-center gap-4 pt-4"
-                    >
+                 {/* CONTENITORE CON SCROLL LATERALE NATIVO E CENTRATURA AUTOMATICA */}
+                 <div 
+                   ref={bracketContainerRef}
+                   className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
+                 >
+                    <div className="flex flex-row items-stretch justify-start min-w-max gap-4 pt-16 pb-4 px-4 mx-auto">
                        
                        {/* LATO SINISTRO */}
-                       <div className="flex gap-4 h-full">
+                       <div className="flex gap-4">
                          {leftStages.map(stage => (
-                           <div key={`left-${stage.id}`} className="flex flex-col w-[130px] shrink-0 h-full">
-                             <div className="h-14 flex flex-col items-center justify-center shrink-0 mb-2">
-                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md text-center leading-tight">
-                                  {stage.title} <br/><span className="text-[8px] opacity-70 block mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
+                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
+                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
-                             <div className="flex-1 flex flex-col justify-around gap-2 pb-2">
-                               {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
-                             </div>
+                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
                            </div>
                          ))}
                        </div>
 
                        {/* COLONNA CENTRALE (FINALE E VINCITORE) */}
-                       <div className="flex flex-col items-center w-[160px] shrink-0 h-full gap-10 pt-16">
+                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-12 pb-4 gap-8 z-20">
                           {/* CAMPIONE */}
                           <div className="w-full flex flex-col items-center">
                             <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
                               <div className="bg-yellow-500/10 py-1.5 flex flex-col items-center border-b border-yellow-500/30">
-                                <Trophy size={18} className="text-yellow-500 drop-shadow-md mb-0.5" />
-                                <span className="text-[8px] font-black uppercase text-yellow-500 tracking-[0.2em]">Campione <span className="opacity-70 ml-1">(+{STAGE_POINTS.WINNER} PT)</span></span>
+                                <Trophy size={20} className="text-yellow-500 drop-shadow-md mb-1" />
+                                <span className="text-[9px] font-black uppercase text-yellow-500 tracking-[0.2em]">Campione <span className="opacity-70 ml-1">(+{STAGE_POINTS.WINNER} PT)</span></span>
                               </div>
-                              {renderSlot({ dbString: 'WINNER', label: 'Vincitore' }, 'WINNER', false)}
+                              {renderSlot({ dbString: 'WINNER_VINCITORE_1', label: 'Vincitore' }, 'WINNER', false)}
                             </div>
                           </div>
 
                           {/* FINALE */}
                           <div className="w-full flex flex-col items-center">
-                            <div className="text-center mb-2 z-10">
-                               <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md text-center leading-tight">
-                                 FINALE <br/><span className="opacity-70 text-[8px] mt-0.5 block">(+{STAGE_POINTS.F} PT)</span>
+                            <div className="text-center mb-3 z-10">
+                               <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md">
+                                 FINALE <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS.F} PT)</span>
                                </h3>
                             </div>
                             <div className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-xl overflow-hidden shadow-xl flex flex-col transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
@@ -835,17 +824,15 @@ export default function TuttiPronosticiPage() {
                        </div>
 
                        {/* LATO DESTRO */}
-                       <div className="flex gap-4 h-full">
+                       <div className="flex gap-4">
                          {rightStages.map(stage => (
-                           <div key={`right-${stage.id}`} className="flex flex-col w-[130px] shrink-0 h-full">
-                             <div className="h-14 flex flex-col items-center justify-center shrink-0 mb-2">
-                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md text-center leading-tight">
-                                  {stage.title} <br/><span className="opacity-70 text-[8px] mt-0.5 block">(+{STAGE_POINTS[stage.id]} PT)</span>
+                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
+                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
+                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md">
+                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
-                             <div className="flex-1 flex flex-col justify-around gap-2 pb-2">
-                               {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
-                             </div>
+                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
                            </div>
                          ))}
                        </div>
