@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame, CalendarDays,
-  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X, Swords
+  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X, Swords, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
@@ -83,14 +83,14 @@ const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch>
     { date: '4 Lug - 02:00',  teams: [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ] },
   ],
   R16: [
-    { date: '4 Lug - 21:00', teams: [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ] },
-    { date: '5 Lug - 03:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
-    { date: '5 Lug - 22:00', teams: [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ] },
-    { date: '6 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ] },
-    { date: '6 Lug - 23:00', teams: [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ] },
-    { date: '7 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V11', label: 'Vinc. Sedicesimi 11' }, { dbString: 'R16_OTTAVI_V12', label: 'Vinc. Sedicesimi 12' } ] },
-    { date: '7 Lug - 22:00', teams: [ { dbString: 'R16_OTTAVI_V13', label: 'Vinc. Sedicesimi 13' }, { dbString: 'R16_OTTAVI_V14', label: 'Vinc. Sedicesimi 14' } ] },
-    { date: '8 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V15', label: 'Vinc. Sedicesimi 15' }, { dbString: 'R16_OTTAVI_V16', label: 'Vinc. Sedicesimi 16' } ] },
+    { date: '4 Lug - 19:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
+    { date: '4 Lug - 23:00', teams: [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ] },
+    { date: '5 Lug - 03:00', teams: [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ] },
+    { date: '5 Lug - 22:00', teams: [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ] },
+    { date: '6 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ] },
+    { date: '6 Lug - 23:00', teams: [ { dbString: 'R16_OTTAVI_V11', label: 'Vinc. Sedicesimi 11' }, { dbString: 'R16_OTTAVI_V12', label: 'Vinc. Sedicesimi 12' } ] },
+    { date: '7 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V13', label: 'Vinc. Sedicesimi 13' }, { dbString: 'R16_OTTAVI_V14', label: 'Vinc. Sedicesimi 14' } ] },
+    { date: '7 Lug - 23:00', teams: [ { dbString: 'R16_OTTAVI_V15', label: 'Vinc. Sedicesimi 15' }, { dbString: 'R16_OTTAVI_V16', label: 'Vinc. Sedicesimi 16' } ] },
   ],
   QF: [
     { date: '9 Lug - 22:00', teams: [ { dbString: 'QF_QUARTI_V1', label: 'Vinc. Ottavi 1' }, { dbString: 'QF_QUARTI_V2', label: 'Vinc. Ottavi 2' } ] },
@@ -105,6 +105,37 @@ const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch>
   F: [
     { date: '19 Lug - 21:00', teams: [ { dbString: 'F_FINALE_1', label: 'Finalista 1' }, { dbString: 'F_FINALE_2', label: 'Finalista 2' } ] }
   ]
+};
+
+// Funzione globale per convertire le date stringa in un valore millisecondi per ordinamento e logiche
+const parseBracketDate = (d: string) => {
+  if (!d) return 0;
+  const parts = d.split(' - ');
+  if (parts.length !== 2) return 0;
+  const [dayStr, monthStr] = parts[0].split(' ');
+  const m = monthStr.toLowerCase().startsWith('giu') ? 5 : 6; // Giugno=5, Luglio=6 in Date JS
+  const [h, min] = parts[1].split(':');
+  return new Date(2026, m, parseInt(dayStr), parseInt(h), parseInt(min)).getTime();
+};
+
+// Funzione automatica per determinare la colonna attiva in base alla data di oggi!
+const getInitialBracketCol = () => {
+  const now = new Date().getTime();
+  const stagesOrder: Exclude<BracketStageType, 'WINNER'>[] = ['R32', 'R16', 'QF', 'SF', 'F'];
+  
+  for (let i = 0; i < stagesOrder.length; i++) {
+    const matches = BRACKET_MATCHES[stagesOrder[i]];
+    let lastMatchTime = 0;
+    matches.forEach(m => {
+      const t = parseBracketDate(m.date);
+      if (t > lastMatchTime) lastMatchTime = t;
+    });
+    // Se la data di oggi è precedente all'ultima partita del turno + 3 ore di tolleranza, mostra questa fase!
+    if (now <= lastMatchTime + (3 * 3600000)) {
+      return i;
+    }
+  }
+  return 4; // Se tutto il torneo è finito, apri direttamente la Finale
 };
 
 const normalizeStage = (s: string) => {
@@ -187,7 +218,8 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
-  const [bracketScale, setBracketScale] = useState(1);
+  // STATO PER LA COMPRESSIONE A FISARMONICA DEL TABELLONE, con Auto-Check del giorno odierno!
+  const [activeBracketCol, setActiveBracketCol] = useState(getInitialBracketCol);
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
@@ -240,21 +272,19 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
-  // CENTRATURA AUTOMATICA DELLO SCROLL SULLA FINALE
+  // Centratura morbida quando si naviga a fisarmonica nel bracket
   useEffect(() => {
-    if (!loading && activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
-      const timer = setTimeout(() => {
-        if (bracketContainerRef.current) {
-          const el = bracketContainerRef.current;
-          el.scrollTo({
-            left: (el.scrollWidth - el.clientWidth) / 2,
-            behavior: 'smooth'
-          });
-        }
-      }, 300);
-      return () => clearTimeout(timer);
+    if (bracketContainerRef.current && activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
+      bracketContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
     }
-  }, [activeTab, bracketViewMode, loading]);
+  }, [activeBracketCol, bracketViewMode, activeTab]);
+
+  const scrollBracket = (direction: 'left' | 'right') => {
+    if (bracketContainerRef.current) {
+      const scrollAmount = 240;
+      bracketContainerRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   const toggleDay = (dayName: string) => {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
@@ -488,6 +518,12 @@ export default function TuttiPronosticiPage() {
        correctUsers = getUsersWhoPickedTeam(stage, offTeam);
     }
 
+    // Controllo se la squadra ha superato ufficialmente QUESTO turno per darle il badge verde
+    const nextStg = getNextStage(stage);
+    const hasAdvanced = offTeam && (
+      stage === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(offTeam))
+    );
+
     return (
       <div className={`p-2 flex flex-col justify-center min-h-[85px] relative ${isTop ? 'border-b-2 border-slate-800/80' : ''}`}>
          {/* Squadra Ufficiale */}
@@ -496,9 +532,9 @@ export default function TuttiPronosticiPage() {
              <>
                <div className="relative">
                  {getFlagUrl(offTeam) ? <img src={getFlagUrl(offTeam)!} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700 shrink-0" alt="" /> : <Shield size={20} className="text-slate-500 shrink-0"/>}
-                 <CheckCircle2 size={12} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                 {hasAdvanced && <CheckCircle2 size={12} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] z-10" />}
                </div>
-               <span className="text-[10px] sm:text-[11px] font-black uppercase text-emerald-400 text-center leading-tight tracking-tight w-full drop-shadow-md whitespace-normal break-words line-clamp-2 mt-1">
+               <span className={`text-[10px] sm:text-[11px] font-black uppercase text-center leading-tight tracking-tight w-full drop-shadow-md whitespace-normal break-words line-clamp-2 mt-1 ${hasAdvanced ? 'text-emerald-400' : 'text-white'}`}>
                  {offTeam}
                </span>
              </>
@@ -548,18 +584,13 @@ export default function TuttiPronosticiPage() {
     </div>
   );
 
-  const leftStages = [
-    { id: 'R32', title: 'SEDICESIMI', matches: (BRACKET_MATCHES.R32 || []).slice(0, 8) },
-    { id: 'R16', title: 'OTTAVI', matches: (BRACKET_MATCHES.R16 || []).slice(0, 4) },
-    { id: 'QF', title: 'QUARTI', matches: (BRACKET_MATCHES.QF || []).slice(0, 2) },
-    { id: 'SF', title: 'SEMIFINALI', matches: (BRACKET_MATCHES.SF || []).slice(0, 1) },
-  ];
-
-  const rightStages = [
-    { id: 'SF', title: 'SEMIFINALI', matches: (BRACKET_MATCHES.SF || []).slice(1, 2) },
-    { id: 'QF', title: 'QUARTI', matches: (BRACKET_MATCHES.QF || []).slice(2, 4) },
-    { id: 'R16', title: 'OTTAVI', matches: (BRACKET_MATCHES.R16 || []).slice(4, 8) },
-    { id: 'R32', title: 'SEDICESIMI', matches: (BRACKET_MATCHES.R32 || []).slice(8, 16) },
+  // Per il layout a fisarmonica (da SX a DX) utilizziamo l'intero array delle fasi in ordine
+  const allStages = [
+    { id: 'R32', title: 'SEDICESIMI', matches: BRACKET_MATCHES.R32 },
+    { id: 'R16', title: 'OTTAVI', matches: BRACKET_MATCHES.R16 },
+    { id: 'QF', title: 'QUARTI', matches: BRACKET_MATCHES.QF },
+    { id: 'SF', title: 'SEMIFINALI', matches: BRACKET_MATCHES.SF },
+    { id: 'F', title: 'FINALE', matches: BRACKET_MATCHES.F },
   ];
 
   const renderMatchCard = (match: any) => {
@@ -625,9 +656,12 @@ export default function TuttiPronosticiPage() {
                   </div>
                   <div className="flex flex-wrap gap-2 pt-1">
                      {group.users.map((u: any, i: number) => (
-                       <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(group.users.length - 1) > i ? ',' : ''}</span>
-                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                       <div key={i} className={`flex flex-col items-start bg-slate-950/50 px-2 py-1.5 rounded-lg border border-slate-800/50 ${u.username === data.currentUserUsername ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                         <div className="flex items-center gap-1.5 mb-0.5">
+                           <span className={`text-[11px] font-bold uppercase leading-none ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-300'}`}>{u.username}</span>
+                           <span className="text-[8px] font-black text-slate-500">#{u.ranking || '--'}</span>
+                         </div>
+                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-1">{u.full_name}</span>}
                        </div>
                      ))}
                   </div>
@@ -660,10 +694,15 @@ export default function TuttiPronosticiPage() {
       </main>
   );
 
-  const filteredModalUsers = selectedNode?.users.filter((u: any) => 
+  // Ordiniamo gli utenti nel modal per Ranking (dal #1 in poi)
+  const filteredModalUsers = (selectedNode?.users.filter((u: any) => 
      u.username?.toLowerCase().includes(modalSearchQuery.toLowerCase()) || 
      u.full_name?.toLowerCase().includes(modalSearchQuery.toLowerCase())
-  ) || [];
+  ) || []).sort((a: any, b: any) => {
+     const rankA = parseInt(a.ranking) || 9999;
+     const rankB = parseInt(b.ranking) || 9999;
+     return rankA - rankB;
+  });
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans overflow-x-hidden">
@@ -775,7 +814,7 @@ export default function TuttiPronosticiPage() {
 
         {/* --- 2. BRACKET TRIPLICE VISTA --- */}
         {activeTab === 'BRACKET' && (
-          <div className="space-y-6">
+          <div className="space-y-6 relative">
              <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 mb-6 max-w-sm mx-auto">
                 <button
                   onClick={() => setBracketViewMode('TREE')}
@@ -803,96 +842,106 @@ export default function TuttiPronosticiPage() {
                 </button>
              </div>
 
-             {/* VISTA 1: ALBERO CON SCORRIMENTO ORIZZONTALE NATIVO E DATA */}
+             {/* VISTA 1: ALBERO CON SCORRIMENTO A FISARMONICA (DA SX A DX) */}
              {bracketViewMode === 'TREE' && (
                <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
                  
-                 <div className="text-center mb-6 px-4">
-                    <h2 className="text-2xl font-black text-blue-400 italic tracking-tight uppercase">Tabellone Reale</h2>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 leading-relaxed">
-                      {"Scorri ai lati per esplorare l'albero."} <br className="sm:hidden" />{"Clicca su un pronostico per vedere i dettagli! ⚽"}
-                    </p>
+                 {/* Top Navigation Bar per la Fisarmonica */}
+                 <div className="flex items-center justify-between bg-slate-900/90 border border-slate-700 p-2 rounded-2xl mb-4 max-w-sm mx-4 sm:mx-auto shadow-xl z-30 relative backdrop-blur-md">
+                   <button 
+                     onClick={() => setActiveBracketCol(Math.max(0, activeBracketCol - 1))}
+                     disabled={activeBracketCol === 0}
+                     className="p-3 bg-slate-950 border border-slate-700 rounded-xl text-white hover:bg-slate-800 hover:border-blue-500 disabled:opacity-30 disabled:hover:border-slate-700 disabled:cursor-not-allowed transition-all"
+                   >
+                     <ChevronLeft size={20} />
+                   </button>
+                   <div className="flex flex-col items-center">
+                     <span className="text-[9px] font-black uppercase text-blue-400 tracking-[0.2em] mb-0.5">Scorri Fasi</span>
+                     <span className="text-xs sm:text-sm font-black text-white uppercase italic">
+                        {activeBracketCol === 4 ? 'VINCITORE' : allStages[activeBracketCol]?.title}
+                     </span>
+                   </div>
+                   <button 
+                     onClick={() => setActiveBracketCol(Math.min(4, activeBracketCol + 1))}
+                     disabled={activeBracketCol === 4}
+                     className="p-3 bg-slate-950 border border-slate-700 rounded-xl text-white hover:bg-slate-800 hover:border-blue-500 disabled:opacity-30 disabled:hover:border-slate-700 disabled:cursor-not-allowed transition-all"
+                   >
+                     <ChevronRight size={20} />
+                   </button>
                  </div>
 
-                 {/* CONTENITORE CON SCROLL LATERALE NATIVO E CENTRATURA AUTOMATICA */}
+                 {/* CONTENITORE CON SCROLL LATERALE NATIVO E COMPRESSIONE A FISARMONICA */}
                  <div 
                    ref={bracketContainerRef}
                    className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
                  >
-                    <div className="flex flex-row items-stretch justify-start min-w-max gap-4 pt-16 pb-4 px-4 mx-auto">
+                    <div className="flex flex-row items-stretch justify-start min-w-max gap-4 sm:gap-6 pt-4 pb-4 px-4 mx-auto transition-all duration-500">
                        
-                       {/* LATO SINISTRO */}
-                       <div className="flex gap-4">
-                         {leftStages.map(stage => (
-                           <div key={`left-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
+                       {/* MAPPA TUTTE LE FASI DA SINISTRA A DESTRA */}
+                       {allStages.map((stage, colIndex) => {
+                         const isCollapsed = colIndex < activeBracketCol;
+
+                         if (isCollapsed) {
+                           return (
+                             <div 
+                               key={`col-collapsed-${stage.id}`} 
+                               onClick={() => setActiveBracketCol(colIndex)}
+                               className="flex flex-col justify-center items-center w-10 sm:w-14 shrink-0 cursor-pointer bg-slate-950 border border-slate-800 rounded-[2rem] hover:border-blue-500/50 hover:bg-slate-900 transition-all shadow-md group relative min-h-[400px] mt-10 mb-4"
+                             >
+                                <div className="absolute top-4 w-full flex justify-center">
+                                   <ChevronLeft size={16} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
+                                </div>
+                                <span className="transform -rotate-90 whitespace-nowrap font-black uppercase tracking-[0.3em] text-slate-500 group-hover:text-blue-400 transition-colors text-[10px] sm:text-xs">
+                                   {stage.title}
+                                </span>
+                             </div>
+                           );
+                         }
+
+                         return (
+                           <div key={`col-${stage.id}`} className="flex flex-col justify-around w-[180px] shrink-0 relative pt-14 pb-4 transition-all duration-500">
                              <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
-                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
+                                <h3 className="text-[10px] sm:text-[11px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/30 shadow-md flex items-center justify-center gap-1">
+                                  {stage.title} <span className="opacity-70 text-[9px]">(+{STAGE_POINTS[stage.id]} PT)</span>
                                 </h3>
                              </div>
                              {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
                            </div>
-                         ))}
-                       </div>
+                         );
+                       })}
 
-                       {/* COLONNA CENTRALE (FINALE E VINCITORE) */}
-                       <div className="flex flex-col justify-center items-center w-[160px] shrink-0 relative pt-12 pb-4 gap-8 z-20">
-                          {/* CAMPIONE */}
-                          <div className="w-full flex flex-col items-center">
-                            <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
-                              <div className="bg-yellow-500/10 py-1.5 flex flex-col items-center border-b border-yellow-500/30">
-                                <Trophy size={20} className="text-yellow-500 drop-shadow-md mb-1" />
-                                <span className="text-[9px] font-black uppercase text-yellow-500 tracking-[0.2em]">Campione <span className="opacity-70 ml-1">(+{STAGE_POINTS.WINNER} PT)</span></span>
+                       {/* COLONNA VINCITORE ALL'ESTREMA DESTRA (SEMPRE VISIBILE SE SIAMO ALLA FINE) */}
+                       {activeBracketCol <= 4 && (
+                         <div className="flex flex-col justify-center items-center w-[180px] shrink-0 relative pt-14 pb-4 z-20 transition-all duration-500">
+                            <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
+                                <h3 className="text-[10px] sm:text-[11px] font-black uppercase text-yellow-500 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-yellow-500/30 shadow-md flex items-center justify-center gap-1">
+                                  CAMPIONE <span className="opacity-70 text-[9px]">(+{STAGE_POINTS.WINNER} PT)</span>
+                                </h3>
+                            </div>
+                            <div className="w-full flex flex-col items-center">
+                              <div className="bg-gradient-to-b from-yellow-900/40 to-slate-950 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.15)] w-full flex flex-col overflow-hidden transition-all hover:border-yellow-400 hover:-translate-y-0.5">
+                                <div className="bg-yellow-500/10 py-3 flex flex-col items-center border-b border-yellow-500/30">
+                                  <Trophy size={32} className="text-yellow-500 drop-shadow-md" />
+                                </div>
+                                {renderSlot({ dbString: 'WINNER_VINCITORE_1', label: 'Vincitore' }, 'WINNER', false)}
                               </div>
-                              {renderSlot({ dbString: 'WINNER_VINCITORE_1', label: 'Vincitore' }, 'WINNER', false)}
                             </div>
-                          </div>
-
-                          {/* FINALE */}
-                          <div className="w-full flex flex-col items-center">
-                            <div className="text-center mb-3 z-10">
-                               <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md">
-                                 FINALE <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS.F} PT)</span>
-                               </h3>
-                            </div>
-                            <div className="w-full bg-slate-900/80 backdrop-blur-md border-2 border-slate-700/80 rounded-xl overflow-hidden shadow-xl flex flex-col transition-all duration-300 hover:border-blue-500 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-0.5">
-                               <div className="bg-slate-950 py-1 text-center border-b border-slate-800 rounded-t-xl">
-                                 <span className="text-[6.5px] text-blue-400 font-black uppercase tracking-widest">{BRACKET_MATCHES.F[0]?.date}</span>
-                               </div>
-                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0].teams[0]) ? renderSlot(BRACKET_MATCHES.F[0].teams[0], 'F', true) : null}
-                               <div className="h-px w-full bg-slate-800"></div>
-                               {(BRACKET_MATCHES.F && BRACKET_MATCHES.F[0] && BRACKET_MATCHES.F[0].teams[1]) ? renderSlot(BRACKET_MATCHES.F[0].teams[1], 'F', false) : null}
-                            </div>
-                          </div>
-                       </div>
-
-                       {/* LATO DESTRO */}
-                       <div className="flex gap-4">
-                         {rightStages.map(stage => (
-                           <div key={`right-${stage.id}`} className="flex flex-col justify-around w-[120px] shrink-0 relative pt-12 pb-4">
-                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
-                                <h3 className="text-[10px] font-black uppercase text-blue-400 tracking-widest bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-500/30 shadow-md">
-                                  {stage.title} <span className="opacity-70 block text-[8px] mt-0.5">(+{STAGE_POINTS[stage.id]} PT)</span>
-                                </h3>
-                             </div>
-                             {stage.matches.map((m, i) => renderMatchBlock(m as any, stage.id, i))}
-                           </div>
-                         ))}
-                       </div>
+                         </div>
+                       )}
 
                     </div>
                  </div>
                </div>
              )}
 
-             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio, ORIDNE CRONOLOGICO) */}
+             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio, ORDINE CRONOLOGICO) */}
              {bracketViewMode === 'MATCHES' && (
                <div className="max-w-4xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
                    const isExpanded = expandedStage === stg.id;
                    const nextStg = getNextStage(stg.id);
                    
-                   // Qui ordiniamo dinamicamente i match in ordine cronologico solo per questa vista!
+                   // Ordiniamo dinamicamente i match in ordine cronologico solo per questa vista
                    const rawMatches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
                    const matches = [...rawMatches].sort((a, b) => {
                       const parseDate = (d: string) => {
@@ -900,7 +949,6 @@ export default function TuttiPronosticiPage() {
                          const parts = d.split(' - ');
                          if (parts.length !== 2) return 0;
                          const [dayStr, monthStr] = parts[0].split(' ');
-                         // Riconosce "Giu" come giugno (mese 5 in js), altrimenti è luglio (mese 6)
                          const m = monthStr.toLowerCase().startsWith('giu') ? 5 : 6;
                          const [h, min] = parts[1].split(':');
                          return new Date(2026, m, parseInt(dayStr), parseInt(h), parseInt(min)).getTime();
@@ -935,6 +983,10 @@ export default function TuttiPronosticiPage() {
                                 const usersA = isTBDA ? [] : getUsersWhoPickedTeam(nextStg, teamA);
                                 const usersB = isTBDB ? [] : getUsersWhoPickedTeam(nextStg, teamB);
 
+                                // Controllo badge qualificazione per visualizzazione Matches
+                                const hasAdvancedA = teamA && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamA)));
+                                const hasAdvancedB = teamB && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamB)));
+
                                 return (
                                   <div key={idx} className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col relative overflow-hidden shadow-lg">
                                     <div className="text-center mb-4 border-b border-slate-800/50 pb-2">
@@ -947,8 +999,11 @@ export default function TuttiPronosticiPage() {
                                        <div className="flex-1 flex flex-col items-center">
                                           {!isTBDA ? (
                                              <>
-                                                {getFlagUrl(teamA) ? <img src={getFlagUrl(teamA)!} className="w-10 h-6 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={24} className="text-slate-500"/>}
-                                                <span className="mt-2 text-xs font-black uppercase text-white tracking-tight text-center">{formatTeamName(teamA)}</span>
+                                                <div className="relative">
+                                                   {getFlagUrl(teamA) ? <img src={getFlagUrl(teamA)!} className="w-10 h-6 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={24} className="text-slate-500"/>}
+                                                   {hasAdvancedA && <CheckCircle2 size={14} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] z-10" />}
+                                                </div>
+                                                <span className={`mt-2 text-xs font-black uppercase tracking-tight text-center ${hasAdvancedA ? 'text-emerald-400' : 'text-white'}`}>{formatTeamName(teamA)}</span>
                                                 
                                                 <div className="mt-3 w-full px-1">
                                                    {usersA.length > 0 ? (
@@ -982,8 +1037,11 @@ export default function TuttiPronosticiPage() {
                                        <div className="flex-1 flex flex-col items-center">
                                           {!isTBDB ? (
                                              <>
-                                                {getFlagUrl(teamB) ? <img src={getFlagUrl(teamB)!} className="w-10 h-6 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={24} className="text-slate-500"/>}
-                                                <span className="mt-2 text-xs font-black uppercase text-white tracking-tight text-center">{formatTeamName(teamB)}</span>
+                                                <div className="relative">
+                                                   {getFlagUrl(teamB) ? <img src={getFlagUrl(teamB)!} className="w-10 h-6 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={24} className="text-slate-500"/>}
+                                                   {hasAdvancedB && <CheckCircle2 size={14} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] z-10" />}
+                                                </div>
+                                                <span className={`mt-2 text-xs font-black uppercase tracking-tight text-center ${hasAdvancedB ? 'text-emerald-400' : 'text-white'}`}>{formatTeamName(teamB)}</span>
                                                 
                                                 <div className="mt-3 w-full px-1">
                                                    {usersB.length > 0 ? (
@@ -1085,9 +1143,12 @@ export default function TuttiPronosticiPage() {
                                   </div>
                                   <div className="flex flex-wrap gap-2 pt-1">
                                      {users.map((u: any, i: number) => (
-                                       <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                         <span className="text-[11px] font-bold uppercase leading-none">{u.username}{(users.length - 1) > i ? ',' : ''}</span>
-                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                       <div key={i} className={`flex flex-col items-start bg-slate-950/50 px-2 py-1.5 rounded-lg border border-slate-800/50 ${u.username === data.currentUserUsername ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                                         <div className="flex items-center gap-1.5 mb-0.5">
+                                           <span className={`text-[11px] font-bold uppercase leading-none ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-300'}`}>{u.username}</span>
+                                           <span className="text-[8px] font-black text-slate-500">#{u.ranking || '--'}</span>
+                                         </div>
+                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-1">{u.full_name}</span>}
                                        </div>
                                      ))}
                                   </div>
@@ -1281,9 +1342,12 @@ export default function TuttiPronosticiPage() {
                          </div>
                          <div className="flex flex-wrap gap-2 pt-1">
                             {w.users.map((u: any, i: number) => (
-                               <div key={i} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                 <span className="text-[10px] font-bold uppercase leading-none">{u.username}{(w.users.length - 1) > i ? ',' : ''}</span>
-                                 {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                               <div key={i} className={`flex flex-col items-start bg-slate-950/50 px-2 py-1.5 rounded-lg border border-slate-800/50 ${u.username === data.currentUserUsername ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                                 <div className="flex items-center gap-1.5 mb-0.5">
+                                   <span className={`text-[10px] font-bold uppercase leading-none ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-300'}`}>{u.username}</span>
+                                   <span className="text-[8px] font-black text-slate-500">#{u.ranking || '--'}</span>
+                                 </div>
+                                 {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-1">{u.full_name}</span>}
                                </div>
                             ))}
                          </div>
@@ -1354,9 +1418,12 @@ export default function TuttiPronosticiPage() {
                                  <div className="flex flex-wrap gap-2 pt-1 items-center">
                                     <span className="text-slate-500 mr-1 uppercase font-black text-[8px] tracking-widest">Colpevoli:</span> 
                                     {usersArray.map((u: any, index: number) => (
-                                       <div key={index} className={`flex flex-col ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-400'}`}>
-                                         <span className="text-[10px] font-bold uppercase leading-none">{u.username}{(usersArray.length - 1) > index ? ',' : ''}</span>
-                                         {u.full_name && <span className="text-[8.5px] sm:text-[9.5px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">{u.full_name}</span>}
+                                       <div key={index} className={`flex items-center gap-1.5 bg-slate-950/50 px-2 py-1.5 rounded-lg border border-slate-800/50 ${u.username === data.currentUserUsername ? 'ring-1 ring-yellow-500/50' : ''}`}>
+                                         <div className="flex flex-col items-start">
+                                           <span className={`text-[10px] font-bold uppercase leading-none ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-300'}`}>{u.username}</span>
+                                           {u.full_name && <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-1 mt-0.5">{u.full_name}</span>}
+                                         </div>
+                                         <span className="text-[8px] font-black text-slate-500 ml-1">#{u.ranking || '--'}</span>
                                        </div>
                                     ))}
                                  </div>
@@ -1416,8 +1483,17 @@ export default function TuttiPronosticiPage() {
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
               {filteredModalUsers.map((u: any, i: number) => (
                 <div key={i} className={`flex flex-col p-3 rounded-xl border transition-colors ${u.username === data.currentUserUsername ? 'bg-yellow-500/10 border-yellow-500/30 ring-1 ring-yellow-500/50' : 'bg-slate-950 border-slate-800 hover:border-slate-600'}`}>
-                  <span className={`text-sm font-black uppercase italic ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-white'}`}>{u.username}</span>
-                  {u.full_name && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{u.full_name}</span>}
+                  <div className="flex justify-between items-center">
+                     <div className="flex flex-col">
+                        <span className={`text-sm font-black uppercase italic ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-white'}`}>{u.username}</span>
+                        {u.full_name && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{u.full_name}</span>}
+                     </div>
+                     <div className="bg-slate-900 border border-slate-700 px-2 py-1 rounded-lg shadow-inner shrink-0 ml-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                           <Trophy size={10} className="text-yellow-500/70" /> #{u.ranking || '--'}
+                        </span>
+                     </div>
+                  </div>
                 </div>
               ))}
               
