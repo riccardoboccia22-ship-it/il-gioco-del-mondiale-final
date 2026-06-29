@@ -83,8 +83,8 @@ const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch>
     { date: '4 Lug - 02:00',  teams: [ { dbString: 'R32_SEDICESIMI_1K', label: '1° Gruppo K' }, { dbString: 'R32_SEDICESIMI_3M8', label: '3° Migliore' } ] },
   ],
   R16: [
-    { date: '4 Lug - 19:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
     { date: '4 Lug - 23:00', teams: [ { dbString: 'R16_OTTAVI_V1', label: 'Vinc. Sedicesimi 1' }, { dbString: 'R16_OTTAVI_V2', label: 'Vinc. Sedicesimi 2' } ] },
+    { date: '4 Lug - 19:00', teams: [ { dbString: 'R16_OTTAVI_V3', label: 'Vinc. Sedicesimi 3' }, { dbString: 'R16_OTTAVI_V4', label: 'Vinc. Sedicesimi 4' } ] },
     { date: '5 Lug - 03:00', teams: [ { dbString: 'R16_OTTAVI_V5', label: 'Vinc. Sedicesimi 5' }, { dbString: 'R16_OTTAVI_V6', label: 'Vinc. Sedicesimi 6' } ] },
     { date: '5 Lug - 22:00', teams: [ { dbString: 'R16_OTTAVI_V7', label: 'Vinc. Sedicesimi 7' }, { dbString: 'R16_OTTAVI_V8', label: 'Vinc. Sedicesimi 8' } ] },
     { date: '6 Lug - 04:00', teams: [ { dbString: 'R16_OTTAVI_V9', label: 'Vinc. Sedicesimi 9' }, { dbString: 'R16_OTTAVI_V10', label: 'Vinc. Sedicesimi 10' } ] },
@@ -218,7 +218,7 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
-  // STATO PER LA COMPRESSIONE A FISARMONICA DEL TABELLONE, con Auto-Check del giorno odierno!
+  // STATO PER LA COMPRESSIONE A FISARMONICA DEL TABELLONE, con Auto-Check del giorno odierno
   const [activeBracketCol, setActiveBracketCol] = useState(getInitialBracketCol);
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
@@ -278,13 +278,6 @@ export default function TuttiPronosticiPage() {
       bracketContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
     }
   }, [activeBracketCol, bracketViewMode, activeTab]);
-
-  const scrollBracket = (direction: 'left' | 'right') => {
-    if (bracketContainerRef.current) {
-      const scrollAmount = 240;
-      bracketContainerRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-    }
-  };
 
   const toggleDay = (dayName: string) => {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
