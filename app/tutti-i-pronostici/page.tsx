@@ -64,7 +64,6 @@ const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
 
 // Mappa esatta degli incroci del Tabellone per calcolare le sfide in tempo reale
 const BRACKET_LINKS = [
-  // R32 -> R16
   { stage1: ['R32_SEDICESIMI_1E', 'R32_SEDICESIMI_3M1'], winner: 'R16_OTTAVI_V1' },
   { stage1: ['R32_SEDICESIMI_1I', 'R32_SEDICESIMI_3M2'], winner: 'R16_OTTAVI_V2' },
   { stage1: ['R32_SEDICESIMI_2A', 'R32_SEDICESIMI_2B'], winner: 'R16_OTTAVI_V3' },
@@ -82,7 +81,6 @@ const BRACKET_LINKS = [
   { stage1: ['R32_SEDICESIMI_1B', 'R32_SEDICESIMI_3M7'], winner: 'R16_OTTAVI_V15' },
   { stage1: ['R32_SEDICESIMI_1K', 'R32_SEDICESIMI_3M8'], winner: 'R16_OTTAVI_V16' },
 
-  // R16 -> QF
   { stage1: ['R16_OTTAVI_V1', 'R16_OTTAVI_V2'], winner: 'QF_QUARTI_V1' },
   { stage1: ['R16_OTTAVI_V3', 'R16_OTTAVI_V4'], winner: 'QF_QUARTI_V2' },
   { stage1: ['R16_OTTAVI_V5', 'R16_OTTAVI_V6'], winner: 'QF_QUARTI_V3' },
@@ -92,17 +90,14 @@ const BRACKET_LINKS = [
   { stage1: ['R16_OTTAVI_V13', 'R16_OTTAVI_V14'], winner: 'QF_QUARTI_V7' },
   { stage1: ['R16_OTTAVI_V15', 'R16_OTTAVI_V16'], winner: 'QF_QUARTI_V8' },
 
-  // QF -> SF
   { stage1: ['QF_QUARTI_V1', 'QF_QUARTI_V2'], winner: 'SF_SEMIFINALI_V1' },
   { stage1: ['QF_QUARTI_V3', 'QF_QUARTI_V4'], winner: 'SF_SEMIFINALI_V2' },
   { stage1: ['QF_QUARTI_V5', 'QF_QUARTI_V6'], winner: 'SF_SEMIFINALI_V3' },
   { stage1: ['QF_QUARTI_V7', 'QF_QUARTI_V8'], winner: 'SF_SEMIFINALI_V4' },
 
-  // SF -> F
   { stage1: ['SF_SEMIFINALI_V1', 'SF_SEMIFINALI_V2'], winner: 'F_FINALE_1' },
   { stage1: ['SF_SEMIFINALI_V3', 'SF_SEMIFINALI_V4'], winner: 'F_FINALE_2' },
 
-  // F -> WINNER
   { stage1: ['F_FINALE_1', 'F_FINALE_2'], winner: 'WINNER_VINCITORE_1' }
 ];
 
@@ -151,18 +146,16 @@ const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch>
   ]
 };
 
-// Funzione globale per convertire le date stringa in un valore millisecondi per ordinamento e logiche
 const parseBracketDate = (d: string) => {
   if (!d) return 0;
   const parts = d.split(' - ');
   if (parts.length !== 2) return 0;
   const [dayStr, monthStr] = parts[0].split(' ');
-  const m = monthStr.toLowerCase().startsWith('giu') ? 5 : 6; // Giugno=5, Luglio=6 in Date JS
+  const m = monthStr.toLowerCase().startsWith('giu') ? 5 : 6; 
   const [h, min] = parts[1].split(':');
   return new Date(2026, m, parseInt(dayStr), parseInt(h), parseInt(min)).getTime();
 };
 
-// Funzione automatica per determinare la colonna attiva in base alla data di oggi!
 const getInitialBracketCol = () => {
   const now = new Date().getTime();
   const stagesOrder: Exclude<BracketStageType, 'WINNER'>[] = ['R32', 'R16', 'QF', 'SF', 'F'];
@@ -174,12 +167,11 @@ const getInitialBracketCol = () => {
       const t = parseBracketDate(m.date);
       if (t > lastMatchTime) lastMatchTime = t;
     });
-    // Se la data di oggi è precedente all'ultima partita del turno + 3 ore di tolleranza, mostra questa fase!
     if (now <= lastMatchTime + (3 * 3600000)) {
       return i;
     }
   }
-  return 4; // Se tutto il torneo è finito, apri direttamente la Finale
+  return 4; 
 };
 
 const normalizeStage = (s: string) => {
@@ -230,7 +222,6 @@ const getEliminatedTeams = (officialBracketData: any[]) => {
      if (ob.team_name) slotMap[ob.stage] = cleanString(ob.team_name);
   });
 
-  // 1. Se i sedicesimi sono pieni, elimino in automatico tutte le altre squadre (uscite ai gironi)
   const r32Teams = officialBracketData.filter(ob => normalizeStage(ob.stage) === 'R32' && ob.team_name).map(ob => cleanString(ob.team_name));
   if (r32Teams.length === 32) {
      TOURNAMENT_GROUPS.forEach(g => g.teams.forEach(t => {
@@ -239,7 +230,6 @@ const getEliminatedTeams = (officialBracketData: any[]) => {
      }));
   }
 
-  // 2. Controllo incrociato: se lo slot del vincitore di un match è stato popolato, la squadra perdente è eliminata
   BRACKET_LINKS.forEach(link => {
      const winnerTeam = slotMap[link.winner];
      if (winnerTeam) {
@@ -293,7 +283,6 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
-  // STATO PER LA COMPRESSIONE A FISARMONICA DEL TABELLONE E LE SQUADRE ELIMINATE
   const [activeBracketCol, setActiveBracketCol] = useState(getInitialBracketCol);
   const [eliminatedTeams, setEliminatedTeams] = useState<Set<string>>(new Set());
   const bracketContainerRef = useRef<HTMLDivElement>(null);
@@ -349,7 +338,6 @@ export default function TuttiPronosticiPage() {
     fetchData();
   }, [router]);
 
-  // Centratura morbida quando si naviga a fisarmonica nel bracket
   useEffect(() => {
     if (bracketContainerRef.current && activeTab === 'BRACKET' && bracketViewMode === 'TREE') {
       bracketContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
@@ -583,6 +571,15 @@ export default function TuttiPronosticiPage() {
      });
   };
 
+  const getPossibleTeamsForSlot = (dbString: string) => {
+    const link = BRACKET_LINKS.find(l => l.winner === dbString);
+    if (!link) return null;
+    const t1 = getOfficialTeamForSlot(link.stage1[0]);
+    const t2 = getOfficialTeamForSlot(link.stage1[1]);
+    if (t1 || t2) return { t1, t2 };
+    return null;
+  };
+
   const handleNodeClick = (team: string, users: any[], stage: string) => {
       setSelectedNode({ team, users, stage });
       setModalSearchQuery(''); 
@@ -595,105 +592,93 @@ export default function TuttiPronosticiPage() {
        correctUsers = getUsersWhoPickedTeam(stage, offTeam);
     }
 
-    // Controllo se la squadra ha superato ufficialmente QUESTO turno per darle il badge verde
     const nextStg = getNextStage(stage);
     const hasAdvanced = offTeam && (
       stage === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(offTeam))
     );
 
-    // Calcolo le possibili squadre (se entrambe le squadre della fase precedente sono note)
-    let possibleTeams = null;
+    let possibleTeams: any = null;
+    let t1Users: any[] = [];
+    let t2Users: any[] = [];
     if (!offTeam) {
-      const link = BRACKET_LINKS.find(l => l.winner === pool.dbString);
-      if (link) {
-        const t1 = getOfficialTeamForSlot(link.stage1[0]);
-        const t2 = getOfficialTeamForSlot(link.stage1[1]);
-        if (t1 || t2) {
-          possibleTeams = { t1, t2 };
-        }
+      possibleTeams = getPossibleTeamsForSlot(pool.dbString);
+      if (possibleTeams) {
+         if (possibleTeams.t1) t1Users = getUsersWhoPickedTeam(stage, possibleTeams.t1);
+         if (possibleTeams.t2) t2Users = getUsersWhoPickedTeam(stage, possibleTeams.t2);
       }
     }
 
     return (
       <div className={`p-2 flex flex-col justify-center min-h-[85px] relative ${isTop ? 'border-b-2 border-slate-800/80' : ''}`}>
-         {/* Squadra Ufficiale */}
-         <div className="flex flex-col items-center justify-center gap-1.5 mb-2 px-1 w-full">
-           {offTeam ? (
-             <>
-               <div className="relative">
-                 {getFlagUrl(offTeam) ? <img src={getFlagUrl(offTeam)!} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700 shrink-0" alt="" /> : <Shield size={20} className="text-slate-500 shrink-0"/>}
-                 {hasAdvanced && <CheckCircle2 size={12} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] z-10" />}
-               </div>
-               <span className={`text-[10px] sm:text-[11px] font-black uppercase text-center leading-tight tracking-tight w-full drop-shadow-md whitespace-normal break-words line-clamp-2 mt-1 ${hasAdvanced ? 'text-emerald-400' : 'text-white'}`}>
-                 {offTeam}
-               </span>
-             </>
-           ) : possibleTeams ? (
-             <div className="w-full flex flex-col items-center justify-center pt-1 pb-2 px-1">
-                <div className="flex items-center justify-center gap-1 w-full opacity-60">
-                   <div className="flex flex-col items-center flex-1 min-w-0">
-                     {possibleTeams.t1 ? (
-                        <>
-                          {getFlagUrl(possibleTeams.t1) ? <img src={getFlagUrl(possibleTeams.t1)!} className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700" alt=""/> : <Shield size={14} className="text-slate-500"/>}
-                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-300 mt-1 truncate w-full text-center leading-tight">{possibleTeams.t1}</span>
-                        </>
-                     ) : (
-                        <>
-                          <div className="w-5 h-3.5 bg-slate-800/50 rounded-[2px] border border-slate-700/50 shadow-inner"></div>
-                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-600 mt-1 truncate w-full text-center leading-tight">TBD</span>
-                        </>
-                     )}
-                   </div>
-                   <div className="flex flex-col items-center justify-center shrink-0 px-0.5">
-                     <span className="text-[6px] sm:text-[7px] font-black text-slate-500 uppercase italic">VS</span>
-                   </div>
-                   <div className="flex flex-col items-center flex-1 min-w-0">
-                     {possibleTeams.t2 ? (
-                        <>
-                          {getFlagUrl(possibleTeams.t2) ? <img src={getFlagUrl(possibleTeams.t2)!} className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700" alt=""/> : <Shield size={14} className="text-slate-500"/>}
-                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-300 mt-1 truncate w-full text-center leading-tight">{possibleTeams.t2}</span>
-                        </>
-                     ) : (
-                        <>
-                          <div className="w-5 h-3.5 bg-slate-800/50 rounded-[2px] border border-slate-700/50 shadow-inner"></div>
-                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-600 mt-1 truncate w-full text-center leading-tight">TBD</span>
-                        </>
-                     )}
-                   </div>
-                </div>
+         {offTeam ? (
+           <div className="flex flex-col items-center justify-center gap-1.5 mb-2 px-1 w-full">
+             <div className="relative">
+               {getFlagUrl(offTeam) ? <img src={getFlagUrl(offTeam)!} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700 shrink-0" alt="" /> : <Shield size={20} className="text-slate-500 shrink-0"/>}
+               {hasAdvanced && <CheckCircle2 size={12} className="text-emerald-400 absolute -bottom-1.5 -right-2 bg-slate-900 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] z-10" />}
              </div>
-           ) : (
-             <>
-               <div className="w-8 h-5 bg-slate-800/50 rounded border border-slate-700/50 shrink-0 shadow-inner"></div>
-               <span className="text-[8px] font-bold uppercase text-slate-500 italic text-center leading-tight tracking-widest whitespace-normal break-words w-full mt-1">
-                 {pool.label}
+             <span className={`text-[10px] sm:text-[11px] font-black uppercase text-center leading-tight tracking-tight w-full drop-shadow-md whitespace-normal break-words line-clamp-2 mt-1 ${hasAdvanced ? 'text-emerald-400' : 'text-white'}`}>
+               {offTeam}
+             </span>
+           </div>
+         ) : possibleTeams ? (
+           <div className="w-full flex flex-col items-center justify-center pt-1 pb-1 px-1">
+               <div className="w-10 h-5 sm:w-12 sm:h-6 bg-slate-800 rounded flex items-center justify-center shadow-inner overflow-hidden mb-1 border border-slate-700">
+                  <div className="flex w-full h-full opacity-80 hover:opacity-100 transition-opacity">
+                     {possibleTeams.t1 && getFlagUrl(possibleTeams.t1) ? <img src={getFlagUrl(possibleTeams.t1)!} className="w-1/2 h-full object-cover border-r border-slate-900/50" alt=""/> : <div className="w-1/2 h-full bg-slate-700 border-r border-slate-900/50"></div>}
+                     {possibleTeams.t2 && getFlagUrl(possibleTeams.t2) ? <img src={getFlagUrl(possibleTeams.t2)!} className="w-1/2 h-full object-cover" alt=""/> : <div className="w-1/2 h-full bg-slate-700"></div>}
+                  </div>
+               </div>
+               
+               <span className="text-[6.5px] sm:text-[7.5px] font-black uppercase text-slate-400 tracking-widest text-center truncate w-full mb-1.5">
+                  {possibleTeams.t1 ? possibleTeams.t1.substring(0,3) : 'TBD'} <span className="text-slate-600">v</span> {possibleTeams.t2 ? possibleTeams.t2.substring(0,3) : 'TBD'}
                </span>
-             </>
-           )}
-         </div>
+               
+               <div className="flex w-full gap-0.5">
+                  {possibleTeams.t1 ? (
+                     <button onClick={(e) => { e.stopPropagation(); handleNodeClick(possibleTeams.t1, t1Users, stage); }} className="flex-1 flex justify-center items-center gap-0.5 bg-slate-950 border border-slate-700 rounded py-0.5 hover:border-yellow-500 transition-all text-slate-400 hover:text-yellow-500">
+                        <Users size={8} /> <span className="text-[7px] font-black">{t1Users.length}</span>
+                     </button>
+                  ) : <div className="flex-1"></div>}
+                  {possibleTeams.t2 ? (
+                     <button onClick={(e) => { e.stopPropagation(); handleNodeClick(possibleTeams.t2, t2Users, stage); }} className="flex-1 flex justify-center items-center gap-0.5 bg-slate-950 border border-slate-700 rounded py-0.5 hover:border-yellow-500 transition-all text-slate-400 hover:text-yellow-500">
+                        <Users size={8} /> <span className="text-[7px] font-black">{t2Users.length}</span>
+                     </button>
+                  ) : <div className="flex-1"></div>}
+               </div>
+           </div>
+         ) : (
+           <div className="flex flex-col items-center justify-center gap-1.5 mb-2 px-1 w-full">
+             <div className="w-8 h-5 bg-slate-800/50 rounded border border-slate-700/50 shrink-0 shadow-inner"></div>
+             <span className="text-[8px] font-bold uppercase text-slate-500 italic text-center leading-tight tracking-widest whitespace-normal break-words w-full mt-1">
+               {pool.label}
+             </span>
+           </div>
+         )}
 
-         {/* Pulsante Utenti */}
-         <div className="w-full px-1">
-           {offTeam ? (
-             correctUsers.length > 0 ? (
-               <button onClick={() => handleNodeClick(offTeam, correctUsers, stage)} className="group relative flex items-center justify-center gap-1.5 py-1 px-1 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all duration-300 w-full overflow-hidden active:scale-95">
-                  <div className="absolute inset-0 bg-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <Users size={10} className="text-slate-400 group-hover:text-yellow-400 transition-colors shrink-0 z-10"/>
-                  <span className="text-[8px] font-black uppercase text-slate-300 group-hover:text-yellow-400 transition-colors z-10 tracking-wider">
-                    {correctUsers.length} <span className="hidden sm:inline">scelte</span>
-                  </span>
-               </button>
+         {/* Pulsante Utenti UFFICIALE - Mostrato solo se non ci sono "possibleTeams" in attesa */}
+         {!possibleTeams && (
+           <div className="w-full px-1">
+             {offTeam ? (
+               correctUsers.length > 0 ? (
+                 <button onClick={() => handleNodeClick(offTeam, correctUsers, stage)} className="group relative flex items-center justify-center gap-1.5 py-1 px-1 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all duration-300 w-full overflow-hidden active:scale-95">
+                    <div className="absolute inset-0 bg-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <Users size={10} className="text-slate-400 group-hover:text-yellow-400 transition-colors shrink-0 z-10"/>
+                    <span className="text-[8px] font-black uppercase text-slate-300 group-hover:text-yellow-400 transition-colors z-10 tracking-wider">
+                      {correctUsers.length} <span className="hidden sm:inline">scelte</span>
+                    </span>
+                 </button>
+               ) : (
+                 <div className="text-[7px] text-slate-500 italic uppercase font-black text-center w-full bg-slate-950/80 py-1.5 rounded-lg border border-slate-800/80">
+                   Nessuno l&apos;ha presa
+                 </div>
+               )
              ) : (
-               <div className="text-[7px] text-slate-500 italic uppercase font-black text-center w-full bg-slate-950/80 py-1.5 rounded-lg border border-slate-800/80">
-                 Nessuno l&apos;ha presa
+               <div className="text-[7px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950/50 py-1.5 rounded-lg border border-slate-800/50">
+                 In attesa
                </div>
-             )
-           ) : (
-             <div className="text-[7px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950/50 py-1.5 rounded-lg border border-slate-800/50">
-               In attesa
-             </div>
-           )}
-         </div>
+             )}
+           </div>
+         )}
       </div>
     )
   };
@@ -708,7 +693,6 @@ export default function TuttiPronosticiPage() {
     </div>
   );
 
-  // Per il layout a fisarmonica (da SX a DX) utilizziamo l'intero array delle fasi in ordine
   const allStages = [
     { id: 'R32', title: 'SEDICESIMI', matches: BRACKET_MATCHES.R32 },
     { id: 'R16', title: 'OTTAVI', matches: BRACKET_MATCHES.R16 },
@@ -818,7 +802,6 @@ export default function TuttiPronosticiPage() {
       </main>
   );
 
-  // Ordiniamo gli utenti nel modal per Ranking (dal #1 in poi)
   const filteredModalUsers = (selectedNode?.users.filter((u: any) => 
      u.username?.toLowerCase().includes(modalSearchQuery.toLowerCase()) || 
      u.full_name?.toLowerCase().includes(modalSearchQuery.toLowerCase())
@@ -833,7 +816,6 @@ export default function TuttiPronosticiPage() {
       <header className="text-center mb-8 pt-4">
         <h1 className="text-4xl font-black text-yellow-500 uppercase italic">Scouting Globale</h1>
         
-        {/* BARRA DI RICERCA */}
         <div className="relative max-w-sm mx-auto mt-6 px-4 sm:px-0">
           <Search className="absolute left-8 sm:left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
           <input
@@ -966,11 +948,10 @@ export default function TuttiPronosticiPage() {
                 </button>
              </div>
 
-             {/* VISTA 1: ALBERO CON SCORRIMENTO A FISARMONICA (DA SX A DX) */}
+             {/* VISTA 1: ALBERO CON SCORRIMENTO A FISARMONICA */}
              {bracketViewMode === 'TREE' && (
                <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
                  
-                 {/* Top Navigation Bar per la Fisarmonica */}
                  <div className="flex items-center justify-between bg-slate-900/90 border border-slate-700 p-2 rounded-2xl mb-4 max-w-sm mx-4 sm:mx-auto shadow-xl z-30 relative backdrop-blur-md">
                    <button 
                      onClick={() => setActiveBracketCol(Math.max(0, activeBracketCol - 1))}
@@ -994,14 +975,12 @@ export default function TuttiPronosticiPage() {
                    </button>
                  </div>
 
-                 {/* CONTENITORE CON SCROLL LATERALE NATIVO E COMPRESSIONE A FISARMONICA */}
                  <div 
                    ref={bracketContainerRef}
                    className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
                  >
                     <div className="flex flex-row items-stretch justify-start min-w-max gap-4 sm:gap-6 pt-4 pb-4 px-4 mx-auto transition-all duration-500">
                        
-                       {/* MAPPA TUTTE LE FASI DA SINISTRA A DESTRA */}
                        {allStages.map((stage, colIndex) => {
                          const isCollapsed = colIndex < activeBracketCol;
 
@@ -1034,7 +1013,6 @@ export default function TuttiPronosticiPage() {
                          );
                        })}
 
-                       {/* COLONNA VINCITORE ALL'ESTREMA DESTRA (SEMPRE VISIBILE SE SIAMO ALLA FINE) */}
                        {activeBracketCol <= 4 && (
                          <div className="flex flex-col justify-center items-center w-[180px] shrink-0 relative pt-14 pb-4 z-20 transition-all duration-500">
                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
@@ -1058,14 +1036,13 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio, ORDINE CRONOLOGICO) */}
+             {/* VISTA 2: PARTITE */}
              {bracketViewMode === 'MATCHES' && (
                <div className="max-w-4xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
                    const isExpanded = expandedStage === stg.id;
                    const nextStg = getNextStage(stg.id);
                    
-                   // Ordiniamo dinamicamente i match in ordine cronologico solo per questa vista
                    const rawMatches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
                    const matches = [...rawMatches].sort((a, b) => {
                       const parseDate = (d: string) => {
@@ -1097,17 +1074,35 @@ export default function TuttiPronosticiPage() {
                              {matches.map((matchObj, idx) => {
                                 const teamA = getOfficialTeamForSlot(matchObj.teams[0].dbString);
                                 const teamB = getOfficialTeamForSlot(matchObj.teams[1].dbString);
-                                
-                                const labelA = teamA || matchObj.teams[0].label;
-                                const labelB = teamB || matchObj.teams[1].label;
 
                                 const isTBDA = !teamA;
                                 const isTBDB = !teamB;
+
+                                let possibleA = null;
+                                let t1UsersA: any[] = [];
+                                let t2UsersA: any[] = [];
+                                if (isTBDA) {
+                                  possibleA = getPossibleTeamsForSlot(matchObj.teams[0].dbString);
+                                  if (possibleA) {
+                                    if (possibleA.t1) t1UsersA = getUsersWhoPickedTeam(nextStg, possibleA.t1);
+                                    if (possibleA.t2) t2UsersA = getUsersWhoPickedTeam(nextStg, possibleA.t2);
+                                  }
+                                }
+
+                                let possibleB = null;
+                                let t1UsersB: any[] = [];
+                                let t2UsersB: any[] = [];
+                                if (isTBDB) {
+                                  possibleB = getPossibleTeamsForSlot(matchObj.teams[1].dbString);
+                                  if (possibleB) {
+                                    if (possibleB.t1) t1UsersB = getUsersWhoPickedTeam(nextStg, possibleB.t1);
+                                    if (possibleB.t2) t2UsersB = getUsersWhoPickedTeam(nextStg, possibleB.t2);
+                                  }
+                                }
                                 
                                 const usersA = isTBDA ? [] : getUsersWhoPickedTeam(nextStg, teamA);
                                 const usersB = isTBDB ? [] : getUsersWhoPickedTeam(nextStg, teamB);
 
-                                // Controllo badge qualificazione per visualizzazione Matches
                                 const hasAdvancedA = teamA && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamA)));
                                 const hasAdvancedB = teamB && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamB)));
 
@@ -1144,15 +1139,39 @@ export default function TuttiPronosticiPage() {
                                                    )}
                                                 </div>
                                              </>
+                                          ) : possibleA ? (
+                                             <div className="flex flex-col items-center justify-center h-full w-full opacity-90 mt-1">
+                                                <div className="w-12 h-7 bg-slate-800 rounded border border-slate-700 flex items-center justify-center shadow-inner overflow-hidden mb-1.5">
+                                                  <div className="flex w-full h-full opacity-80 hover:opacity-100 transition-opacity">
+                                                     {possibleA.t1 && getFlagUrl(possibleA.t1) ? <img src={getFlagUrl(possibleA.t1)!} className="w-1/2 h-full object-cover border-r border-slate-900/50" alt=""/> : <div className="w-1/2 h-full bg-slate-700 border-r border-slate-900/50"></div>}
+                                                     {possibleA.t2 && getFlagUrl(possibleA.t2) ? <img src={getFlagUrl(possibleA.t2)!} className="w-1/2 h-full object-cover" alt=""/> : <div className="w-1/2 h-full bg-slate-700"></div>}
+                                                  </div>
+                                                </div>
+                                                <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase font-black text-center leading-tight mb-2 w-full truncate px-2">
+                                                  {possibleA.t1 || 'TBD'} <span className="text-slate-600 mx-0.5">VS</span> {possibleA.t2 || 'TBD'}
+                                                </span>
+                                                <div className="flex w-full gap-2 px-1">
+                                                    {possibleA.t1 ? (
+                                                        <button onClick={(e) => { e.stopPropagation(); handleNodeClick(possibleA.t1, t1UsersA, nextStg); }} className="flex-1 flex justify-center items-center gap-1 bg-slate-950 border border-slate-800 rounded py-1 hover:border-yellow-500 hover:text-yellow-500 transition-all text-slate-400">
+                                                           <Users size={10} /> <span className="text-[8px] font-black">{t1UsersA.length}</span>
+                                                        </button>
+                                                    ) : <div className="flex-1"></div>}
+                                                    {possibleA.t2 ? (
+                                                        <button onClick={(e) => { e.stopPropagation(); handleNodeClick(possibleA.t2, t2UsersA, nextStg); }} className="flex-1 flex justify-center items-center gap-1 bg-slate-950 border border-slate-800 rounded py-1 hover:border-yellow-500 hover:text-yellow-500 transition-all text-slate-400">
+                                                           <Users size={10} /> <span className="text-[8px] font-black">{t2UsersA.length}</span>
+                                                        </button>
+                                                    ) : <div className="flex-1"></div>}
+                                                </div>
+                                             </div>
                                           ) : (
                                              <div className="flex flex-col items-center justify-center h-full opacity-50">
                                                <div className="w-10 h-6 bg-slate-800 rounded border border-slate-700 mb-2"></div>
-                                               <span className="text-[9px] text-slate-500 uppercase font-black text-center mt-2">{labelA}</span>
+                                               <span className="text-[9px] text-slate-500 uppercase font-black text-center mt-2">TBD</span>
                                              </div>
                                           )}
                                        </div>
 
-                                       {/* VS */}
+                                       {/* VS CENTRALE */}
                                        <div className="flex flex-col items-center justify-center shrink-0 px-2 mt-4">
                                           <span className="bg-slate-950 border border-slate-800 text-yellow-500 font-black text-[10px] px-2 py-1 rounded-lg shadow-inner">VS</span>
                                        </div>
@@ -1182,10 +1201,34 @@ export default function TuttiPronosticiPage() {
                                                    )}
                                                 </div>
                                              </>
+                                          ) : possibleB ? (
+                                             <div className="flex flex-col items-center justify-center h-full w-full opacity-90 mt-1">
+                                                <div className="w-12 h-7 bg-slate-800 rounded border border-slate-700 flex items-center justify-center shadow-inner overflow-hidden mb-1.5">
+                                                  <div className="flex w-full h-full opacity-80 hover:opacity-100 transition-opacity">
+                                                     {possibleB.t1 && getFlagUrl(possibleB.t1) ? <img src={getFlagUrl(possibleB.t1)!} className="w-1/2 h-full object-cover border-r border-slate-900/50" alt=""/> : <div className="w-1/2 h-full bg-slate-700 border-r border-slate-900/50"></div>}
+                                                     {possibleB.t2 && getFlagUrl(possibleB.t2) ? <img src={getFlagUrl(possibleB.t2)!} className="w-1/2 h-full object-cover" alt=""/> : <div className="w-1/2 h-full bg-slate-700"></div>}
+                                                  </div>
+                                                </div>
+                                                <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase font-black text-center leading-tight mb-2 w-full truncate px-2">
+                                                  {possibleB.t1 || 'TBD'} <span className="text-slate-600 mx-0.5">VS</span> {possibleB.t2 || 'TBD'}
+                                                </span>
+                                                <div className="flex w-full gap-2 px-1">
+                                                    {possibleB.t1 ? (
+                                                        <button onClick={(e) => { e.stopPropagation(); handleNodeClick(possibleB.t1, t1UsersB, nextStg); }} className="flex-1 flex justify-center items-center gap-1 bg-slate-950 border border-slate-800 rounded py-1 hover:border-yellow-500 hover:text-yellow-500 transition-all text-slate-400">
+                                                           <Users size={10} /> <span className="text-[8px] font-black">{t1UsersB.length}</span>
+                                                        </button>
+                                                    ) : <div className="flex-1"></div>}
+                                                    {possibleB.t2 ? (
+                                                        <button onClick={(e) => { e.stopPropagation(); handleNodeClick(possibleB.t2, t2UsersB, nextStg); }} className="flex-1 flex justify-center items-center gap-1 bg-slate-950 border border-slate-800 rounded py-1 hover:border-yellow-500 hover:text-yellow-500 transition-all text-slate-400">
+                                                           <Users size={10} /> <span className="text-[8px] font-black">{t2UsersB.length}</span>
+                                                        </button>
+                                                    ) : <div className="flex-1"></div>}
+                                                </div>
+                                             </div>
                                           ) : (
                                              <div className="flex flex-col items-center justify-center h-full opacity-50">
                                                <div className="w-10 h-6 bg-slate-800 rounded border border-slate-700 mb-2"></div>
-                                               <span className="text-[9px] text-slate-500 uppercase font-black text-center mt-2">{labelB}</span>
+                                               <span className="text-[9px] text-slate-500 uppercase font-black text-center mt-2">TBD</span>
                                              </div>
                                           )}
                                        </div>
@@ -1202,7 +1245,7 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 3: LISTE (ACCORDION) */}
+             {/* VISTA 3: LISTE */}
              {bracketViewMode === 'LIST' && (
                <div className="max-w-2xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.map((stg) => {
@@ -1217,7 +1260,6 @@ export default function TuttiPronosticiPage() {
 
                     const aggregatedPicks = getAggregatedBracketPicks(stg.id).map(([team, users]: any) => {
                        const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
-                       // Ora isWrong tiene conto della nuova eliminazione a cascata
                        const isWrong = eliminatedTeams.has(cleanString(team)) || (isStageFull && !isCorrect);
                        return { team, users, isCorrect, isWrong };
                     });
@@ -1290,7 +1332,7 @@ export default function TuttiPronosticiPage() {
           </div>
         )}
 
-        {/* --- 3. BONUS (ACCORDION SENZA LUCCHETTI) --- */}
+        {/* --- 3. BONUS --- */}
         {activeTab === 'BONUS' && (
           <div className="space-y-6 max-w-2xl mx-auto">
             {[
