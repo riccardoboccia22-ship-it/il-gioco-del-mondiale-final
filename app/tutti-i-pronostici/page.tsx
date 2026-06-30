@@ -62,6 +62,50 @@ const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
   { id: 'WINNER', title: 'CAMPIONE' }
 ];
 
+// Mappa esatta degli incroci del Tabellone per calcolare le sfide in tempo reale
+const BRACKET_LINKS = [
+  // R32 -> R16
+  { stage1: ['R32_SEDICESIMI_1E', 'R32_SEDICESIMI_3M1'], winner: 'R16_OTTAVI_V1' },
+  { stage1: ['R32_SEDICESIMI_1I', 'R32_SEDICESIMI_3M2'], winner: 'R16_OTTAVI_V2' },
+  { stage1: ['R32_SEDICESIMI_2A', 'R32_SEDICESIMI_2B'], winner: 'R16_OTTAVI_V3' },
+  { stage1: ['R32_SEDICESIMI_1F', 'R32_SEDICESIMI_2C'], winner: 'R16_OTTAVI_V4' },
+  { stage1: ['R32_SEDICESIMI_2K', 'R32_SEDICESIMI_2L'], winner: 'R16_OTTAVI_V5' },
+  { stage1: ['R32_SEDICESIMI_1H', 'R32_SEDICESIMI_2J'], winner: 'R16_OTTAVI_V6' },
+  { stage1: ['R32_SEDICESIMI_1D', 'R32_SEDICESIMI_3M5'], winner: 'R16_OTTAVI_V7' },
+  { stage1: ['R32_SEDICESIMI_1G', 'R32_SEDICESIMI_3M6'], winner: 'R16_OTTAVI_V8' },
+  { stage1: ['R32_SEDICESIMI_1C', 'R32_SEDICESIMI_2F'], winner: 'R16_OTTAVI_V9' },
+  { stage1: ['R32_SEDICESIMI_2E', 'R32_SEDICESIMI_2I'], winner: 'R16_OTTAVI_V10' },
+  { stage1: ['R32_SEDICESIMI_1A', 'R32_SEDICESIMI_3M3'], winner: 'R16_OTTAVI_V11' },
+  { stage1: ['R32_SEDICESIMI_1L', 'R32_SEDICESIMI_3M4'], winner: 'R16_OTTAVI_V12' },
+  { stage1: ['R32_SEDICESIMI_1J', 'R32_SEDICESIMI_2H'], winner: 'R16_OTTAVI_V13' },
+  { stage1: ['R32_SEDICESIMI_2D', 'R32_SEDICESIMI_2G'], winner: 'R16_OTTAVI_V14' },
+  { stage1: ['R32_SEDICESIMI_1B', 'R32_SEDICESIMI_3M7'], winner: 'R16_OTTAVI_V15' },
+  { stage1: ['R32_SEDICESIMI_1K', 'R32_SEDICESIMI_3M8'], winner: 'R16_OTTAVI_V16' },
+
+  // R16 -> QF
+  { stage1: ['R16_OTTAVI_V1', 'R16_OTTAVI_V2'], winner: 'QF_QUARTI_V1' },
+  { stage1: ['R16_OTTAVI_V3', 'R16_OTTAVI_V4'], winner: 'QF_QUARTI_V2' },
+  { stage1: ['R16_OTTAVI_V5', 'R16_OTTAVI_V6'], winner: 'QF_QUARTI_V3' },
+  { stage1: ['R16_OTTAVI_V7', 'R16_OTTAVI_V8'], winner: 'QF_QUARTI_V4' },
+  { stage1: ['R16_OTTAVI_V9', 'R16_OTTAVI_V10'], winner: 'QF_QUARTI_V5' },
+  { stage1: ['R16_OTTAVI_V11', 'R16_OTTAVI_V12'], winner: 'QF_QUARTI_V6' },
+  { stage1: ['R16_OTTAVI_V13', 'R16_OTTAVI_V14'], winner: 'QF_QUARTI_V7' },
+  { stage1: ['R16_OTTAVI_V15', 'R16_OTTAVI_V16'], winner: 'QF_QUARTI_V8' },
+
+  // QF -> SF
+  { stage1: ['QF_QUARTI_V1', 'QF_QUARTI_V2'], winner: 'SF_SEMIFINALI_V1' },
+  { stage1: ['QF_QUARTI_V3', 'QF_QUARTI_V4'], winner: 'SF_SEMIFINALI_V2' },
+  { stage1: ['QF_QUARTI_V5', 'QF_QUARTI_V6'], winner: 'SF_SEMIFINALI_V3' },
+  { stage1: ['QF_QUARTI_V7', 'QF_QUARTI_V8'], winner: 'SF_SEMIFINALI_V4' },
+
+  // SF -> F
+  { stage1: ['SF_SEMIFINALI_V1', 'SF_SEMIFINALI_V2'], winner: 'F_FINALE_1' },
+  { stage1: ['SF_SEMIFINALI_V3', 'SF_SEMIFINALI_V4'], winner: 'F_FINALE_2' },
+
+  // F -> WINNER
+  { stage1: ['F_FINALE_1', 'F_FINALE_2'], winner: 'WINNER_VINCITORE_1' }
+];
+
 // Calendario Ufficiale FIFA 2026 (Orari e Date convertite in Italiano CEST)
 const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch> = {
   R32: [
@@ -278,6 +322,13 @@ export default function TuttiPronosticiPage() {
       bracketContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
     }
   }, [activeBracketCol, bracketViewMode, activeTab]);
+
+  const scrollBracket = (direction: 'left' | 'right') => {
+    if (bracketContainerRef.current) {
+      const scrollAmount = 240;
+      bracketContainerRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   const toggleDay = (dayName: string) => {
     setOpenDays((prev) => ({ ...prev, [dayName]: !prev[dayName] }));
@@ -517,6 +568,19 @@ export default function TuttiPronosticiPage() {
       stage === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(offTeam))
     );
 
+    // Calcolo le possibili squadre (se entrambe le squadre della fase precedente sono note)
+    let possibleTeams = null;
+    if (!offTeam) {
+      const link = BRACKET_LINKS.find(l => l.winner === pool.dbString);
+      if (link) {
+        const t1 = getOfficialTeamForSlot(link.stage1[0]);
+        const t2 = getOfficialTeamForSlot(link.stage1[1]);
+        if (t1 || t2) {
+          possibleTeams = { t1, t2 };
+        }
+      }
+    }
+
     return (
       <div className={`p-2 flex flex-col justify-center min-h-[85px] relative ${isTop ? 'border-b-2 border-slate-800/80' : ''}`}>
          {/* Squadra Ufficiale */}
@@ -531,6 +595,40 @@ export default function TuttiPronosticiPage() {
                  {offTeam}
                </span>
              </>
+           ) : possibleTeams ? (
+             <div className="w-full flex flex-col items-center justify-center pt-1 pb-2 px-1">
+                <div className="flex items-center justify-center gap-1 w-full opacity-60">
+                   <div className="flex flex-col items-center flex-1 min-w-0">
+                     {possibleTeams.t1 ? (
+                        <>
+                          {getFlagUrl(possibleTeams.t1) ? <img src={getFlagUrl(possibleTeams.t1)!} className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700" alt=""/> : <Shield size={14} className="text-slate-500"/>}
+                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-300 mt-1 truncate w-full text-center leading-tight">{possibleTeams.t1}</span>
+                        </>
+                     ) : (
+                        <>
+                          <div className="w-5 h-3.5 bg-slate-800/50 rounded-[2px] border border-slate-700/50 shadow-inner"></div>
+                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-600 mt-1 truncate w-full text-center leading-tight">TBD</span>
+                        </>
+                     )}
+                   </div>
+                   <div className="flex flex-col items-center justify-center shrink-0 px-0.5">
+                     <span className="text-[6px] sm:text-[7px] font-black text-slate-500 uppercase italic">VS</span>
+                   </div>
+                   <div className="flex flex-col items-center flex-1 min-w-0">
+                     {possibleTeams.t2 ? (
+                        <>
+                          {getFlagUrl(possibleTeams.t2) ? <img src={getFlagUrl(possibleTeams.t2)!} className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700" alt=""/> : <Shield size={14} className="text-slate-500"/>}
+                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-300 mt-1 truncate w-full text-center leading-tight">{possibleTeams.t2}</span>
+                        </>
+                     ) : (
+                        <>
+                          <div className="w-5 h-3.5 bg-slate-800/50 rounded-[2px] border border-slate-700/50 shadow-inner"></div>
+                          <span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-600 mt-1 truncate w-full text-center leading-tight">TBD</span>
+                        </>
+                     )}
+                   </div>
+                </div>
+             </div>
            ) : (
              <>
                <div className="w-8 h-5 bg-slate-800/50 rounded border border-slate-700/50 shrink-0 shadow-inner"></div>
@@ -1086,7 +1184,8 @@ export default function TuttiPronosticiPage() {
 
                     const aggregatedPicks = getAggregatedBracketPicks(stg.id).map(([team, users]: any) => {
                        const isCorrect = officialTeamsInStage.some((off: any) => cleanString(off.team_name) === cleanString(team));
-                       const isWrong = isStageFull && !isCorrect;
+                       // Ora isWrong tiene conto della nuova eliminazione a cascata
+                       const isWrong = eliminatedTeams.has(cleanString(team)) || (isStageFull && !isCorrect);
                        return { team, users, isCorrect, isWrong };
                     });
 
