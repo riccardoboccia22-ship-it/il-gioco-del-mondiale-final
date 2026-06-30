@@ -222,6 +222,37 @@ const cleanString = (str: string) => {
   return formatTeamName(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
+const getEliminatedTeams = (officialBracketData: any[]) => {
+  const eliminated = new Set<string>();
+  const slotMap: Record<string, string> = {};
+  
+  officialBracketData.forEach(ob => {
+     if (ob.team_name) slotMap[ob.stage] = cleanString(ob.team_name);
+  });
+
+  // 1. Se i sedicesimi sono pieni, elimino in automatico tutte le altre squadre (uscite ai gironi)
+  const r32Teams = officialBracketData.filter(ob => normalizeStage(ob.stage) === 'R32' && ob.team_name).map(ob => cleanString(ob.team_name));
+  if (r32Teams.length === 32) {
+     TOURNAMENT_GROUPS.forEach(g => g.teams.forEach(t => {
+        const cleanT = cleanString(t);
+        if (!r32Teams.includes(cleanT)) eliminated.add(cleanT);
+     }));
+  }
+
+  // 2. Controllo incrociato: se lo slot del vincitore di un match è stato popolato, la squadra perdente è eliminata
+  BRACKET_LINKS.forEach(link => {
+     const winnerTeam = slotMap[link.winner];
+     if (winnerTeam) {
+        const t1 = slotMap[link.stage1[0]];
+        const t2 = slotMap[link.stage1[1]];
+        if (t1 && t1 !== winnerTeam) eliminated.add(t1);
+        if (t2 && t2 !== winnerTeam) eliminated.add(t2);
+     }
+  });
+
+  return eliminated;
+};
+
 const fetchAllRecords = async (table: string, orderCol1?: string, orderCol2?: string, orderCol3?: string) => {
   let result: any[] = [];
   let start = 0;
@@ -262,8 +293,9 @@ export default function TuttiPronosticiPage() {
   const [selectedNode, setSelectedNode] = useState<{team: string, users: any[], stage: string} | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState(''); 
   
-  // STATO PER LA COMPRESSIONE A FISARMONICA DEL TABELLONE, con Auto-Check del giorno odierno
+  // STATO PER LA COMPRESSIONE A FISARMONICA DEL TABELLONE E LE SQUADRE ELIMINATE
   const [activeBracketCol, setActiveBracketCol] = useState(getInitialBracketCol);
+  const [eliminatedTeams, setEliminatedTeams] = useState<Set<string>>(new Set());
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
@@ -309,6 +341,7 @@ export default function TuttiPronosticiPage() {
           bracketMap: brackMap, officialResults: obData || [], officialBonus: offBo || null, bonusMap: bMap,
         });
 
+        setEliminatedTeams(getEliminatedTeams(obData || []));
         setOpenDays({});
 
       } catch (e) { console.error(e); } finally { setLoading(false); }
