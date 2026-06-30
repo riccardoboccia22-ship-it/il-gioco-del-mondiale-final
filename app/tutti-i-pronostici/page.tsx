@@ -693,6 +693,7 @@ export default function TuttiPronosticiPage() {
     </div>
   );
 
+  // Per il layout a fisarmonica (da SX a DX) utilizziamo l'intero array delle fasi in ordine
   const allStages = [
     { id: 'R32', title: 'SEDICESIMI', matches: BRACKET_MATCHES.R32 },
     { id: 'R16', title: 'OTTAVI', matches: BRACKET_MATCHES.R16 },
@@ -802,6 +803,7 @@ export default function TuttiPronosticiPage() {
       </main>
   );
 
+  // Ordiniamo gli utenti nel modal per Ranking (dal #1 in poi)
   const filteredModalUsers = (selectedNode?.users.filter((u: any) => 
      u.username?.toLowerCase().includes(modalSearchQuery.toLowerCase()) || 
      u.full_name?.toLowerCase().includes(modalSearchQuery.toLowerCase())
@@ -816,6 +818,7 @@ export default function TuttiPronosticiPage() {
       <header className="text-center mb-8 pt-4">
         <h1 className="text-4xl font-black text-yellow-500 uppercase italic">Scouting Globale</h1>
         
+        {/* BARRA DI RICERCA */}
         <div className="relative max-w-sm mx-auto mt-6 px-4 sm:px-0">
           <Search className="absolute left-8 sm:left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
           <input
@@ -952,6 +955,7 @@ export default function TuttiPronosticiPage() {
              {bracketViewMode === 'TREE' && (
                <div className="animate-in fade-in duration-500 bg-slate-900/40 sm:border border-slate-800 sm:rounded-[2rem] shadow-2xl py-6 overflow-hidden -mx-4 sm:mx-0 relative">
                  
+                 {/* Top Navigation Bar per la Fisarmonica */}
                  <div className="flex items-center justify-between bg-slate-900/90 border border-slate-700 p-2 rounded-2xl mb-4 max-w-sm mx-4 sm:mx-auto shadow-xl z-30 relative backdrop-blur-md">
                    <button 
                      onClick={() => setActiveBracketCol(Math.max(0, activeBracketCol - 1))}
@@ -975,12 +979,14 @@ export default function TuttiPronosticiPage() {
                    </button>
                  </div>
 
+                 {/* CONTENITORE CON SCROLL LATERALE NATIVO E COMPRESSIONE A FISARMONICA */}
                  <div 
                    ref={bracketContainerRef}
                    className="w-full overflow-x-auto custom-scrollbar pb-10 scroll-smooth px-4"
                  >
                     <div className="flex flex-row items-stretch justify-start min-w-max gap-4 sm:gap-6 pt-4 pb-4 px-4 mx-auto transition-all duration-500">
                        
+                       {/* MAPPA TUTTE LE FASI DA SINISTRA A DESTRA */}
                        {allStages.map((stage, colIndex) => {
                          const isCollapsed = colIndex < activeBracketCol;
 
@@ -1013,6 +1019,7 @@ export default function TuttiPronosticiPage() {
                          );
                        })}
 
+                       {/* COLONNA VINCITORE ALL'ESTREMA DESTRA (SEMPRE VISIBILE SE SIAMO ALLA FINE) */}
                        {activeBracketCol <= 4 && (
                          <div className="flex flex-col justify-center items-center w-[180px] shrink-0 relative pt-14 pb-4 z-20 transition-all duration-500">
                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
@@ -1036,13 +1043,14 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: PARTITE */}
+             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio, ORDINE CRONOLOGICO) */}
              {bracketViewMode === 'MATCHES' && (
                <div className="max-w-4xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
                    const isExpanded = expandedStage === stg.id;
                    const nextStg = getNextStage(stg.id);
                    
+                   // Ordiniamo dinamicamente i match in ordine cronologico solo per questa vista
                    const rawMatches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
                    const matches = [...rawMatches].sort((a, b) => {
                       const parseDate = (d: string) => {
@@ -1074,11 +1082,14 @@ export default function TuttiPronosticiPage() {
                              {matches.map((matchObj, idx) => {
                                 const teamA = getOfficialTeamForSlot(matchObj.teams[0].dbString);
                                 const teamB = getOfficialTeamForSlot(matchObj.teams[1].dbString);
+                                
+                                const labelA = teamA || matchObj.teams[0].label;
+                                const labelB = teamB || matchObj.teams[1].label;
 
                                 const isTBDA = !teamA;
                                 const isTBDB = !teamB;
 
-                                let possibleA = null;
+                                let possibleA: any = null;
                                 let t1UsersA: any[] = [];
                                 let t2UsersA: any[] = [];
                                 if (isTBDA) {
@@ -1089,7 +1100,7 @@ export default function TuttiPronosticiPage() {
                                   }
                                 }
 
-                                let possibleB = null;
+                                let possibleB: any = null;
                                 let t1UsersB: any[] = [];
                                 let t2UsersB: any[] = [];
                                 if (isTBDB) {
@@ -1103,6 +1114,7 @@ export default function TuttiPronosticiPage() {
                                 const usersA = isTBDA ? [] : getUsersWhoPickedTeam(nextStg, teamA);
                                 const usersB = isTBDB ? [] : getUsersWhoPickedTeam(nextStg, teamB);
 
+                                // Controllo badge qualificazione per visualizzazione Matches
                                 const hasAdvancedA = teamA && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamA)));
                                 const hasAdvancedB = teamB && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamB)));
 
