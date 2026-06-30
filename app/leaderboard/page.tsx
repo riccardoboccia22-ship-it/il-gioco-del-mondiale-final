@@ -43,6 +43,50 @@ const STAGE_POINTS: Record<string, number> = { R32: 2, R16: 4, QF: 6, SF: 8, F: 
 const STAGE_CAPACITY: Record<string, number> = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
 const STAGE_LABELS: Record<string, string> = { R32: 'Sedicesimi', R16: 'Ottavi', QF: 'Quarti', SF: 'Semifinale', F: 'Finalista', WINNER: 'Campione' };
 
+// Mappa esatta degli incroci del Tabellone per calcolare le eliminazioni istantanee
+const BRACKET_LINKS = [
+  // R32 -> R16
+  { stage1: ['R32_SEDICESIMI_1E', 'R32_SEDICESIMI_3M1'], winner: 'R16_OTTAVI_V1' },
+  { stage1: ['R32_SEDICESIMI_1I', 'R32_SEDICESIMI_3M2'], winner: 'R16_OTTAVI_V2' },
+  { stage1: ['R32_SEDICESIMI_2A', 'R32_SEDICESIMI_2B'], winner: 'R16_OTTAVI_V3' },
+  { stage1: ['R32_SEDICESIMI_1F', 'R32_SEDICESIMI_2C'], winner: 'R16_OTTAVI_V4' },
+  { stage1: ['R32_SEDICESIMI_2K', 'R32_SEDICESIMI_2L'], winner: 'R16_OTTAVI_V5' },
+  { stage1: ['R32_SEDICESIMI_1H', 'R32_SEDICESIMI_2J'], winner: 'R16_OTTAVI_V6' },
+  { stage1: ['R32_SEDICESIMI_1D', 'R32_SEDICESIMI_3M5'], winner: 'R16_OTTAVI_V7' },
+  { stage1: ['R32_SEDICESIMI_1G', 'R32_SEDICESIMI_3M6'], winner: 'R16_OTTAVI_V8' },
+  { stage1: ['R32_SEDICESIMI_1C', 'R32_SEDICESIMI_2F'], winner: 'R16_OTTAVI_V9' },
+  { stage1: ['R32_SEDICESIMI_2E', 'R32_SEDICESIMI_2I'], winner: 'R16_OTTAVI_V10' },
+  { stage1: ['R32_SEDICESIMI_1A', 'R32_SEDICESIMI_3M3'], winner: 'R16_OTTAVI_V11' },
+  { stage1: ['R32_SEDICESIMI_1L', 'R32_SEDICESIMI_3M4'], winner: 'R16_OTTAVI_V12' },
+  { stage1: ['R32_SEDICESIMI_1J', 'R32_SEDICESIMI_2H'], winner: 'R16_OTTAVI_V13' },
+  { stage1: ['R32_SEDICESIMI_2D', 'R32_SEDICESIMI_2G'], winner: 'R16_OTTAVI_V14' },
+  { stage1: ['R32_SEDICESIMI_1B', 'R32_SEDICESIMI_3M7'], winner: 'R16_OTTAVI_V15' },
+  { stage1: ['R32_SEDICESIMI_1K', 'R32_SEDICESIMI_3M8'], winner: 'R16_OTTAVI_V16' },
+
+  // R16 -> QF
+  { stage1: ['R16_OTTAVI_V1', 'R16_OTTAVI_V2'], winner: 'QF_QUARTI_V1' },
+  { stage1: ['R16_OTTAVI_V3', 'R16_OTTAVI_V4'], winner: 'QF_QUARTI_V2' },
+  { stage1: ['R16_OTTAVI_V5', 'R16_OTTAVI_V6'], winner: 'QF_QUARTI_V3' },
+  { stage1: ['R16_OTTAVI_V7', 'R16_OTTAVI_V8'], winner: 'QF_QUARTI_V4' },
+  { stage1: ['R16_OTTAVI_V9', 'R16_OTTAVI_V10'], winner: 'QF_QUARTI_V5' },
+  { stage1: ['R16_OTTAVI_V11', 'R16_OTTAVI_V12'], winner: 'QF_QUARTI_V6' },
+  { stage1: ['R16_OTTAVI_V13', 'R16_OTTAVI_V14'], winner: 'QF_QUARTI_V7' },
+  { stage1: ['R16_OTTAVI_V15', 'R16_OTTAVI_V16'], winner: 'QF_QUARTI_V8' },
+
+  // QF -> SF
+  { stage1: ['QF_QUARTI_V1', 'QF_QUARTI_V2'], winner: 'SF_SEMIFINALI_V1' },
+  { stage1: ['QF_QUARTI_V3', 'QF_QUARTI_V4'], winner: 'SF_SEMIFINALI_V2' },
+  { stage1: ['QF_QUARTI_V5', 'QF_QUARTI_V6'], winner: 'SF_SEMIFINALI_V3' },
+  { stage1: ['QF_QUARTI_V7', 'QF_QUARTI_V8'], winner: 'SF_SEMIFINALI_V4' },
+
+  // SF -> F
+  { stage1: ['SF_SEMIFINALI_V1', 'SF_SEMIFINALI_V2'], winner: 'F_FINALE_1' },
+  { stage1: ['SF_SEMIFINALI_V3', 'SF_SEMIFINALI_V4'], winner: 'F_FINALE_2' },
+
+  // F -> WINNER
+  { stage1: ['F_FINALE_1', 'F_FINALE_2'], winner: 'WINNER_VINCITORE_1' }
+];
+
 const normalizeStage = (s: string) => {
   const u = s?.toUpperCase().trim() || '';
   if (u.includes('SEDICESIM') || u === 'R32') return 'R32';
@@ -92,6 +136,37 @@ const getTeamFlagCode = (teamName: string) => {
   if (!teamName) return null;
   const formattedName = formatMatchName(teamName).toLowerCase();
   return flagMap[formattedName] || null;
+};
+
+const getEliminatedTeams = (officialBracketData: any[]) => {
+  const eliminated = new Set<string>();
+  const slotMap: Record<string, string> = {};
+  
+  officialBracketData.forEach(ob => {
+     if (ob.team_name) slotMap[ob.stage] = cleanString(ob.team_name);
+  });
+
+  // 1. Se i sedicesimi sono pieni, elimino in automatico tutte le altre squadre (uscite ai gironi)
+  const r32Teams = officialBracketData.filter(ob => normalizeStage(ob.stage) === 'R32' && ob.team_name).map(ob => cleanString(ob.team_name));
+  if (r32Teams.length === 32) {
+     TOURNAMENT_GROUPS.forEach(g => g.teams.forEach(t => {
+        const cleanT = cleanString(t);
+        if (!r32Teams.includes(cleanT)) eliminated.add(cleanT);
+     }));
+  }
+
+  // 2. Controllo incrociato: se lo slot del vincitore di un match è stato popolato, la squadra perdente è eliminata
+  BRACKET_LINKS.forEach(link => {
+     const winnerTeam = slotMap[link.winner];
+     if (winnerTeam) {
+        const t1 = slotMap[link.stage1[0]];
+        const t2 = slotMap[link.stage1[1]];
+        if (t1 && t1 !== winnerTeam) eliminated.add(t1);
+        if (t2 && t2 !== winnerTeam) eliminated.add(t2);
+     }
+  });
+
+  return eliminated;
 };
 
 type AvatarDef = {
@@ -288,6 +363,9 @@ export default function LeaderboardPage() {
   // Variabili globali caricate una sola volta
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
+  
+  // STATO PER LE ELIMINAZIONI A CASCATA
+  const [eliminatedTeams, setEliminatedTeams] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchLeaderboard();
@@ -328,8 +406,12 @@ export default function LeaderboardPage() {
         setLeaderboard(sorted);
       }
 
-      setOfficialBracket(offBracketRes.data || []);
+      const offBracketData = offBracketRes.data || [];
+      setOfficialBracket(offBracketData);
       setOfficialBonuses(offBonusRes.data || null);
+      
+      // Calcola le squadre matematicamente eliminate
+      setEliminatedTeams(getEliminatedTeams(offBracketData));
 
     } catch (err) {
       console.error("Sync Error:", err);
@@ -381,7 +463,7 @@ export default function LeaderboardPage() {
       }
       setPlayerPredictions(combinedMatches);
 
-      // 2. CARICAMENTO TABELLONE CON SQUADRE ELIMINATE O IN ATTESA
+      // 2. CARICAMENTO TABELLONE CON LOGICA ELIMINAZIONE ISTANTANEA
       const { data: bData, error: e2 } = await supabase.from('brackets').select('*').eq('user_id', player.id);
       if (e2) throw e2;
       const processedBrackets: any[] = [];
@@ -394,12 +476,11 @@ export default function LeaderboardPage() {
          
          if (!cleanT) return;
          
-         // Cerco quali squadre sono classificate ufficialmente per questa fase
          const officialTeamsInStage = officialBracket.filter(ob => normalizeStage(ob.stage) === uS);
          const isCorrect = officialTeamsInStage.some(ob => cleanString(ob.team_name) === cleanT);
          
-         // Se per la fase X ci sono già tutte le squadre qualificate previste (es. 16 per gli Ottavi)
-         // e la squadra utente non c'è, allora è eliminata.
+         // La squadra è eliminata se è nel set delle eliminate (calcolato tramite l'albero ufficiale)
+         const isEliminated = eliminatedTeams.has(cleanT);
          const isStageFull = officialTeamsInStage.length >= (STAGE_CAPACITY[uS] || 99);
          
          if (!seenBrackets.has(uniqueKey)) {
@@ -408,7 +489,7 @@ export default function LeaderboardPage() {
             
             if (isCorrect) {
                processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: pts, status: 'CORRECT', stageValue: pts });
-            } else if (isStageFull) {
+            } else if (isEliminated || isStageFull) {
                processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: 0, status: 'WRONG', stageValue: pts });
             } else {
                processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: 0, status: 'PENDING', stageValue: pts });
@@ -427,13 +508,12 @@ export default function LeaderboardPage() {
          return 0;
       }));
 
-      // 3. CARICAMENTO BONUS (CON CONTROLLI SICURI E RECUPERO PARZIALE)
+      // 3. CARICAMENTO BONUS 
       const { data: uBonus, error: e3 } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
-      if (e3 && e3.code !== 'PGRST116') throw e3; // Ignoriamo errore riga non trovata se l'utente non ha salvato nulla
+      if (e3 && e3.code !== 'PGRST116') throw e3; 
       
       const processedBonuses: any[] = [];
       
-      // CONTROLLO PARZIALE DEI BONUS GIRONI: Verifico se almeno uno è stato valorizzato e non è TBD
       const isGroupsClosed = !!(officialBonuses && (
         (officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD' && officialBonuses.high_scoring_match.trim() !== '') ||
         (officialBonuses.highest_scoring_group && officialBonuses.highest_scoring_group !== 'TBD' && officialBonuses.highest_scoring_group.trim() !== '') ||
@@ -455,7 +535,6 @@ export default function LeaderboardPage() {
             let earnedPts = 0;
             const offVal = officialBonuses ? officialBonuses[key] : null;
             
-            // Verifico che il bonus sia stato giudicato ufficialmente
             if (isEvaluated && offVal != null && offVal !== 'TBD' && String(offVal).trim() !== '') {
                const offValues = String(offVal).split(',').map(v => cleanString(v));
                if (offValues.includes(cleanString(uVal))) {
@@ -517,13 +596,11 @@ export default function LeaderboardPage() {
            (player.full_name?.toLowerCase().includes(query));
   });
 
-  // Helper function to render a bonus answer with flags and proper spacing
   const renderBonusAnswer = (answer: string, label: string, status: string) => {
     if (!answer) return null;
     const isWrong = status === 'WRONG';
     const textClass = `text-[11px] font-black uppercase italic truncate ${isWrong ? 'text-rose-500 line-through' : 'text-white'}`;
     
-    // Gestione Partita con Più Gol
     if (label === 'Match + Gol' && answer.includes('-')) {
       const [t1, t2] = answer.split('-').map(s => s.trim());
       const f1 = getTeamFlagCode(t1);
@@ -539,7 +616,6 @@ export default function LeaderboardPage() {
       );
     }
     
-    // Gestione Gironi
     if (label.includes('Girone')) {
       const groupInfo = TOURNAMENT_GROUPS.find(g => g.name.toLowerCase() === answer.toLowerCase());
       return (
@@ -557,7 +633,6 @@ export default function LeaderboardPage() {
       );
     }
 
-    // Gestione Giocatori (MVP, Capocannoniere, Portiere)
     if (['MVP Mondiale', 'Capocannoniere', 'Miglior Portiere'].includes(label)) {
       const allPlayers = [...(WORLD_CUP_PLAYERS || []), ...(WORLD_CUP_GOALKEEPERS || [])];
       const playerInfo = allPlayers.find(p => cleanString(p.name) === cleanString(answer));
@@ -573,7 +648,6 @@ export default function LeaderboardPage() {
       );
     }
     
-    // Base Case
     return <span className={`${textClass} block mt-0.5 leading-none`}>{answer}</span>;
   };
 
@@ -652,7 +726,6 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="flex flex-col justify-center min-w-0">
                       <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>{player.username}</p>
-                      {/* FIX: Nome e Cognome con wrapping fluido su mobile invece di truncate */}
                       {player.full_name && (
                         <p className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">
                           {player.full_name}
@@ -787,7 +860,7 @@ export default function LeaderboardPage() {
                                    isWrong ? 'text-rose-500 bg-rose-500/10 border-rose-500/20' : 
                                    'text-slate-400 bg-slate-800/50 border-slate-700/50'
                                 }`}>
-                                  {isCorrect ? `+${br.points} PT` : isWrong ? 'Eliminata' : 'In attesa'}
+                                  {isCorrect ? `+${br.points} PT` : isWrong ? 'Eliminata ❌' : 'In attesa'}
                                 </span>
                               </div>
                            </div>
