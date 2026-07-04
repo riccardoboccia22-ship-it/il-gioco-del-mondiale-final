@@ -152,7 +152,7 @@ const normalizeStage = (s: string) => {
   if (u.includes('QUART') || u.includes('QF')) return 'QF';
   if (u.includes('SEMIFINAL') || u.includes('SF')) return 'SF';
   if (u.includes('VINCITOR') || u.includes('CAMPIONE') || u.includes('WINNER')) return 'WINNER';
-  if (u.includes('FINAL') || u === 'F' || u.includes('F_')) return 'F';
+  if (u.includes('FINAL') || u === 'F' || u.startsWith('F_')) return 'F';
   return u;
 };
 
@@ -1678,7 +1678,7 @@ export default function AdminPage() {
 
               <div className="space-y-4 pt-4 border-t border-slate-800">
                  {STAGES.map(stg => { 
-                    const items = officialBracket.filter(o => o.stage.includes(stg.id + '_')); 
+                    const items = officialBracket.filter(o => normalizeStage(o.stage) === stg.id); 
                     if (items.length === 0) return null; 
                     
                     return (
