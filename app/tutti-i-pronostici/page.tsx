@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
+const FINALE_START_DATE = new Date('2026-07-19T21:00:00+02:00');
 
 // Punteggi assegnati per ogni fase
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
@@ -271,9 +272,10 @@ export default function TuttiPronosticiPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [data, setData] = useState<any>({
-    currentUserUsername: '', profiles: [], matches: [], predictionsMap: {}, bracketMap: {}, bonusMap: {}, officialBonus: null, officialResults: [],
+    currentUserUsername: '', profiles: [], matches: [], predictionsMap: {}, bracketMap: {}, bonusMap: {}, officialBonus: null, officialResults: [], finalePredictions: []
   });
   const [loading, setLoading] = useState(true);
+  const [isFinaleActive, setIsFinaleActive] = useState(false);
   
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
@@ -288,6 +290,7 @@ export default function TuttiPronosticiPage() {
   const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   const isStarted = new Date().getTime() > WORLD_CUP_START_DATE.getTime();
+  const isFinaleExpired = new Date().getTime() > FINALE_START_DATE.getTime();
 
   useEffect(() => {
     async function fetchData() {
@@ -306,7 +309,9 @@ export default function TuttiPronosticiPage() {
         
         const prData = await fetchAllRecords('predictions', 'user_id', 'match_id');
         const brData = await fetchAllRecords('brackets', 'user_id', 'stage', 'team_name');
+        const fPredData = await fetchAllRecords('final_match_predictions', 'user_id');
 
+        const { data: appSet } = await supabase.from('app_settings').select('is_finale_active').eq('id', 1).maybeSingle();
         const { data: offBo } = await supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle();
 
         const predMap: any = {};
@@ -328,8 +333,10 @@ export default function TuttiPronosticiPage() {
           currentUserUsername: profile.username,
           profiles: pData || [], matches: mData || [], predictionsMap: predMap,
           bracketMap: brackMap, officialResults: obData || [], officialBonus: offBo || null, bonusMap: bMap,
+          finalePredictions: fPredData || []
         });
 
+        if (appSet) setIsFinaleActive(appSet.is_finale_active);
         setEliminatedTeams(getEliminatedTeams(obData || []));
         setOpenDays({});
 
@@ -693,7 +700,6 @@ export default function TuttiPronosticiPage() {
     </div>
   );
 
-  // Per il layout a fisarmonica (da SX a DX) utilizziamo l'intero array delle fasi in ordine
   const allStages = [
     { id: 'R32', title: 'SEDICESIMI', matches: BRACKET_MATCHES.R32 },
     { id: 'R16', title: 'OTTAVI', matches: BRACKET_MATCHES.R16 },
@@ -803,7 +809,6 @@ export default function TuttiPronosticiPage() {
       </main>
   );
 
-  // Ordiniamo gli utenti nel modal per Ranking (dal #1 in poi)
   const filteredModalUsers = (selectedNode?.users.filter((u: any) => 
      u.username?.toLowerCase().includes(modalSearchQuery.toLowerCase()) || 
      u.full_name?.toLowerCase().includes(modalSearchQuery.toLowerCase())
@@ -812,6 +817,40 @@ export default function TuttiPronosticiPage() {
      const rankB = parseInt(b.ranking) || 9999;
      return rankA - rankB;
   });
+
+  // NUOVA LOGICA: CALCOLO DELLE SCHEDINE AGGREGATE DE "LA FINALE"
+  const getAggregatedFinalePicks = () => {
+    const agg: Record<string, { users: any[], count: number, details: any }> = {};
+
+    data.finalePredictions.forEach((pred: any) => {
+      const p = filteredProfiles.find((prof: any) => prof.id === pred.user_id);
+      if (!p) return;
+
+      const camp = formatTeamName(pred.champion_team);
+      const score = `${pred.home_score}-${pred.away_score}`;
+      let meth = '';
+      if (pred.ending_method === 'REGULAR') meth = '90\'';
+      if (pred.ending_method === 'OVERTIME') meth = 'Suppl.';
+      if (pred.ending_method === 'PENALTIES') meth = 'Rigori';
+
+      // Raggruppiamo per Campione + Risultato + Modalità
+      const key = `${camp}_${score}_${meth}`;
+
+      if (!agg[key]) {
+        agg[key] = {
+          users: [],
+          count: 0,
+          details: { camp, score, meth, flag: getFlagUrl(camp) }
+        };
+      }
+      agg[key].users.push({ ...p, minute: pred.first_goal_minute });
+      agg[key].count += 1;
+    });
+
+    return Object.values(agg).sort((a, b) => b.count - a.count);
+  };
+
+  const aggregatedFinalePicks = getAggregatedFinalePicks();
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans overflow-x-hidden">
@@ -843,6 +882,67 @@ export default function TuttiPronosticiPage() {
           ))}
         </div>
       </header>
+
+      {/* --- SEZIONE "LA FINALE" IN CIMA SE ATTIVA --- */}
+      {isFinaleActive && (
+        <div className="max-w-4xl mx-auto mb-8 px-2 sm:px-0">
+          <div className="bg-slate-900 border-2 border-yellow-500/50 rounded-[2rem] overflow-hidden shadow-[0_0_30px_rgba(234,179,8,0.1)] relative">
+            <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 p-4 text-center border-b border-yellow-400/50">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-950 uppercase italic tracking-tighter flex items-center justify-center gap-2">
+                <Trophy size={20}/> Pronostici de "La Finale"
+              </h2>
+            </div>
+            
+            <div className="p-4 sm:p-6 bg-slate-950/80">
+              {!isFinaleExpired ? (
+                <div className="text-center py-6 flex flex-col items-center opacity-70">
+                  <Lock size={32} className="text-yellow-500 mb-3" />
+                  <p className="text-xs font-black uppercase text-yellow-500 tracking-widest max-w-xs">I pronostici saranno svelati all'inizio della Finale.</p>
+                </div>
+              ) : aggregatedFinalePicks.length === 0 ? (
+                <p className="text-xs font-black uppercase text-slate-500 text-center py-6">Nessuna schedina trovata</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {aggregatedFinalePicks.map((pick, idx) => {
+                    const isMe = pick.users.some(u => u.username === data.currentUserUsername);
+                    return (
+                      <div key={idx} className={`bg-slate-900 border rounded-2xl p-4 relative transition-all ${isMe ? 'border-yellow-500/50 ring-1 ring-yellow-500 shadow-md' : 'border-slate-800'}`}>
+                        {isMe && <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg">La tua</div>}
+                        
+                        <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-3">
+                          <div className="flex items-center gap-3">
+                            {pick.details.flag ? <img src={pick.details.flag} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={20} className="text-slate-600"/>}
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black uppercase italic text-white leading-none mb-1">{pick.details.camp}</span>
+                              <div className="flex gap-2 text-[10px] font-black uppercase tracking-wider">
+                                <span className="text-yellow-500">Ris: {pick.details.score}</span>
+                                <span className="text-slate-500">({pick.details.meth})</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner text-center shrink-0">
+                            <span className="text-slate-400 font-black text-[10px] block leading-none">{pick.count}</span>
+                            <span className="text-slate-600 font-bold uppercase text-[7px] tracking-widest">Scelte</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {pick.users.map((u: any, i: number) => (
+                            <div key={i} className={`flex flex-col bg-slate-950/50 px-2.5 py-1.5 rounded-lg border border-slate-800/50 ${u.username === data.currentUserUsername ? 'bg-yellow-500/10 border-yellow-500/30' : ''}`}>
+                              <span className={`text-[10px] font-black uppercase ${u.username === data.currentUserUsername ? 'text-yellow-500' : 'text-slate-300'}`}>{u.username}</span>
+                              <span className="text-[8px] font-bold text-slate-500 uppercase mt-0.5">Tie: {u.minute ? `${u.minute}'` : '0'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto space-y-6">
         

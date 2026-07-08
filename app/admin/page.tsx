@@ -279,7 +279,6 @@ const AutocompleteInput = ({
   );
 };
 
-// FIX: Aggiunto ordinamento univoco a 3 livelli per evitare che il DB salti le righe nel limite delle 1000 iterazioni!
 const fetchAllRecords = async (table: string, orderCol1?: string, orderCol2?: string, orderCol3?: string) => {
   let result: any[] = [];
   let start = 0;
@@ -305,7 +304,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   
-  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, liveStats: false, bonus: false, statistiche: false, marcatori: false });
+  const [openSection, setOpenSection] = useState({ annuncio: false, iscrizioni: false, risultati: false, tabellone: false, liveStats: false, bonus: false, statistiche: false, marcatori: false, laFinale: false });
   
   const [matches, setMatches] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -314,8 +313,11 @@ export default function AdminPage() {
   const [allBrackets, setAllBrackets] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [topScorers, setTopScorers] = useState<any[]>([]);
+  const [userFinalePredictions, setUserFinalePredictions] = useState<any[]>([]);
   
   const [announcement, setAnnouncement] = useState('');
+  const [isFinaleActive, setIsFinaleActive] = useState(false);
+  
   const [newScorerName, setNewScorerName] = useState('');
   const [newScorerTeam, setNewScorerTeam] = useState('');
 
@@ -324,10 +326,19 @@ export default function AdminPage() {
   const [qSlot, setQSlot] = useState(BRACKET_SLOTS['R32'][0].dbString);
 
   const [bonusData, setBonusData] = useState({ red: '', top: '', penalties: '', own_goals: '', mvp_world_cup: '', best_goalkeeper: '', high: '', high_group: '', low_group: '' });
+  
+  // STATI REALI INPUT SEZIONE "LA FINALE"
+  const [finaleResultData, setFinaleResultData] = useState({
+    champion_team: '',
+    home_score: '',
+    away_score: '',
+    ending_method: 'REGULAR',
+    first_goal_minute: ''
+  });
+  const [finaleReportText, setFinaleReportText] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [groupedMatches, setGroupedMatches] = useState<Record<string, string[]>>({});
-  
-  // STATO PER IL GIORNO CORRENTE DA AUTOSCROLLARE
   const [todayKey, setTodayKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -339,7 +350,6 @@ export default function AdminPage() {
     init();
   }, []);
 
-  // EFFETTO PER L'AUTO-SCROLL AI RISULTATI ODIERNI
   useEffect(() => {
     if (openSection.risultati && todayKey) {
       const timer = setTimeout(() => {
@@ -362,11 +372,11 @@ export default function AdminPage() {
       supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
     ]);
     
-    // FETCH A BLOCCHI SICURO CON ORDINAMENTO UNIVOCO
     const pData = await fetchAllRecords('profiles', 'id');
     const ubData = await fetchAllRecords('user_bonus_answers', 'user_id');
-    const brData = await fetchAllRecords('brackets', 'user_id', 'stage', 'team_name'); // <- FONDAMENTALE!
+    const brData = await fetchAllRecords('brackets', 'user_id', 'stage', 'team_name');
     const predData = await fetchAllRecords('predictions', 'user_id', 'match_id');
+    const fPredictions = await fetchAllRecords('final_match_predictions', 'user_id');
 
     const fetchedMatches = mRes.data || [];
     setMatches(fetchedMatches); 
@@ -376,9 +386,11 @@ export default function AdminPage() {
     setAllBrackets(brData || []);
     setPredictions(predData || []);
     setTopScorers(scorersRes.data || []);
+    setUserFinalePredictions(fPredictions || []);
     
     if (settingsRes.data) {
       setAnnouncement(settingsRes.data.announcement || '');
+      setIsFinaleActive(settingsRes.data.is_finale_active || false);
     }
 
     const tempGroups: Record<string, string[]> = {};
@@ -395,7 +407,6 @@ export default function AdminPage() {
     });
     setGroupedMatches(tempGroups);
     
-    // Individuo la giornata di oggi per lo scroll
     const today = new Date();
     let foundTodayKey: string | null = null;
     fetchedMatches.forEach((m: any) => {
@@ -428,7 +439,6 @@ export default function AdminPage() {
     }
   }
 
-  // --- LOGICA RAGGRUPPAMENTO PARTITE PER GIORNO ---
   const groupedMatchesByDay = useMemo(() => {
     const processed = matches
       .map(m => {
@@ -452,7 +462,7 @@ export default function AdminPage() {
         const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
         dayName = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
       } else if (m.id) {
-        dVal = m.id; // fallback per match senza data
+        dVal = m.id;
       }
 
       if (!groupsMap[dayName]) {
@@ -473,6 +483,86 @@ export default function AdminPage() {
     const { error } = await supabase.from('app_settings').upsert({ id: 1, announcement: text });
     if (error) toast.error('Errore durante il salvataggio');
     else toast.success(text === '' ? 'Annuncio rimosso!' : 'Annuncio pubblicato!');
+  };
+
+  const toggleFinaleStatus = async () => {
+    const newStatus = !isFinaleActive;
+    setIsFinaleActive(newStatus);
+    const { error } = await supabase.from('app_settings').upsert({ id: 1, is_finale_active: newStatus });
+    if (error) {
+      toast.error('Errore durante il cambio stato');
+      setIsFinaleActive(!newStatus);
+    } else {
+      toast.success(newStatus ? 'Fase "LA FINALE" Attivata! Pop-up sbloccato.' : 'Fase "LA FINALE" Disattivata.');
+    }
+  };
+
+  const handleCalculateFinaleWinners = () => {
+    if (!finaleResultData.champion_team || !finaleResultData.home_score || !finaleResultData.away_score || !finaleResultData.first_goal_minute) {
+      return toast.error('Inserisci tutti i dati reali della finale per calcolare i vincitori');
+    }
+
+    const realCamp = cleanString(finaleResultData.champion_team);
+    const realHScore = parseInt(finaleResultData.home_score);
+    const realAScore = parseInt(finaleResultData.away_score);
+    const realMethod = finaleResultData.ending_method;
+    const realMin = parseInt(finaleResultData.first_goal_minute);
+
+    const scoredUsers = userFinalePredictions.map(pred => {
+      let currentPts = 0;
+      const isCampCorrect = cleanString(pred.champion_team) === realCamp;
+      const isScoreCorrect = parseInt(pred.home_score) === realHScore && parseInt(pred.away_score) === realAScore;
+      const isMethodCorrect = pred.ending_method === realMethod;
+      
+      if (isScoreCorrect) currentPts += 10;
+      if (isCampCorrect) currentPts += 5;
+      if (isMethodCorrect) currentPts += 5; // Combinato: +5 punti se indovina la modalità
+
+      const userMin = parseInt(pred.first_goal_minute) || 0;
+      const minDistance = Math.abs(userMin - realMin);
+
+      const uProf = profiles.find(p => p.id === pred.user_id);
+      return {
+        username: uProf ? uProf.username : 'Anonimo',
+        points: currentPts,
+        isScoreCorrect,
+        isCampCorrect,
+        isMethodCorrect,
+        minute: userMin,
+        distance: minDistance
+      };
+    });
+
+    const maxPts = Math.max(...scoredUsers.map(u => u.points), 0);
+    const topScorersList = scoredUsers.filter(u => u.points === maxPts && maxPts > 0);
+
+    let sortedWinners = [...topScorersList].sort((a, b) => a.distance - b.distance);
+
+    let report = `🏆 *RISULTATI COMPETIZIONE "LA FINALE"* 🏆\n\n`;
+    report += `📊 *Dati Reali:* ${finaleResultData.champion_team} Campione, Risultato: ${realHScore}-${realAScore} (${realMethod}), Minuto 1° Gol: ${realMin}'\n\n`;
+    
+    if (sortedWinners.length > 0) {
+      report += `👑 *VINCITORE PREMIO EXTRA/JACKPOT:* \n`;
+      report += `🥇 *${sortedWinners[0].username}* con ${sortedWinners[0].points} PT (Minuto inserito: ${sortedWinners[0].minute}', Distanza dal reale: ${sortedWinners[0].distance} min)\n\n`;
+      
+      if (sortedWinners.length > 1) {
+        report += `👥 *In lizza a pari punti ma spareggiati per il minuto:* \n`;
+        sortedWinners.slice(1).forEach((w, rank) => {
+          report += `${rank + 2}°. *${w.username}* (${w.points} pt, errore di ${w.distance} min)\n`;
+        });
+        report += `\n`;
+      }
+    } else {
+      report += `🧊 Nessun utente ha totalizzato punti in questa fase.\n\n`;
+    }
+
+    report += `📝 *Classifica Completa de "LA FINALE":*\n`;
+    [...scoredUsers].sort((a,b) => b.points - a.points || a.distance - b.distance).forEach(u => {
+      report += `- *${u.username}*: ${u.points} pt (Score: ${u.isScoreCorrect ? '✓' : '✗'}, Camp: ${u.isCampCorrect ? '✓' : '✗'}, Mode: ${u.isMethodCorrect ? '✓' : '✗'} | Errore Min: ${u.distance}m)\n`;
+    });
+
+    setFinaleReportText(report);
+    toast.success('Graduatoria de "LA FINALE" calcolata con successo!');
   };
 
   const addScorer = async (e: React.FormEvent) => {
@@ -721,7 +811,7 @@ export default function AdminPage() {
         if (b.pts_sf !== a.pts_sf) return b.pts_sf - a.pts_sf; 
         if (b.pts_f !== a.pts_f) return b.pts_f - a.pts_f; 
         if (b.pts_winner !== a.pts_winner) return b.pts_winner - a.pts_winner;
-        return (a.username || '').localeCompare(b.username || '');
+        return (a.username || '').localeCompare(b.username || ' ');
       });
 
       const ranked = sorted.map((u, i) => ({ ...u, ranking: (i + 1).toString() }));
@@ -1348,6 +1438,129 @@ export default function AdminPage() {
                 <button onClick={() => { setAnnouncement(''); saveAnnouncement(''); }} className="p-5 bg-slate-900 border border-slate-700 text-slate-500 hover:text-rose-500 rounded-2xl transition-colors"><Trash2 size={20} /></button>
                 <button onClick={() => saveAnnouncement(announcement)} className="flex-1 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">Pubblica Annuncio</button>
               </div>
+            </div>
+          )}
+        </section>
+
+        {/* ----- NUOVA SEZIONE: LA FINALE ----- */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-yellow-500">
+          <button onClick={() => setOpenSection({ ...openSection, laFinale: !openSection.laFinale })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Trophy className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">LA FINALE</h2></div>
+            {openSection.laFinale ? <ChevronUp /> : <ChevronDown />}
+          </button>
+          {openSection.laFinale && (
+            <div className="p-5 bg-slate-950/30 space-y-6">
+              
+              {/* ACCENSIONE/SPEGNIMENTO POPUP IN APP_SETTINGS */}
+              <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-between shadow-inner">
+                <div className="flex flex-col pr-4">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">Stato Fase Finale</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase mt-1">Attiva o disattiva la visibilità del pop-up per gli utenti</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleFinaleStatus}
+                  className={`px-4 py-2.5 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all shrink-0 border ${isFinaleActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-slate-950 text-slate-500 border-slate-800'}`}
+                >
+                  {isFinaleActive ? '✓ ATTIVA (POP-UP ON)' : '❌ DISATTIVATA'}
+                </button>
+              </div>
+
+              {/* INPUT RISULTATI REALI */}
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-4 shadow-inner">
+                <h3 className="text-xs font-black text-yellow-500 uppercase tracking-widest text-center mb-1">Inserimento Dati Reali della Finale</h3>
+                
+                <div className="space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Squadra Campione</span>
+                  <AutocompleteInput 
+                    value={finaleResultData.champion_team} 
+                    onChange={val => setFinaleResultData({ ...finaleResultData, champion_team: val })} 
+                    placeholder="SQUADRA CAMPIONE UFFICIALE" 
+                    suggestions={TEAMS_2026.map(t => ({ name: t, country: t }))} 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Gol Casa (Regular)</span>
+                    <input 
+                      value={finaleResultData.home_score} 
+                      onChange={e => setFinaleResultData({...finaleResultData, home_score: e.target.value})} 
+                      type="number" 
+                      placeholder="0" 
+                      className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-base text-center outline-none focus:border-yellow-500" 
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Gol Ospiti (Regular)</span>
+                    <input 
+                      value={finaleResultData.away_score} 
+                      onChange={e => setFinaleResultData({...finaleResultData, away_score: e.target.value})} 
+                      type="number" 
+                      placeholder="0" 
+                      className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-base text-center outline-none focus:border-yellow-500" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 mt-1">
+                  {[
+                    { id: 'REGULAR', label: '90 Minuti' },
+                    { id: 'OVERTIME', label: 'Suppl.' },
+                    { id: 'PENALTIES', label: 'Rigori' }
+                  ].map(method => (
+                    <button
+                      key={method.id}
+                      type="button"
+                      onClick={() => setFinaleResultData({ ...finaleResultData, ending_method: method.id })}
+                      className={`py-2 px-1 text-[10px] font-black uppercase rounded-xl border transition-all ${finaleResultData.ending_method === method.id ? 'bg-yellow-500 text-slate-950 border-yellow-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'}`}
+                    >
+                      {method.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Minuto Primo Gol (Tie-Breaker)</span>
+                  <input 
+                    value={finaleResultData.first_goal_minute} 
+                    onChange={e => setFinaleResultData({...finaleResultData, first_goal_minute: e.target.value})} 
+                    type="number" 
+                    placeholder="Es. 24 (Inserisci 0 se finisce 0-0)" 
+                    className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-sm focus:border-yellow-500 outline-none" 
+                  />
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={handleCalculateFinaleWinners} 
+                  className="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 py-4 mt-2 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all"
+                >
+                  🏆 Calcola Classifica e Vincitore
+                </button>
+              </div>
+
+              {/* REPORT GRADUATORIA GENERATA */}
+              {finaleReportText && (
+                <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-3 shadow-md animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Resoconto Calcolato</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(finaleReportText);
+                        toast.success('Report copiato negli appunti!');
+                      }}
+                      className="text-[9px] font-black uppercase bg-slate-950 border border-slate-700 hover:border-yellow-500 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-inner"
+                    >
+                      <MessageCircle size={12}/> Copia Report
+                    </button>
+                  </div>
+                  <pre className="text-[11px] font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto custom-scrollbar bg-slate-950 p-3 rounded-xl border border-slate-800/60 shadow-inner">
+                    {finaleReportText}
+                  </pre>
+                </div>
+              )}
+
             </div>
           )}
         </section>

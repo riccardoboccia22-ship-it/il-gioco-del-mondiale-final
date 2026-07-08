@@ -4,11 +4,24 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search, Star, Zap, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search, Star, Zap, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
+const FINALE_START_DATE = new Date('2026-07-19T21:00:00+02:00');
+
+const TEAMS_2026 = [
+  'Algeria', 'Arabia Saudita', 'Argentina', 'Australia', 'Austria', 'Belgio',
+  'Bosnia ed Erzegovina', 'Brasile', 'Canada', 'Capo Verde', 'Colombia',
+  'Corea del Sud', "Costa d'avorio", 'Croazia', 'Curaçao', 'Ecuador', 'Egitto',
+  'Francia', 'Germania', 'Ghana', 'Giappone', 'Giordania', 'Haiti', 'Inghilterra',
+  'Iran', 'Iraq', 'Marocco', 'Messico', 'Norvegia', 'Nuova Zelanda', 'Olanda',
+  'Panama', 'Paraguay', 'Portogallo', 'Qatar', 'Repubblica Ceca',
+  'Repubblica Democratica del Congo', 'Scozia', 'Senegal', 'Spagna',
+  'Stati Uniti', 'Sudafrica', 'Svezia', 'Svizzera', 'Tunisia', 'Turchia',
+  'Uruguay', 'Uzbekistan',
+].sort();
 
 const STAGES = [
   { id: 'R32', label: 'Sedicesimi', count: 32, pts: 2 },
@@ -82,15 +95,30 @@ const cleanString = (str: string) => {
 
 export default function BracketPage() {
   const router = useRouter(); 
+  const [userId, setUserId] = useState<string | null>(null);
   const [selections, setSelections] = useState<any>({});
-  const [officialBracket, setOfficialBracket] = useState<any[]>([]); // <- NUOVO STATO
+  const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   
   const [activeCell, setActiveCell] = useState<any>(null);
   const [teamSearch, setTeamSearch] = useState(''); 
 
+  // STATI EVENTO "LA FINALE"
+  const [isFinaleActive, setIsFinaleActive] = useState(false);
+  const [isFinalePopupOpen, setIsFinalePopupOpen] = useState(false);
+  const [hasPlayedFinale, setHasPlayedFinale] = useState(false);
+  const [isSavingFinale, setIsSavingFinale] = useState(false);
+  const [finalePrediction, setFinalePrediction] = useState({
+    champion_team: '',
+    home_score: '',
+    away_score: '',
+    ending_method: 'REGULAR',
+    first_goal_minute: ''
+  });
+
   const isExpired = new Date() > WORLD_CUP_START_DATE;
+  const isFinaleExpired = new Date() > FINALE_START_DATE;
 
   useEffect(() => {
     loadSavedBracket();
@@ -107,11 +135,14 @@ export default function BracketPage() {
       setFetching(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/'); return; } 
+      setUserId(user.id);
 
-      const [profileRes, bracketRes, offBracketRes] = await Promise.all([
+      const [profileRes, bracketRes, offBracketRes, settingsRes, finaleRes] = await Promise.all([
          supabase.from('profiles').select('full_name').eq('id', user.id).single(),
          supabase.from('brackets').select('stage, team_name').eq('user_id', user.id),
-         supabase.from('official_bracket').select('*') // <- RECUPERO TABELLONE UFFICIALE
+         supabase.from('official_bracket').select('*'),
+         supabase.from('app_settings').select('is_finale_active').eq('id', 1).maybeSingle(),
+         supabase.from('final_match_predictions').select('*').eq('user_id', user.id).maybeSingle()
       ]);
 
       if (!profileRes.data || !profileRes.data.full_name) {
@@ -134,8 +165,93 @@ export default function BracketPage() {
           setOfficialBracket(offBracketRes.data);
       }
 
+      // Impostazioni "LA FINALE"
+      if (settingsRes.data) {
+        setIsFinaleActive(settingsRes.data.is_finale_active);
+      }
+      
+      if (finaleRes.data) {
+        setFinalePrediction({
+          champion_team: finaleRes.data.champion_team || '',
+          home_score: finaleRes.data.home_score?.toString() || '',
+          away_score: finaleRes.data.away_score?.toString() || '',
+          ending_method: finaleRes.data.ending_method || 'REGULAR',
+          first_goal_minute: finaleRes.data.first_goal_minute?.toString() || ''
+        });
+        setHasPlayedFinale(true);
+      } else if (settingsRes.data?.is_finale_active && !isFinaleExpired) {
+        // Se l'evento è attivo e l'utente non ha mai giocato, apri il pop-up in automatico
+        setTimeout(() => setIsFinalePopupOpen(true), 1200);
+      }
+
     } catch (err) { toast.error('Errore caricamento'); } finally { setFetching(false); }
   }
+
+  const handleSaveFinale = async () => {
+    if (!userId || isFinaleExpired) return;
+    if (!finalePrediction.champion_team || finalePrediction.home_score === '' || finalePrediction.away_score === '' || finalePrediction.first_goal_minute === '') {
+      toast.error('Compila tutti i campi della schedina per procedere!');
+      return;
+    }
+    
+    setIsSavingFinale(true);
+    try {
+      const payload = {
+        user_id: userId,
+        champion_team: finalePrediction.champion_team,
+        home_score: parseInt(finalePrediction.home_score),
+        away_score: parseInt(finalePrediction.away_score),
+        ending_method: finalePrediction.ending_method,
+        first_goal_minute: parseInt(finalePrediction.first_goal_minute)
+      };
+      
+      const { error } = await supabase.from('final_match_predictions').upsert(payload, { onConflict: 'user_id' });
+      if (error) throw error;
+      
+      toast.success('Schedina de LA FINALE salvata con successo! 🏆');
+      setHasPlayedFinale(true);
+      setIsFinalePopupOpen(false);
+      
+      if (!hasPlayedFinale) {
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.5 },
+          colors: ['#eab308', '#ca8a04', '#ffffff']
+        });
+      }
+    } catch(e) {
+      toast.error('Errore durante il salvataggio della Finale.');
+    } finally {
+      setIsSavingFinale(false);
+    }
+  };
+
+  const handleResetFinale = async () => {
+    if (!userId || isFinaleExpired) return;
+    if (window.confirm('Sei sicuro di voler svuotare il tuo pronostico de LA FINALE?')) {
+      setIsSavingFinale(true);
+      try {
+        const { error } = await supabase.from('final_match_predictions').delete().eq('user_id', userId);
+        if (error) throw error;
+        
+        setFinalePrediction({
+          champion_team: '',
+          home_score: '',
+          away_score: '',
+          ending_method: 'REGULAR',
+          first_goal_minute: ''
+        });
+        setHasPlayedFinale(false);
+        setIsFinalePopupOpen(false);
+        toast.success('Schedina svuotata!', { icon: '🧹' });
+      } catch (e) {
+        toast.error('Errore durante la rimozione.');
+      } finally {
+        setIsSavingFinale(false);
+      }
+    }
+  };
 
   const getFileFlag = (team: string) => {
     const code = flagMap[team?.toLowerCase().trim()];
@@ -284,6 +400,116 @@ export default function BracketPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-48 font-sans">
+      
+      {/* POP-UP "LA FINALE" */}
+      {isFinalePopupOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-yellow-500/50 rounded-3xl w-full max-w-md shadow-[0_0_60px_rgba(234,179,8,0.2)] relative flex flex-col max-h-[90vh]">
+            
+            {/* Pop-up Header */}
+            <div className="bg-gradient-to-br from-yellow-600 to-yellow-500 p-6 text-center rounded-t-3xl relative shrink-0">
+               <button onClick={() => setIsFinalePopupOpen(false)} className="absolute top-4 right-4 bg-black/20 p-2 rounded-full hover:bg-black/40 text-yellow-50 transition-colors"><X size={16}/></button>
+               <Trophy size={48} className="mx-auto mb-3 text-yellow-100" />
+               <h2 className="text-3xl font-black text-slate-950 uppercase italic tracking-tighter leading-none shadow-black/10">LA FINALE</h2>
+               <p className="text-[10px] font-black uppercase tracking-widest text-yellow-900 mt-2 bg-yellow-400/50 inline-block px-3 py-1 rounded-full">Inserisci il pronostico qui!</p>
+            </div>
+            
+            {/* Pop-up Body */}
+            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                  <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">1</span>
+                  Chi alzerà la coppa? (5 PT)
+                </label>
+                <select 
+                  disabled={isFinaleExpired}
+                  value={finalePrediction.champion_team}
+                  onChange={e => setFinalePrediction({...finalePrediction, champion_team: e.target.value})}
+                  className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-sm text-white uppercase outline-none focus:border-yellow-500 appearance-none"
+                >
+                  <option value="">Seleziona Campione...</option>
+                  {TEAMS_2026.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                 <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                    <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">2</span>
+                    Risultato Esatto (10 PT)
+                 </label>
+                 <p className="text-[9px] text-slate-400 font-bold uppercase leading-relaxed mb-2">Risultato nei 90' o 120'</p>
+                 <div className="flex items-center gap-4 justify-center bg-slate-950 border border-slate-800 p-4 rounded-2xl">
+                    <input type="number" disabled={isFinaleExpired} value={finalePrediction.home_score} onChange={e => setFinalePrediction({...finalePrediction, home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                    <span className="text-xl font-black text-slate-600">-</span>
+                    <input type="number" disabled={isFinaleExpired} value={finalePrediction.away_score} onChange={e => setFinalePrediction({...finalePrediction, away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                 <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                    <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">3</span>
+                    Come si decide? (5 PT)
+                 </label>
+                 <div className="grid grid-cols-3 gap-2">
+                   {[
+                      { id: 'REGULAR', label: 'Nei 90\'' },
+                      { id: 'OVERTIME', label: 'Supplementari' },
+                      { id: 'PENALTIES', label: 'Ai Rigori' }
+                    ].map(method => (
+                      <button
+                        key={method.id}
+                        disabled={isFinaleExpired}
+                        onClick={() => setFinalePrediction({ ...finalePrediction, ending_method: method.id })}
+                        className={`py-4 px-1 text-[10px] sm:text-xs font-black uppercase rounded-xl border transition-all ${finalePrediction.ending_method === method.id ? 'bg-yellow-500 text-slate-950 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
+                      >
+                        {method.label}
+                      </button>
+                    ))}
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                   <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">4</span>
+                   Tie-Breaker: Minuto 1° Gol
+                </label>
+                <p className="text-[9px] text-slate-400 font-bold uppercase leading-relaxed mb-2">Serve solo in caso di spareggio. Se finisce 0-0, inserisci 0.</p>
+                <input 
+                  type="number" 
+                  disabled={isFinaleExpired}
+                  value={finalePrediction.first_goal_minute}
+                  onChange={e => setFinalePrediction({...finalePrediction, first_goal_minute: e.target.value})}
+                  placeholder="Es: 12"
+                  className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-center text-lg text-white outline-none focus:border-yellow-500 shadow-inner"
+                />
+              </div>
+            </div>
+
+            {/* Pop-up Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900 shrink-0 rounded-b-3xl flex gap-3">
+               {hasPlayedFinale && !isFinaleExpired && (
+                 <button 
+                    disabled={isSavingFinale}
+                    onClick={handleResetFinale}
+                    className="p-4 bg-slate-950 border border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-lg shrink-0 disabled:opacity-50"
+                    title="Svuota Schedina"
+                 >
+                    <Trash2 size={20} />
+                 </button>
+               )}
+               <button 
+                  disabled={isSavingFinale || isFinaleExpired}
+                  onClick={handleSaveFinale}
+                  className="flex-1 py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+               >
+                  {isSavingFinale ? <Loader2 size={16} className="animate-spin" /> : isFinaleExpired ? 'Pronostici Chiusi' : 'Salva!'}
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="text-center mb-6 pt-4 flex flex-col items-center">
         <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
         <p className="text-slate-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.4em] mt-3 italic">
@@ -302,12 +528,32 @@ export default function BracketPage() {
       <div className={`max-w-4xl mx-auto space-y-12 ${isExpired ? 'opacity-90' : ''}`}>
         
         {/* INFO BOX */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 -mt-2 mb-10 shadow-lg">
+        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 -mt-2 mb-6 shadow-lg">
           <Info className="text-yellow-500 shrink-0 mt-0.5" size={18} />
           <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
             <strong className="text-slate-200 font-black">L'ORDINE NON CONTA.</strong> Questa non è la griglia degli accoppiamenti esatti, ma solo la lista delle squadre che accederanno al turno. Ogni squadra qualificata ed indovinata riceverà i relativi punti.
           </p>
         </div>
+
+        {/* BOTTONE LA FINALE (Mostrato in cima se l'evento è attivo) */}
+        {isFinaleActive && (
+          <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
+             <button 
+               onClick={() => setIsFinalePopupOpen(true)}
+               className="w-full bg-gradient-to-br from-yellow-600 to-yellow-500 p-6 rounded-[2rem] shadow-[0_0_30px_rgba(234,179,8,0.15)] flex flex-col items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-95 border-2 border-yellow-400/50 relative overflow-hidden group"
+             >
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                
+                <Trophy size={48} className="text-yellow-100 drop-shadow-md" />
+                <div className="text-center relative z-10">
+                   <h2 className="text-2xl sm:text-3xl font-black text-slate-950 uppercase italic tracking-tighter leading-none mb-1.5 drop-shadow-sm">LA FINALE</h2>
+                   <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-950 bg-white/20 inline-block px-3 py-1 rounded-full">
+                     {hasPlayedFinale ? '✅ Modifica Pronostico' : 'Clicca qui!'}
+                   </p>
+                </div>
+             </button>
+          </div>
+        )}
 
         {STAGES.map((stage) => {
           // Filtraggio squadre ufficiali caricate per questa fase
