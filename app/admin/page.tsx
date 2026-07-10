@@ -479,19 +479,33 @@ export default function AdminPage() {
       .sort((a, b) => a.dateVal - b.dateVal);
   }, [matches, searchTerm]);
 
+  // CORRETTO: Uso di .update() invece di .upsert() per aggiornare solo l'annuncio
   const saveAnnouncement = async (text: string) => {
-    const { error } = await supabase.from('app_settings').upsert({ id: 1, announcement: text });
+    const { error } = await supabase
+      .from('app_settings')
+      .update({ announcement: text })
+      .eq('id', 1);
+
     if (error) toast.error('Errore durante il salvataggio');
     else toast.success(text === '' ? 'Annuncio rimosso!' : 'Annuncio pubblicato!');
   };
 
+  // CORRETTO: Uso di .update() per evitare sovrascritture o reset non voluti
   const toggleFinaleStatus = async () => {
-    const newStatus = !isFinaleActive;
+    const currentStatus = isFinaleActive;
+    const newStatus = !currentStatus;
+    
+    // Aggiornamento ottimistico
     setIsFinaleActive(newStatus);
-    const { error } = await supabase.from('app_settings').upsert({ id: 1, is_finale_active: newStatus });
+    
+    const { error } = await supabase
+      .from('app_settings')
+      .update({ is_finale_active: newStatus })
+      .eq('id', 1);
+
     if (error) {
       toast.error('Errore durante il cambio stato');
-      setIsFinaleActive(!newStatus);
+      setIsFinaleActive(currentStatus); // Rollback in caso di errore
     } else {
       toast.success(newStatus ? 'Fase "LA FINALE" Attivata! Pop-up sbloccato.' : 'Fase "LA FINALE" Disattivata.');
     }
