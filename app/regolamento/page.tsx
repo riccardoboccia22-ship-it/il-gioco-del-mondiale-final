@@ -12,7 +12,8 @@ import {
   Medal,
   LayoutGrid,
   Eye,
-  MessageCircle
+  MessageCircle,
+  ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -225,13 +226,13 @@ export default function RegolamentoPage() {
               </h3>
               <ul className="space-y-3 text-[11px] text-slate-300 font-medium">
                 <li className="flex justify-between items-start gap-4">
-                  <span>🎯 <strong>Il Cecchino:</strong> Chi indovina più "Risultati Esatti" nei gironi.</span>
+                  <span>🎯 <strong>Il Cecchino:</strong> Chi indovina più "Risultati Esatti" nei gironi. In caso di parità o divieto di cumulo, l'assegnazione potrà essere vincolata ad apposita Mini-Competizione.</span>
                 </li>
                 <li className="flex justify-between items-start gap-4">
-                  <span><Eye size={12} className="inline mr-1 -mt-0.5" /> <strong>Il Veggente:</strong> Chi indovina l'esatta partita della Finale. Se nessuno la indovina, scala al 9° in classifica generale.</span>
+                  <span><Eye size={12} className="inline mr-1 -mt-0.5" /> <strong>Il Veggente:</strong> Chi indovina l'esatta partita della Finale. In caso di mancata assegnazione, parità o divieto di cumulo, l'assegnazione potrà essere decisa tramite apposita <strong>Mini-Competizione</strong>.</span>
                 </li>
                 <li className="flex justify-between items-start gap-4 border-t border-slate-800 pt-3">
-                  <span>🧊 <strong>Zero Assoluto:</strong> A chi chiude i gironi con ZERO risultati esatti. In caso di parità, vince chi è <strong>più in basso</strong> in classifica generale.</span>
+                  <span>🧊 <strong>Zero Assoluto:</strong> A chi chiude i gironi con ZERO risultati esatti. In caso di nessuno utente con 0 risultati esatti, l'assegnazione verrà decisa tramite la <strong>Mini-Competizione della Finale</strong>.</span>
                 </li>
               </ul>
             </div>
@@ -262,7 +263,7 @@ export default function RegolamentoPage() {
           </div>
         </section>
 
-        {/* 5. SPAREGGI */}
+        {/* 5. SPAREGGI E DISPOSIZIONI */}
         <section className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-2 h-full bg-orange-500"></div>
           <div className="flex items-center gap-3 mb-6">
@@ -270,10 +271,10 @@ export default function RegolamentoPage() {
             <h2 className="text-xl font-black uppercase italic tracking-tight">5. Criteri di Spareggio</h2>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed mb-6">
-            In caso di parità punti, la posizione in classifica e nei premi di specialità viene sbrogliata automaticamente seguendo questo ordine:
+            In caso di parità punti, la posizione in classifica e nei premi di specialità viene sbrogliata automaticamente seguendo questo ordine standard:
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mb-8">
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-black text-orange-500 shrink-0 border border-slate-700 text-xs">1</div>
               <div>
@@ -304,6 +305,19 @@ export default function RegolamentoPage() {
                 <h3 className="font-black text-slate-200 uppercase text-[10px] tracking-wider">Qualità del Tabellone</h3>
                 <p className="text-[9px] text-slate-500 mt-1 italic">Vince chi ha predetto meglio le fasi iniziali (Sedicesimi → Ottavi → Quarti → Semifinali → Finaliste → Campione).</p>
               </div>
+            </div>
+          </div>
+
+          {/* DISPOSIZIONE AMMINISTRATORE */}
+          <div className="bg-gradient-to-r from-orange-950/40 to-yellow-950/40 border border-orange-500/30 p-5 rounded-2xl flex items-start gap-4 shadow-lg">
+            <ShieldAlert className="text-orange-400 shrink-0 mt-1" size={24} />
+            <div>
+              <h3 className="font-black text-orange-400 uppercase text-xs tracking-wider mb-1.5">
+                Disposizione dell'Amministratore
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                L'amministratore del torneo si riserva il diritto insindacabile di riassegnare, unire o modificare l'erogazione dei premi bonus e di specialità in caso di spareggi complessi, pareggi multipli o applicazione della regola sul divieto di cumulo, istituendo <strong>mini-competizioni dedicate</strong> (es. pronostico sulla Finale) o adottando criteri operativi specifici comunicati ufficialmente ai partecipanti nel gruppo WhatsApp.
+              </p>
             </div>
           </div>
         </section>
