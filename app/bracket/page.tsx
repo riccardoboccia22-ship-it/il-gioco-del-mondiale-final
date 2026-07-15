@@ -11,6 +11,41 @@ import confetti from 'canvas-confetti';
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
 const FINALE_START_DATE = new Date('2026-07-18T23:00:00+02:00'); // Orario d'inizio della finale 3°/4° posto di Sabato
 
+// LISTE CONVOCATI UFFICIALI E REALI AGGIORNATE
+const PLAYERS_SPAGNA = [
+  'David Raya', 'Unai Simón', 'Joan García', 'Marc Pubill', 'Alejandro Grimaldo',
+  'Eric García', 'Marcos Llorente', 'Pedro Porro', 'Aymeric Laporte', 'Pau Cubarsí',
+  'Marc Cucurella', 'Pedri', 'Fabián Ruiz', 'Martin Zubimendi', 'Gavi', 'Rodri',
+  'Álex Baena', 'Mikel Merino', 'Mikel Oyarzabal', 'Dani Olmo', 'Nico Williams',
+  'Yéremy Pino', 'Ferran Torres', 'Borja Iglesias', 'Víctor Muñoz', 'Lamine Yamal'
+].sort();
+
+const PLAYERS_ARGENTINA = [
+  'Emiliano Martínez', 'Gerónimo Rulli', 'Juan Musso', 'Gonzalo Montiel', 'Nahuel Molina',
+  'Cristian Romero', 'Lisandro Martínez', 'Nicolás Otamendi', 'Facundo Medina', 'Nicolás Tagliafico',
+  'Marcos Senesi', 'Rodrigo De Paul', 'Leandro Paredes', 'Alexis Mac Allister', 'Enzo Fernández',
+  'Giovani Lo Celso', 'Exequiel Palacios', 'Valentín Barco', 'Nicolás González', 'Lionel Messi',
+  'Lautaro Martínez', 'Julián Álvarez', 'Thiago Almada', 'Giuliano Simeone', 'Nico Paz',
+  'José Manuel López'
+].sort();
+
+const PLAYERS_INGHILTERRA = [
+  'Jordan Pickford', 'Dean Henderson', 'James Trafford', 'John Stones', 'Marc Guéhi',
+  'Ezri Konsa', 'Dan Burn', 'Reece James', 'Djed Spence', 'Jarell Quansah', "Nico O'Reilly",
+  'Declan Rice', 'Jude Bellingham', 'Kobbie Mainoo', 'Jordan Henderson', 'Conor Gallagher',
+  'Morgan Rogers', 'Eberechi Eze', 'Elliot Anderson', 'Harry Kane', 'Bukayo Saka',
+  'Marcus Rashford', 'Anthony Gordon', 'Ollie Watkins', 'Noni Madueke', 'Ivan Toney'
+].sort();
+
+const PLAYERS_FRANCIA = [
+  'Mike Maignan', 'Brice Samba', 'Robin Risser', 'Malo Gusto', 'Lucas Digne',
+  'Dayot Upamecano', 'Jules Koundé', 'Ibrahima Konaté', 'William Saliba', 'Théo Hernandez',
+  'Lucas Hernandez', 'Maxence Lacroix', "N'Golo Kanté", 'Aurélien Tchouaméni', 'Adrien Rabiot',
+  'Warren Zaïre-Emery', 'Manu Koné', 'Rayan Cherki', 'Maghnes Akliouche', 'Ousmane Dembélé',
+  'Marcus Thuram', 'Kylian Mbappé', 'Michael Olise', 'Désiré Doué', 'Jean-Philippe Mateta',
+  'Bradley Barcola'
+].sort();
+
 const TEAMS_2026 = [
   'Algeria', 'Arabia Saudita', 'Argentina', 'Australia', 'Austria', 'Belgio',
   'Bosnia ed Erzegovina', 'Brasile', 'Canada', 'Capo Verde', 'Colombia',
@@ -245,7 +280,6 @@ export default function BracketPage() {
   const handleSaveFinale = async () => {
     if (!userId || isFinaleExpired) return;
     
-    // Controllo campi base obbligatori (ora verifica sia finalissima che 3°/4° posto)
     if (
       finalePrediction.home_score === '' || 
       finalePrediction.away_score === '' || 
@@ -264,7 +298,6 @@ export default function BracketPage() {
         return isNaN(parsed) ? null : parsed;
       };
 
-      // 1. Calcolo automatico di "champion_team" dal bracket salvato per risolvere il NOT NULL obbligatorio
       const team1 = selections['F-0'] || 'Spagna';
       const team2 = selections['F-1'] || 'Argentina';
       const hScore = parseNum(finalePrediction.home_score) ?? 0;
@@ -273,7 +306,7 @@ export default function BracketPage() {
 
       const payload = {
         user_id: userId,
-        champion_team: calculatedChampion, // RISOLVE L'OBBLIGO NOT NULL SUL DATABASE
+        champion_team: calculatedChampion, 
         home_score: parseNum(finalePrediction.home_score),
         away_score: parseNum(finalePrediction.away_score),
         ending_method: finalePrediction.ending_method,
@@ -284,7 +317,7 @@ export default function BracketPage() {
         f12_2nd_away_score: parseNum(finalePrediction.f12_2nd_away_score),
         f12_first_to_score: finalePrediction.f12_first_to_score || null,
         f12_scorer: finalePrediction.f12_scorer || null,
-        first_goal_minute: parseNum(finalePrediction.first_goal_minute) ?? 0, // RISOLVE L'OBBLIGO NOT NULL SUL DATABASE CON FALLBACK A 0
+        first_goal_minute: parseNum(finalePrediction.first_goal_minute) ?? 0, 
         f12_fouls: parseNum(finalePrediction.f12_fouls),
         f12_yellow_cards: parseNum(finalePrediction.f12_yellow_cards),
         f12_red_cards: parseNum(finalePrediction.f12_red_cards),
@@ -324,7 +357,6 @@ export default function BracketPage() {
       }
     } catch(e: any) {
       console.error("Errore dettagliato database:", e);
-      // Mostrerà a schermo l'errore reale se qualcos'altro andasse storto (es. RLS, vincoli)
       toast.error(`Errore nel database: ${e.message || e.details || 'Verifica la console'}`);
     } finally {
       setIsSavingFinale(false);
@@ -344,7 +376,7 @@ export default function BracketPage() {
           f12_ht_home_score: '', f12_ht_away_score: '', f12_2nd_home_score: '', f12_2nd_away_score: '',
           f12_first_to_score: '', f12_scorer: '', first_goal_minute: '', f12_fouls: '',
           f12_yellow_cards: '', f12_red_cards: '', f12_penalties: '',
-          f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
+          f34_home_score: '', away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
           f34_ht_home_score: '', f34_ht_away_score: '', f34_2nd_home_score: '', f34_2nd_away_score: '',
           f34_first_to_score: '', f34_scorer: '', f34_first_goal_minute: '', f34_fouls: '',
           f34_yellow_cards: '', f34_red_cards: '', f34_penalties: ''
@@ -507,7 +539,7 @@ export default function BracketPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-48 font-sans">
       
-      {/* POP-UP MODALE "LA FINALE" - COMPATTO SENZA VINCE COPPA */}
+      {/* POP-UP MODALE "LA FINALE" */}
       {isFinalePopupOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-slate-900 border border-yellow-500/50 rounded-3xl w-full max-w-xl shadow-[0_0_60px_rgba(234,179,8,0.2)] relative flex flex-col max-h-[95vh] sm:max-h-[90vh]">
@@ -543,12 +575,12 @@ export default function BracketPage() {
             {/* Pop-up Body Contenuto Scorrevole */}
             <div className="p-4 sm:p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               
-              {/* === TAB 1: DOMENICA (FINALISSIMA) === */}
+              {/* === TAB 1: DOMENICA (FINALISSIMA - SPAGNA VS ARGENTINA) === */}
               {activeFinaleTab === 'SUNDAY' && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   <div className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center gap-2 text-yellow-400 text-xs font-bold">
                     <AlertCircle size={16} className="shrink-0 text-yellow-500" />
-                    <span>Pronostici per la Finale del 1° e 2° Posto (Domenica ore 21:00).</span>
+                    <span>Pronostici per la Finale del 1° e 2° Posto: SPAGNA - ARGENTINA.</span>
                   </div>
 
                   {/* RISULTATO FINALE NEI 90/120 */}
@@ -556,7 +588,7 @@ export default function BracketPage() {
                      <div className="flex justify-between items-center">
                         <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
                            <span className="bg-yellow-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
-                           Risultato Esatto Finale
+                           Risultato Esatto Finale (Spagna - Argentina)
                         </label>
                         <span className="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded font-black">+30 PT</span>
                      </div>
@@ -621,14 +653,22 @@ export default function BracketPage() {
                     </div>
                   </div>
 
-                  {/* MARCATORI E MVP */}
+                  {/* MENU A TENDINA: MARCATORI E MVP (DOMENICA) */}
                   <div className="space-y-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest">MVP (Miglior Giocatore FIFA)</label>
+                        <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest">MVP (Miglior Giocatore Ufficiale FIFA)</label>
                         <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+12 PT</span>
                       </div>
-                      <input type="text" disabled={isFinaleExpired} value={finalePrediction.f12_mvp} onChange={e => setFinalePrediction({...finalePrediction, f12_mvp: e.target.value})} placeholder="Es: Lamine Yamal" className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                      <select disabled={isFinaleExpired} value={finalePrediction.f12_mvp} onChange={e => setFinalePrediction({...finalePrediction, f12_mvp: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
+                        <option value="" className="text-slate-500">-- Scegli MVP --</option>
+                        <optgroup label="Spagna" className="bg-slate-950 text-yellow-500 font-bold">
+                          {PLAYERS_SPAGNA.map(p => <option key={`mvp-f12-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                        </optgroup>
+                        <optgroup label="Argentina" className="bg-slate-950 text-sky-400 font-bold">
+                          {PLAYERS_ARGENTINA.map(p => <option key={`mvp-f12-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                        </optgroup>
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
@@ -637,14 +677,28 @@ export default function BracketPage() {
                           <label className="text-[10px] font-black text-slate-300 uppercase">Squadra 1° Gol</label>
                           <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+5 PT</span>
                         </div>
-                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f12_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f12_first_to_score: e.target.value})} placeholder="Es: Spagna" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                        <select disabled={isFinaleExpired} value={finalePrediction.f12_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f12_first_to_score: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
+                          <option value="">-- Scegli Squadra --</option>
+                          <option value="Spagna">Spagna</option>
+                          <option value="Argentina">Argentina</option>
+                          <option value="Nessuno">Nessun Gol (0-0)</option>
+                        </select>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore</label>
+                          <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore 1° Gol</label>
                           <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+11 PT</span>
                         </div>
-                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f12_scorer} onChange={e => setFinalePrediction({...finalePrediction, f12_scorer: e.target.value})} placeholder="Es: Morata" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                        <select disabled={isFinaleExpired} value={finalePrediction.f12_scorer} onChange={e => setFinalePrediction({...finalePrediction, f12_scorer: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
+                          <option value="" className="text-slate-500">-- Scegli Marcatore --</option>
+                          <option value="Nessuno" className="text-rose-400">Nessuno / Solo Autogol</option>
+                          <optgroup label="Spagna" className="bg-slate-950 text-yellow-500 font-bold">
+                            {PLAYERS_SPAGNA.map(p => <option key={`scr-f12-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                          </optgroup>
+                          <optgroup label="Argentina" className="bg-slate-950 text-sky-400 font-bold">
+                            {PLAYERS_ARGENTINA.map(p => <option key={`scr-f12-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                          </optgroup>
+                        </select>
                       </div>
                     </div>
 
@@ -653,7 +707,7 @@ export default function BracketPage() {
                         <label className="text-[10px] font-black text-slate-300 uppercase">Minuto 1° Gol </label>
                         <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
-                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, first_goal_minute: e.target.value})} placeholder="Es: 24 (Se 0-0 scrivi 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
+                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, first_goal_minute: e.target.value})} placeholder="Es: 24 (Se non si segna, lascia vuoto o 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
                     </div>
                   </div>
 
@@ -682,12 +736,12 @@ export default function BracketPage() {
                 </div>
               )}
 
-              {/* === TAB 2: SABATO (FINALE 3°/4° POSTO) === */}
+              {/* === TAB 2: SABATO (FINALE 3°/4° POSTO - INGHILTERRA VS FRANCIA) === */}
               {activeFinaleTab === 'SATURDAY' && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl flex items-center gap-2 text-amber-400 text-xs font-bold">
                     <AlertCircle size={16} className="shrink-0 text-amber-500" />
-                    <span>Pronostici per la Finale 3°/4° Posto (Sabato ore 23:00).</span>
+                    <span>Pronostici per la Finale 3°/4° Posto: INGHILTERRA - FRANCIA.</span>
                   </div>
 
                   {/* RISULTATO FINALE NEI 90/120 */}
@@ -695,7 +749,7 @@ export default function BracketPage() {
                      <div className="flex justify-between items-center">
                         <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
                            <span className="bg-amber-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
-                           Risultato Esatto Finale
+                           Risultato Esatto Finale (Inghilterra - Francia)
                         </label>
                         <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black">+30 PT</span>
                      </div>
@@ -760,14 +814,22 @@ export default function BracketPage() {
                     </div>
                   </div>
 
-                  {/* MARCATORI E MVP */}
+                  {/* MENU A TENDINA: MARCATORI E MVP (SABATO) */}
                   <div className="space-y-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest">MVP (Miglior Giocatore FIFA)</label>
+                        <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest">MVP (Miglior Giocatore Ufficiale FIFA)</label>
                         <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+12 PT</span>
                       </div>
-                      <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_mvp} onChange={e => setFinalePrediction({...finalePrediction, f34_mvp: e.target.value})} placeholder="Es: Griezmann" className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500" />
+                      <select disabled={isFinaleExpired} value={finalePrediction.f34_mvp} onChange={e => setFinalePrediction({...finalePrediction, f34_mvp: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500 cursor-pointer">
+                        <option value="" className="text-slate-500">-- Scegli MVP --</option>
+                        <optgroup label="Inghilterra" className="bg-slate-950 text-white font-bold">
+                          {PLAYERS_INGHILTERRA.map(p => <option key={`mvp-f34-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                        </optgroup>
+                        <optgroup label="Francia" className="bg-slate-950 text-blue-400 font-bold">
+                          {PLAYERS_FRANCIA.map(p => <option key={`mvp-f34-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                        </optgroup>
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
@@ -776,14 +838,28 @@ export default function BracketPage() {
                           <label className="text-[10px] font-black text-slate-300 uppercase">Squadra 1° Gol</label>
                           <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+5 PT</span>
                         </div>
-                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f34_first_to_score: e.target.value})} placeholder="Es: Francia" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                        <select disabled={isFinaleExpired} value={finalePrediction.f34_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f34_first_to_score: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
+                          <option value="">-- Scegli Squadra --</option>
+                          <option value="Inghilterra">Inghilterra</option>
+                          <option value="Francia">Francia</option>
+                          <option value="Nessuno">Nessun Gol (0-0)</option>
+                        </select>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore</label>
+                          <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore 1° Gol</label>
                           <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+11 PT</span>
                         </div>
-                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_scorer} onChange={e => setFinalePrediction({...finalePrediction, f34_scorer: e.target.value})} placeholder="Es: Mbappé" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                        <select disabled={isFinaleExpired} value={finalePrediction.f34_scorer} onChange={e => setFinalePrediction({...finalePrediction, f34_scorer: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
+                          <option value="" className="text-slate-500">-- Scegli Marcatore --</option>
+                          <option value="Nessuno" className="text-rose-400">Nessuno / Solo Autogol</option>
+                          <optgroup label="Inghilterra" className="bg-slate-950 text-white font-bold">
+                            {PLAYERS_INGHILTERRA.map(p => <option key={`scr-f34-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                          </optgroup>
+                          <optgroup label="Francia" className="bg-slate-950 text-blue-400 font-bold">
+                            {PLAYERS_FRANCIA.map(p => <option key={`scr-f34-${p}`} value={p} className="text-white font-medium">{p}</option>)}
+                          </optgroup>
+                        </select>
                       </div>
                     </div>
 
@@ -792,7 +868,7 @@ export default function BracketPage() {
                         <label className="text-[10px] font-black text-slate-300 uppercase">Minuto 1° Gol</label>
                         <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
-                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se 0-0 scrivi 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
+                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se non si segna, lascia vuoto o 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
                     </div>
                   </div>
 
@@ -849,6 +925,7 @@ export default function BracketPage() {
         </div>
       )}
 
+      {/* Resto del layout */}
       <header className="text-center mb-6 pt-4 flex flex-col items-center">
         <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
         <p className="text-slate-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.4em] mt-3 italic">
@@ -865,8 +942,6 @@ export default function BracketPage() {
       </header>
 
       <div className={`max-w-4xl mx-auto space-y-12 ${isExpired ? 'opacity-90' : ''}`}>
-        
-        {/* INFO BOX */}
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 -mt-2 mb-6 shadow-lg">
           <Info className="text-yellow-500 shrink-0 mt-0.5" size={18} />
           <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
@@ -874,7 +949,6 @@ export default function BracketPage() {
           </p>
         </div>
 
-        {/* BOTTONE LA FINALE */}
         {isFinaleActive && (
           <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
              <button 
@@ -882,7 +956,6 @@ export default function BracketPage() {
                className="w-full bg-gradient-to-br from-yellow-600 to-yellow-500 p-6 rounded-[2rem] shadow-[0_0_30px_rgba(234,179,8,0.15)] flex flex-col items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-95 border-2 border-yellow-400/50 relative overflow-hidden group"
              >
                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                
                 <Trophy size={48} className="text-yellow-100 drop-shadow-md" />
                 <div className="text-center relative z-10">
                    <h2 className="text-2xl sm:text-3xl font-black text-slate-950 uppercase italic tracking-tighter leading-none mb-1.5 drop-shadow-sm">LA FINALE</h2>
@@ -951,7 +1024,6 @@ export default function BracketPage() {
                         <span className={`text-[9px] sm:text-[11px] font-black w-3 sm:w-4 text-center shrink-0 ${numClass}`}>
                           {cellNumber}
                         </span>
-                        
                         <div className="shrink-0 flex items-center justify-center relative">
                           {currentSelection ? (
                             <>
@@ -966,12 +1038,10 @@ export default function BracketPage() {
                             <ShieldCheck className="text-slate-800 w-4 h-4 sm:w-6 sm:h-6" />
                           )}
                         </div>
-                        
                         <span className={`text-[10px] sm:text-[13px] font-black uppercase leading-[1.15] sm:leading-tight flex-1 truncate ${nameClass}`}>
                           {currentSelection ? formatTeamName(currentSelection) : 'Scegli'}
                         </span>
                       </button>
-                      
                       {currentSelection && !isExpired && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleSelect(stage.id, i, ''); }} 
@@ -992,7 +1062,6 @@ export default function BracketPage() {
       {activeCell && !isExpired && (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center px-0 sm:px-4 pb-0">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setActiveCell(null)}></div>
-          
           <div className="relative w-full max-w-xl bg-slate-900 border-t-2 sm:border-2 border-yellow-500/40 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl flex flex-col h-[85dvh] sm:h-auto sm:max-h-[80dvh] animate-in slide-in-from-bottom duration-300 mx-auto">
             <div className="shrink-0 p-6 sm:p-7 bg-slate-950 border-b border-slate-800 flex flex-col gap-4 rounded-t-[2.5rem] sm:rounded-t-[2.3rem] z-20">
               <div className="flex items-center justify-between">
@@ -1004,7 +1073,6 @@ export default function BracketPage() {
                 </div>
                 <button onClick={() => setActiveCell(null)} className="p-4 bg-slate-800 rounded-full text-white active:scale-90 transition-all shadow-lg"><X size={24} strokeWidth={3}/></button>
               </div>
-              
               <div className="relative">
                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                  <input 
@@ -1018,15 +1086,12 @@ export default function BracketPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-8 bg-slate-900 custom-scrollbar pb-24 overscroll-contain">
-                
                 {(() => {
                   const prevStageId = getPrevStageId(activeCell.stageId);
                   const currentStageTeams = getTeamsInStage(activeCell.stageId);
                   const currentCellTeam = selections[`${activeCell.stageId}-${activeCell.index}`];
-
                   const isTeamDisabled = (t: string) => currentStageTeams.includes(t) && t !== currentCellTeam;
                   const matchSearch = (t: string) => t.toLowerCase().includes(teamSearch.toLowerCase()) || formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase());
-
                   const prevStageTeamsList = prevStageId ? getTeamsInStage(prevStageId) : [];
                   const filteredPrevTeams = prevStageTeamsList.filter(t => matchSearch(t));
                   
@@ -1049,7 +1114,6 @@ export default function BracketPage() {
                               <span className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">Qualificate dal turno precedente</span>
                               <div className="flex-1 h-px bg-emerald-500/30"></div>
                             </div>
-                            
                             <div className="space-y-6">
                                 {prevGroups.map(group => {
                                     const sortedPrevTeams = [...group.teams].sort((a, b) => {
@@ -1059,7 +1123,6 @@ export default function BracketPage() {
                                       if (!aDis && bDis) return -1;
                                       return 0;
                                     });
-
                                     return (
                                        <div key={`prev-${group.name}`} className="space-y-3 pl-1">
                                           <div className="flex items-center gap-2 px-2">
@@ -1085,12 +1148,11 @@ export default function BracketPage() {
                             if (!aDis && bDis) return -1;
                             return 0;
                           });
-
                           return (
                             <div key={group.name} className="space-y-4">
                               <div className="flex items-center gap-3 px-2">
                                 <Trophy size={16} className="text-yellow-500/50" />
-                                <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">{group.name}</span>
+                                <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]"> {group.name}</span>
                                 <div className="flex-1 h-px bg-slate-800/50"></div>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1103,7 +1165,6 @@ export default function BracketPage() {
                     </>
                   );
                 })()}
-
             </div>
           </div>
         </div>
