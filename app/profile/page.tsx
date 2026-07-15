@@ -76,7 +76,15 @@ const cleanString = (str: string) => {
   return formatMatchName(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
-const AVATARS = [
+type AvatarDef = {
+  id: string;
+  name: string;
+  emoji?: string;
+  color: string;
+  flagCode?: string;
+};
+
+const AVATARS: AvatarDef[] = [
   { id: 'trainer', name: 'Il Mister', emoji: '🧢', color: 'from-blue-600 to-blue-400' },
   { id: 'wizard', name: 'Il Mago', emoji: '🪄', color: 'from-purple-600 to-purple-400' },
   { id: 'bomber', name: 'Il Bomber', emoji: '⚽', color: 'from-rose-600 to-rose-400' },
