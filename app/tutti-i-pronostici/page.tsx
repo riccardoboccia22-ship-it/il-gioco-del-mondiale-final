@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 import {
   Trophy, Star, LayoutGrid, ChevronDown, ChevronUp, Flame, CalendarDays,
-  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X, Swords, ChevronLeft, ChevronRight
+  Award, Zap, Target, Shield, Goal, ArrowDownToLine, ArrowUpToLine, ShieldCheck, Lock, Activity, Search, Users, GitMerge, List, CheckCircle2, X, Swords, ChevronLeft, ChevronRight, Medal
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
-const FINALE_START_DATE = new Date('2026-07-19T21:00:00+02:00');
+const FINALE_START_DATE = new Date('2026-07-18T23:00:00+02:00'); // Aggiornato a Sabato ore 23:00
 
 // Punteggi assegnati per ogni fase
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
@@ -102,7 +102,6 @@ const BRACKET_LINKS = [
   { stage1: ['F_FINALE_1', 'F_FINALE_2'], winner: 'WINNER_VINCITORE_1' }
 ];
 
-// Calendario Ufficiale FIFA 2026 (Orari e Date convertite in Italiano CEST)
 const BRACKET_MATCHES: Record<Exclude<BracketStageType, 'WINNER'>, BracketMatch> = {
   R32: [
     { date: '29 Giu - 22:30', teams: [ { dbString: 'R32_SEDICESIMI_1E', label: '1° Gruppo E' }, { dbString: 'R32_SEDICESIMI_3M1', label: '3° Migliore' } ] },
@@ -275,8 +274,10 @@ export default function TuttiPronosticiPage() {
     currentUserUsername: '', profiles: [], matches: [], predictionsMap: {}, bracketMap: {}, bonusMap: {}, officialBonus: null, officialResults: [], finalePredictions: []
   });
   const [loading, setLoading] = useState(true);
-  const [isFinaleActive, setIsFinaleActive] = useState(false);
   
+  const [isFinaleActive, setIsFinaleActive] = useState(false);
+  const [activeFinaleTab, setActiveFinaleTab] = useState<'SUNDAY' | 'SATURDAY'>('SUNDAY');
+
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [expandedBonus, setExpandedBonus] = useState<string | null>(null);
@@ -662,7 +663,6 @@ export default function TuttiPronosticiPage() {
            </div>
          )}
 
-         {/* Pulsante Utenti UFFICIALE - Mostrato solo se non ci sono "possibleTeams" in attesa */}
          {!possibleTeams && (
            <div className="w-full px-1">
              {offTeam ? (
@@ -818,7 +818,7 @@ export default function TuttiPronosticiPage() {
      return rankA - rankB;
   });
 
-  // NUOVA LOGICA: CALCOLO DELLE SCHEDINE AGGREGATE DE "LA FINALE"
+  // LOGICA AGGREGAZIONE DOPPIA SCHEDA (Sabato e Domenica)
   const getAggregatedFinalePicks = () => {
     const agg: Record<string, { users: any[], count: number, details: any }> = {};
 
@@ -826,25 +826,36 @@ export default function TuttiPronosticiPage() {
       const p = filteredProfiles.find((prof: any) => prof.id === pred.user_id);
       if (!p) return;
 
-      const camp = formatTeamName(pred.champion_team);
-      const score = `${pred.home_score}-${pred.away_score}`;
-      let meth = '';
-      if (pred.ending_method === 'REGULAR') meth = '90\'';
-      if (pred.ending_method === 'OVERTIME') meth = 'Suppl.';
-      if (pred.ending_method === 'PENALTIES') meth = 'Rigori';
+      if (activeFinaleTab === 'SUNDAY') {
+        if (pred.home_score == null || pred.away_score == null) return;
+        const camp = formatTeamName(pred.champion_team || '');
+        const score = `${pred.home_score}-${pred.away_score}`;
+        let meth = '';
+        if (pred.ending_method === 'REGULAR') meth = '90\'';
+        if (pred.ending_method === 'OVERTIME') meth = 'Suppl.';
+        if (pred.ending_method === 'PENALTIES') meth = 'Rigori';
 
-      // Raggruppiamo per Campione + Risultato + Modalità
-      const key = `${camp}_${score}_${meth}`;
+        const key = `${camp}_${score}_${meth}`;
+        if (!agg[key]) {
+          agg[key] = { users: [], count: 0, details: { camp, score, meth, flag: getFlagUrl(camp) } };
+        }
+        agg[key].users.push({ ...p, minute: pred.first_goal_minute });
+        agg[key].count += 1;
+      } else {
+        if (pred.f34_home_score == null || pred.f34_away_score == null) return;
+        const score = `${pred.f34_home_score}-${pred.f34_away_score}`;
+        let meth = '';
+        if (pred.f34_ending_method === 'REGULAR') meth = '90\'';
+        if (pred.f34_ending_method === 'OVERTIME') meth = 'Suppl.';
+        if (pred.f34_ending_method === 'PENALTIES') meth = 'Rigori';
 
-      if (!agg[key]) {
-        agg[key] = {
-          users: [],
-          count: 0,
-          details: { camp, score, meth, flag: getFlagUrl(camp) }
-        };
+        const key = `34_${score}_${meth}`;
+        if (!agg[key]) {
+          agg[key] = { users: [], count: 0, details: { camp: 'Finale 3°/4° Posto', score, meth, flag: null } };
+        }
+        agg[key].users.push({ ...p, minute: pred.f34_first_goal_minute });
+        agg[key].count += 1;
       }
-      agg[key].users.push({ ...p, minute: pred.first_goal_minute });
-      agg[key].count += 1;
     });
 
     return Object.values(agg).sort((a, b) => b.count - a.count);
@@ -893,29 +904,55 @@ export default function TuttiPronosticiPage() {
               </h2>
             </div>
             
+            {/* SWITCHER DOPPIA FINALE */}
+            <div className="flex bg-slate-950 p-1.5 border-b border-slate-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveFinaleTab('SUNDAY')}
+                className={`flex-1 py-3 px-2 font-black uppercase tracking-wider text-[10px] sm:text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 rounded-xl shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl'}`}
+              >
+                <Trophy size={16} className={activeFinaleTab === 'SUNDAY' ? 'text-slate-950' : 'text-yellow-500'} />
+                <span className="hidden sm:inline">1°/2° Posto (Dom 19/07)</span>
+                <span className="sm:hidden">1°/2° P.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFinaleTab('SATURDAY')}
+                className={`flex-1 py-3 px-2 font-black uppercase tracking-wider text-[10px] sm:text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white rounded-xl shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl'}`}
+              >
+                <Medal size={16} className={activeFinaleTab === 'SATURDAY' ? 'text-white' : 'text-amber-500'} />
+                <span className="hidden sm:inline">3°/4° Posto (Sab 18/07)</span>
+                <span className="sm:hidden">3°/4° P.</span>
+              </button>
+            </div>
+            
             <div className="p-4 sm:p-6 bg-slate-950/80">
               {!isFinaleExpired ? (
                 <div className="text-center py-6 flex flex-col items-center opacity-70">
                   <Lock size={32} className="text-yellow-500 mb-3" />
-                  <p className="text-xs font-black uppercase text-yellow-500 tracking-widest max-w-xs">I pronostici saranno svelati all'inizio della Finale.</p>
+                  <p className="text-xs font-black uppercase text-yellow-500 tracking-widest max-w-xs">I pronostici saranno svelati all'inizio della Finale 3°/4° Posto.</p>
                 </div>
               ) : aggregatedFinalePicks.length === 0 ? (
-                <p className="text-xs font-black uppercase text-slate-500 text-center py-6">Nessuna schedina trovata</p>
+                <p className="text-xs font-black uppercase text-slate-500 text-center py-6">Nessuna schedina trovata per questa partita</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {aggregatedFinalePicks.map((pick, idx) => {
                     const isMe = pick.users.some(u => u.username === data.currentUserUsername);
                     return (
                       <div key={idx} className={`bg-slate-900 border rounded-2xl p-4 relative transition-all ${isMe ? 'border-yellow-500/50 ring-1 ring-yellow-500 shadow-md' : 'border-slate-800'}`}>
-                        {isMe && <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg">La tua</div>}
+                        {isMe && <div className="absolute top-0 right-0 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase px-2 py-1 rounded-bl-lg z-10">La tua</div>}
                         
                         <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-3">
                           <div className="flex items-center gap-3">
-                            {pick.details.flag ? <img src={pick.details.flag} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700" alt=""/> : <Shield size={20} className="text-slate-600"/>}
+                            {pick.details.flag ? (
+                               <img src={pick.details.flag} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700" alt=""/> 
+                            ) : (
+                               <Medal size={24} className="text-amber-600"/>
+                            )}
                             <div className="flex flex-col">
                               <span className="text-sm font-black uppercase italic text-white leading-none mb-1">{pick.details.camp}</span>
                               <div className="flex gap-2 text-[10px] font-black uppercase tracking-wider">
-                                <span className="text-yellow-500">Ris: {pick.details.score}</span>
+                                <span className={activeFinaleTab === 'SUNDAY' ? 'text-yellow-500' : 'text-amber-500'}>Ris: {pick.details.score}</span>
                                 <span className="text-slate-500">({pick.details.meth})</span>
                               </div>
                             </div>
@@ -1119,7 +1156,7 @@ export default function TuttiPronosticiPage() {
                          );
                        })}
 
-                       {/* COLONNA VINCITORE ALL'ESTREMA DESTRA (SEMPRE VISIBILE SE SIAMO ALLA FINE) */}
+                       {/* COLONNA VINCITORE ALL'ESTREMA DESTRA */}
                        {activeBracketCol <= 4 && (
                          <div className="flex flex-col justify-center items-center w-[180px] shrink-0 relative pt-14 pb-4 z-20 transition-all duration-500">
                             <div className="absolute top-0 left-0 w-full text-center z-10 flex justify-center">
@@ -1143,14 +1180,13 @@ export default function TuttiPronosticiPage() {
                </div>
              )}
 
-             {/* VISTA 2: PARTITE (Testa a Testa con Tasti Dettaglio, ORDINE CRONOLOGICO) */}
+             {/* VISTA 2: PARTITE */}
              {bracketViewMode === 'MATCHES' && (
                <div className="max-w-4xl mx-auto space-y-6">
                  {BRACKET_ROUNDS.filter(r => r.id !== 'WINNER').map((stg) => {
                    const isExpanded = expandedStage === stg.id;
                    const nextStg = getNextStage(stg.id);
                    
-                   // Ordiniamo dinamicamente i match in ordine cronologico solo per questa vista
                    const rawMatches = BRACKET_MATCHES[stg.id as Exclude<BracketStageType, 'WINNER'>];
                    const matches = [...rawMatches].sort((a, b) => {
                       const parseDate = (d: string) => {
@@ -1214,7 +1250,6 @@ export default function TuttiPronosticiPage() {
                                 const usersA = isTBDA ? [] : getUsersWhoPickedTeam(nextStg, teamA);
                                 const usersB = isTBDB ? [] : getUsersWhoPickedTeam(nextStg, teamB);
 
-                                // Controllo badge qualificazione per visualizzazione Matches
                                 const hasAdvancedA = teamA && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamA)));
                                 const hasAdvancedB = teamB && (stg.id === 'WINNER' ? true : data.officialResults.some((o: any) => normalizeStage(o.stage) === nextStg && cleanString(o.team_name) === cleanString(teamB)));
 
@@ -1226,7 +1261,6 @@ export default function TuttiPronosticiPage() {
                                     </div>
 
                                     <div className="flex justify-between items-start gap-2 relative">
-                                       {/* TEAM A */}
                                        <div className="flex-1 flex flex-col items-center">
                                           {!isTBDA ? (
                                              <>
@@ -1246,7 +1280,7 @@ export default function TuttiPronosticiPage() {
                                                      </button>
                                                    ) : (
                                                      <div className="text-[9px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950 py-2 rounded-xl border border-slate-800/50">
-                                                       Nessuno
+                                                        Nessuno
                                                      </div>
                                                    )}
                                                 </div>
@@ -1283,12 +1317,10 @@ export default function TuttiPronosticiPage() {
                                           )}
                                        </div>
 
-                                       {/* VS CENTRALE */}
                                        <div className="flex flex-col items-center justify-center shrink-0 px-2 mt-4">
                                           <span className="bg-slate-950 border border-slate-800 text-yellow-500 font-black text-[10px] px-2 py-1 rounded-lg shadow-inner">VS</span>
                                        </div>
 
-                                       {/* TEAM B */}
                                        <div className="flex-1 flex flex-col items-center">
                                           {!isTBDB ? (
                                              <>
@@ -1308,7 +1340,7 @@ export default function TuttiPronosticiPage() {
                                                      </button>
                                                    ) : (
                                                      <div className="text-[9px] text-slate-600 italic uppercase font-black text-center w-full bg-slate-950 py-2 rounded-xl border border-slate-800/50">
-                                                       Nessuno
+                                                        Nessuno
                                                      </div>
                                                    )}
                                                 </div>
@@ -1351,8 +1383,8 @@ export default function TuttiPronosticiPage() {
                              })}
                           </div>
                         )}
-                     </div>
-                   )
+                      </div>
+                   );
                  })}
                </div>
              )}

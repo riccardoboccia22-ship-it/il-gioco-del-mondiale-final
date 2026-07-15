@@ -4,12 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search, Star, Zap, CheckCircle2, Loader2 } from 'lucide-react';
+import { ChevronDown, X, ShieldCheck, Trash2, Map, Info, Trophy, BarChart3, Search, Zap, CheckCircle2, Loader2, Medal, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
-const FINALE_START_DATE = new Date('2026-07-19T21:00:00+02:00');
+const FINALE_START_DATE = new Date('2026-07-18T23:00:00+02:00'); // Orario d'inizio della finale 3°/4° posto di Sabato
 
 const TEAMS_2026 = [
   'Algeria', 'Arabia Saudita', 'Argentina', 'Australia', 'Austria', 'Belgio',
@@ -104,17 +104,47 @@ export default function BracketPage() {
   const [activeCell, setActiveCell] = useState<any>(null);
   const [teamSearch, setTeamSearch] = useState(''); 
 
-  // STATI EVENTO "LA FINALE"
+  // STATI EVENTO "LA FINALE" (Sdoppiato Sabato + Domenica)
   const [isFinaleActive, setIsFinaleActive] = useState(false);
   const [isFinalePopupOpen, setIsFinalePopupOpen] = useState(false);
+  const [activeFinaleTab, setActiveFinaleTab] = useState<'SATURDAY' | 'SUNDAY'>('SUNDAY');
   const [hasPlayedFinale, setHasPlayedFinale] = useState(false);
   const [isSavingFinale, setIsSavingFinale] = useState(false);
+  
   const [finalePrediction, setFinalePrediction] = useState({
-    champion_team: '',
+    // DOMENICA: FINALE 1° e 2° POSTO
     home_score: '',
     away_score: '',
     ending_method: 'REGULAR',
-    first_goal_minute: ''
+    f12_mvp: '',
+    f12_ht_home_score: '',
+    f12_ht_away_score: '',
+    f12_2nd_home_score: '',
+    f12_2nd_away_score: '',
+    f12_first_to_score: '',
+    f12_scorer: '',
+    first_goal_minute: '',
+    f12_fouls: '',
+    f12_yellow_cards: '',
+    f12_red_cards: '',
+    f12_penalties: '',
+    
+    // SABATO: FINALE 3° e 4° POSTO
+    f34_home_score: '',
+    f34_away_score: '',
+    f34_ending_method: 'REGULAR',
+    f34_mvp: '',
+    f34_ht_home_score: '',
+    f34_ht_away_score: '',
+    f34_2nd_home_score: '',
+    f34_2nd_away_score: '',
+    f34_first_to_score: '',
+    f34_scorer: '',
+    f34_first_goal_minute: '',
+    f34_fouls: '',
+    f34_yellow_cards: '',
+    f34_red_cards: '',
+    f34_penalties: ''
   });
 
   const isExpired = new Date() > WORLD_CUP_START_DATE;
@@ -172,15 +202,40 @@ export default function BracketPage() {
       
       if (finaleRes.data) {
         setFinalePrediction({
-          champion_team: finaleRes.data.champion_team || '',
           home_score: finaleRes.data.home_score?.toString() || '',
           away_score: finaleRes.data.away_score?.toString() || '',
           ending_method: finaleRes.data.ending_method || 'REGULAR',
-          first_goal_minute: finaleRes.data.first_goal_minute?.toString() || ''
+          f12_mvp: finaleRes.data.f12_mvp || '',
+          f12_ht_home_score: finaleRes.data.f12_ht_home_score?.toString() || '',
+          f12_ht_away_score: finaleRes.data.f12_ht_away_score?.toString() || '',
+          f12_2nd_home_score: finaleRes.data.f12_2nd_home_score?.toString() || '',
+          f12_2nd_away_score: finaleRes.data.f12_2nd_away_score?.toString() || '',
+          f12_first_to_score: finaleRes.data.f12_first_to_score || '',
+          f12_scorer: finaleRes.data.f12_scorer || '',
+          first_goal_minute: finaleRes.data.first_goal_minute?.toString() || '',
+          f12_fouls: finaleRes.data.f12_fouls?.toString() || '',
+          f12_yellow_cards: finaleRes.data.f12_yellow_cards?.toString() || '',
+          f12_red_cards: finaleRes.data.f12_red_cards?.toString() || '',
+          f12_penalties: finaleRes.data.f12_penalties?.toString() || '',
+
+          f34_home_score: finaleRes.data.f34_home_score?.toString() || '',
+          f34_away_score: finaleRes.data.f34_away_score?.toString() || '',
+          f34_ending_method: finaleRes.data.f34_ending_method || 'REGULAR',
+          f34_mvp: finaleRes.data.f34_mvp || '',
+          f34_ht_home_score: finaleRes.data.f34_ht_home_score?.toString() || '',
+          f34_ht_away_score: finaleRes.data.f34_ht_away_score?.toString() || '',
+          f34_2nd_home_score: finaleRes.data.f34_2nd_home_score?.toString() || '',
+          f34_2nd_away_score: finaleRes.data.f34_2nd_away_score?.toString() || '',
+          f34_first_to_score: finaleRes.data.f34_first_to_score || '',
+          f34_scorer: finaleRes.data.f34_scorer || '',
+          f34_first_goal_minute: finaleRes.data.f34_first_goal_minute?.toString() || '',
+          f34_fouls: finaleRes.data.f34_fouls?.toString() || '',
+          f34_yellow_cards: finaleRes.data.f34_yellow_cards?.toString() || '',
+          f34_red_cards: finaleRes.data.f34_red_cards?.toString() || '',
+          f34_penalties: finaleRes.data.f34_penalties?.toString() || ''
         });
         setHasPlayedFinale(true);
       } else if (settingsRes.data?.is_finale_active && !isFinaleExpired) {
-        // Se l'evento è attivo e l'utente non ha mai giocato, apri il pop-up in automatico
         setTimeout(() => setIsFinalePopupOpen(true), 1200);
       }
 
@@ -189,26 +244,56 @@ export default function BracketPage() {
 
   const handleSaveFinale = async () => {
     if (!userId || isFinaleExpired) return;
-    if (!finalePrediction.champion_team || finalePrediction.home_score === '' || finalePrediction.away_score === '' || finalePrediction.first_goal_minute === '') {
-      toast.error('Compila tutti i campi della schedina per procedere!');
+    
+    // Controllo campi base obbligatori per salvare (almeno i risultati finali delle due partite)
+    if (finalePrediction.home_score === '' || finalePrediction.away_score === '' || finalePrediction.f34_home_score === '') {
+      toast.error('Inserisci almeno i Risultati Esatti di entrambe le finali!');
       return;
     }
     
     setIsSavingFinale(true);
     try {
+      const parseNum = (val: string) => val === '' ? null : parseInt(val);
+
       const payload = {
         user_id: userId,
-        champion_team: finalePrediction.champion_team,
-        home_score: parseInt(finalePrediction.home_score),
-        away_score: parseInt(finalePrediction.away_score),
+        home_score: parseNum(finalePrediction.home_score),
+        away_score: parseNum(finalePrediction.away_score),
         ending_method: finalePrediction.ending_method,
-        first_goal_minute: parseInt(finalePrediction.first_goal_minute)
+        f12_mvp: finalePrediction.f12_mvp || null,
+        f12_ht_home_score: parseNum(finalePrediction.f12_ht_home_score),
+        f12_ht_away_score: parseNum(finalePrediction.f12_ht_away_score),
+        f12_2nd_home_score: parseNum(finalePrediction.f12_2nd_home_score),
+        f12_2nd_away_score: parseNum(finalePrediction.f12_2nd_away_score),
+        f12_first_to_score: finalePrediction.f12_first_to_score || null,
+        f12_scorer: finalePrediction.f12_scorer || null,
+        first_goal_minute: parseNum(finalePrediction.first_goal_minute),
+        f12_fouls: parseNum(finalePrediction.f12_fouls),
+        f12_yellow_cards: parseNum(finalePrediction.f12_yellow_cards),
+        f12_red_cards: parseNum(finalePrediction.f12_red_cards),
+        f12_penalties: parseNum(finalePrediction.f12_penalties),
+
+        f34_home_score: parseNum(finalePrediction.f34_home_score),
+        f34_away_score: parseNum(finalePrediction.f34_away_score),
+        f34_ending_method: finalePrediction.f34_ending_method,
+        f34_mvp: finalePrediction.f34_mvp || null,
+        f34_ht_home_score: parseNum(finalePrediction.f34_ht_home_score),
+        f34_ht_away_score: parseNum(finalePrediction.f34_ht_away_score),
+        f34_2nd_home_score: parseNum(finalePrediction.f34_2nd_home_score),
+        f34_2nd_away_score: parseNum(finalePrediction.f34_2nd_away_score),
+        f34_first_to_score: finalePrediction.f34_first_to_score || null,
+        f34_scorer: finalePrediction.f34_scorer || null,
+        f34_first_goal_minute: parseNum(finalePrediction.f34_first_goal_minute),
+        f34_fouls: parseNum(finalePrediction.f34_fouls),
+        f34_yellow_cards: parseNum(finalePrediction.f34_yellow_cards),
+        f34_red_cards: parseNum(finalePrediction.f34_red_cards),
+        f34_penalties: parseNum(finalePrediction.f34_penalties)
       };
       
       const { error } = await supabase.from('final_match_predictions').upsert(payload, { onConflict: 'user_id' });
       if (error) throw error;
       
-      toast.success('Schedina de LA FINALE salvata con successo! 🏆');
+      toast.success('Schedine de LA FINALE salvate con successo! 🏆');
       setHasPlayedFinale(true);
       setIsFinalePopupOpen(false);
       
@@ -221,7 +306,7 @@ export default function BracketPage() {
         });
       }
     } catch(e) {
-      toast.error('Errore durante il salvataggio della Finale.');
+      toast.error('Errore durante il salvataggio della Schedina.');
     } finally {
       setIsSavingFinale(false);
     }
@@ -236,11 +321,14 @@ export default function BracketPage() {
         if (error) throw error;
         
         setFinalePrediction({
-          champion_team: '',
-          home_score: '',
-          away_score: '',
-          ending_method: 'REGULAR',
-          first_goal_minute: ''
+          home_score: '', away_score: '', ending_method: 'REGULAR', f12_mvp: '',
+          f12_ht_home_score: '', f12_ht_away_score: '', f12_2nd_home_score: '', f12_2nd_away_score: '',
+          f12_first_to_score: '', f12_scorer: '', first_goal_minute: '', f12_fouls: '',
+          f12_yellow_cards: '', f12_red_cards: '', f12_penalties: '',
+          f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
+          f34_ht_home_score: '', f34_ht_away_score: '', f34_2nd_home_score: '', f34_2nd_away_score: '',
+          f34_first_to_score: '', f34_scorer: '', f34_first_goal_minute: '', f34_fouls: '',
+          f34_yellow_cards: '', f34_red_cards: '', f34_penalties: ''
         });
         setHasPlayedFinale(false);
         setIsFinalePopupOpen(false);
@@ -324,7 +412,6 @@ export default function BracketPage() {
     const isCurrentCellTeam = selections[`${activeCell?.stageId}-${activeCell?.index}`] === t;
     const isDisabled = isSelectedInStage && !isCurrentCellTeam;
 
-    // Controllo se la squadra è tra le QUALIFICATE UFFICIALI della fase attiva (Admin Info)
     const isOfficialForActiveStage = officialBracket.some(ob => normalizeStage(ob.stage) === activeCell?.stageId && cleanString(ob.team_name) === cleanString(t));
 
     const teamStages = Object.entries(selections)
@@ -401,95 +488,327 @@ export default function BracketPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-48 font-sans">
       
-      {/* POP-UP "LA FINALE" */}
+      {/* POP-UP MODALE "LA FINALE" - COMPATTO SENZA VINCE COPPA */}
       {isFinalePopupOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-slate-900 border border-yellow-500/50 rounded-3xl w-full max-w-md shadow-[0_0_60px_rgba(234,179,8,0.2)] relative flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-yellow-500/50 rounded-3xl w-full max-w-xl shadow-[0_0_60px_rgba(234,179,8,0.2)] relative flex flex-col max-h-[95vh] sm:max-h-[90vh]">
             
             {/* Pop-up Header */}
-            <div className="bg-gradient-to-br from-yellow-600 to-yellow-500 p-6 text-center rounded-t-3xl relative shrink-0">
+            <div className="bg-gradient-to-br from-yellow-600 to-yellow-500 p-5 text-center rounded-t-3xl relative shrink-0">
                <button onClick={() => setIsFinalePopupOpen(false)} className="absolute top-4 right-4 bg-black/20 p-2 rounded-full hover:bg-black/40 text-yellow-50 transition-colors"><X size={16}/></button>
-               <Trophy size={48} className="mx-auto mb-3 text-yellow-100" />
-               <h2 className="text-3xl font-black text-slate-950 uppercase italic tracking-tighter leading-none shadow-black/10">LA FINALE</h2>
-               <p className="text-[10px] font-black uppercase tracking-widest text-yellow-900 mt-2 bg-yellow-400/50 inline-block px-3 py-1 rounded-full">Inserisci il pronostico qui!</p>
+               <Trophy size={40} className="mx-auto mb-2 text-yellow-100 drop-shadow" />
+               <h2 className="text-2xl sm:text-3xl font-black text-slate-950 uppercase italic tracking-tighter leading-none">LA FINALE</h2>
+               <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-yellow-900 mt-1.5 bg-yellow-400/60 inline-block px-3 py-0.5 rounded-full">Mini-Competizione a Schedina Doppia</p>
             </div>
             
-            {/* Pop-up Body */}
-            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+            {/* Switcher Tab per le due partite */}
+            <div className="flex bg-slate-950 p-1.5 border-b border-slate-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveFinaleTab('SUNDAY')}
+                className={`flex-1 py-3 px-2 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+              >
+                <Trophy size={16} className={activeFinaleTab === 'SUNDAY' ? 'text-slate-950' : 'text-yellow-500'} />
+                <span>🏆 1°/2° Posto (Dom 19/07)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFinaleTab('SATURDAY')}
+                className={`flex-1 py-3 px-2 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+              >
+                <Medal size={16} className={activeFinaleTab === 'SATURDAY' ? 'text-white' : 'text-amber-500'} />
+                <span>🥉 3°/4° Posto (Sab 18/07)</span>
+              </button>
+            </div>
+            
+            {/* Pop-up Body Contenuto Scorrevole */}
+            <div className="p-4 sm:p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
-                  <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">1</span>
-                  Chi alzerà la coppa? (5 PT)
-                </label>
-                <select 
-                  disabled={isFinaleExpired}
-                  value={finalePrediction.champion_team}
-                  onChange={e => setFinalePrediction({...finalePrediction, champion_team: e.target.value})}
-                  className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-sm text-white uppercase outline-none focus:border-yellow-500 appearance-none"
-                >
-                  <option value="">Seleziona Campione...</option>
-                  {TEAMS_2026.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+              {/* === TAB 1: DOMENICA (FINALISSIMA) === */}
+              {activeFinaleTab === 'SUNDAY' && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center gap-2 text-yellow-400 text-xs font-bold">
+                    <AlertCircle size={16} className="shrink-0 text-yellow-500" />
+                    <span>Pronostici per la Finale del 1° e 2° Posto (Domenica ore 21:00).</span>
+                  </div>
 
-              <div className="space-y-2">
-                 <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
-                    <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">2</span>
-                    Risultato Esatto (10 PT)
-                 </label>
-                 <p className="text-[9px] text-slate-400 font-bold uppercase leading-relaxed mb-2">Risultato nei 90' o 120'</p>
-                 <div className="flex items-center gap-4 justify-center bg-slate-950 border border-slate-800 p-4 rounded-2xl">
-                    <input type="number" disabled={isFinaleExpired} value={finalePrediction.home_score} onChange={e => setFinalePrediction({...finalePrediction, home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
-                    <span className="text-xl font-black text-slate-600">-</span>
-                    <input type="number" disabled={isFinaleExpired} value={finalePrediction.away_score} onChange={e => setFinalePrediction({...finalePrediction, away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
-                 </div>
-              </div>
+                  {/* RISULTATO FINALE NEI 90/120 */}
+                  <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                     <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                           <span className="bg-yellow-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
+                           Risultato Esatto Finale
+                        </label>
+                        <span className="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded font-black">+30 PT</span>
+                     </div>
+                     <p className="text-[10px] text-slate-400 font-medium">Punteggio al termine dei 90' o 120' minuti (esclusi rigori).</p>
+                     <div className="flex items-center gap-4 justify-center pt-1">
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.home_score} onChange={e => setFinalePrediction({...finalePrediction, home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                        <span className="text-2xl font-black text-slate-600">-</span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.away_score} onChange={e => setFinalePrediction({...finalePrediction, away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                     </div>
+                  </div>
 
-              <div className="space-y-2">
-                 <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
-                    <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">3</span>
-                    Come si decide? (5 PT)
-                 </label>
-                 <div className="grid grid-cols-3 gap-2">
-                   {[
-                      { id: 'REGULAR', label: 'Nei 90\'' },
-                      { id: 'OVERTIME', label: 'Supplementari' },
-                      { id: 'PENALTIES', label: 'Ai Rigori' }
-                    ].map(method => (
-                      <button
-                        key={method.id}
-                        disabled={isFinaleExpired}
-                        onClick={() => setFinalePrediction({ ...finalePrediction, ending_method: method.id })}
-                        className={`py-4 px-1 text-[10px] sm:text-xs font-black uppercase rounded-xl border transition-all ${finalePrediction.ending_method === method.id ? 'bg-yellow-500 text-slate-950 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
-                      >
-                        {method.label}
-                      </button>
-                    ))}
-                 </div>
-              </div>
+                  {/* MODALITA DI FINE */}
+                  <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                     <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                           <span className="bg-yellow-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">2</span>
+                           Come finisce la partita?
+                        </label>
+                        <span className="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded font-black">+10 PT</span>
+                     </div>
+                     <div className="grid grid-cols-3 gap-2 pt-1">
+                       {[
+                          { id: 'REGULAR', label: 'Nei 90\'' },
+                          { id: 'OVERTIME', label: 'Supplementari' },
+                          { id: 'PENALTIES', label: 'Ai Rigori' }
+                        ].map(method => (
+                          <button
+                            key={method.id} type="button" disabled={isFinaleExpired}
+                            onClick={() => setFinalePrediction({ ...finalePrediction, ending_method: method.id })}
+                            className={`py-3 px-1 text-[11px] font-black uppercase rounded-xl border transition-all ${finalePrediction.ending_method === method.id ? 'bg-yellow-500 text-slate-950 border-yellow-500 shadow-md' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'}`}
+                          >
+                            {method.label}
+                          </button>
+                        ))}
+                     </div>
+                  </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
-                   <span className="bg-yellow-500 text-slate-950 w-4 h-4 flex items-center justify-center rounded-full">4</span>
-                   Tie-Breaker: Minuto 1° Gol
-                </label>
-                <p className="text-[9px] text-slate-400 font-bold uppercase leading-relaxed mb-2">Serve solo in caso di spareggio. Se finisce 0-0, inserisci 0.</p>
-                <input 
-                  type="number" 
-                  disabled={isFinaleExpired}
-                  value={finalePrediction.first_goal_minute}
-                  onChange={e => setFinalePrediction({...finalePrediction, first_goal_minute: e.target.value})}
-                  placeholder="Es: 12"
-                  className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl font-black text-center text-lg text-white outline-none focus:border-yellow-500 shadow-inner"
-                />
-              </div>
+                  {/* RISULTATI PARZIALI 1° E 2° TEMPO */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">Esatto 1° Tempo</label>
+                        <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
+                      </div>
+                      <div className="flex items-center gap-2 justify-center">
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_ht_home_score} onChange={e => setFinalePrediction({...finalePrediction, f12_ht_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                        <span className="font-bold text-slate-600">-</span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_ht_away_score} onChange={e => setFinalePrediction({...finalePrediction, f12_ht_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">Esatto 2° Tempo</label>
+                        <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
+                      </div>
+                      <div className="flex items-center gap-2 justify-center">
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_2nd_home_score} onChange={e => setFinalePrediction({...finalePrediction, f12_2nd_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                        <span className="font-bold text-slate-600">-</span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_2nd_away_score} onChange={e => setFinalePrediction({...finalePrediction, f12_2nd_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MARCATORI E MVP */}
+                  <div className="space-y-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest">MVP (Miglior Giocatore FIFA)</label>
+                        <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+12 PT</span>
+                      </div>
+                      <input type="text" disabled={isFinaleExpired} value={finalePrediction.f12_mvp} onChange={e => setFinalePrediction({...finalePrediction, f12_mvp: e.target.value})} placeholder="Es: Lamine Yamal" className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black text-slate-300 uppercase">Squadra 1° Gol</label>
+                          <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+5 PT</span>
+                        </div>
+                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f12_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f12_first_to_score: e.target.value})} placeholder="Es: Spagna" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore</label>
+                          <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+11 PT</span>
+                        </div>
+                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f12_scorer} onChange={e => setFinalePrediction({...finalePrediction, f12_scorer: e.target.value})} placeholder="Es: Morata" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 pt-2 border-t border-slate-800/80">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-slate-300 uppercase">Minuto 1° Gol </label>
+                        <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
+                      </div>
+                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, first_goal_minute: e.target.value})} placeholder="Es: 24 (Se 0-0 scrivi 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
+                    </div>
+                  </div>
+
+                  {/* DISCIPLINARE E FALLI */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest block">Statistiche Disciplinari & Falli</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Falli Fischiati <span className="text-yellow-400">+6PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_fouls} onChange={e => setFinalePrediction({...finalePrediction, f12_fouls: e.target.value})} placeholder="Es: 22" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-yellow-400 font-bold uppercase block mb-1">🟨 Gialli <span className="text-slate-400">+3PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_yellow_cards} onChange={e => setFinalePrediction({...finalePrediction, f12_yellow_cards: e.target.value})} placeholder="Es: 4" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-rose-500 font-bold uppercase block mb-1">🟥 Rossi <span className="text-slate-400">+3PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_red_cards} onChange={e => setFinalePrediction({...finalePrediction, f12_red_cards: e.target.value})} placeholder="Es: 0" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-blue-400 font-bold uppercase block mb-1">🥅 Rigori <span className="text-slate-400">+1PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_penalties} onChange={e => setFinalePrediction({...finalePrediction, f12_penalties: e.target.value})} placeholder="Es: 1" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === TAB 2: SABATO (FINALE 3°/4° POSTO) === */}
+              {activeFinaleTab === 'SATURDAY' && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl flex items-center gap-2 text-amber-400 text-xs font-bold">
+                    <AlertCircle size={16} className="shrink-0 text-amber-500" />
+                    <span>Pronostici per la Finale 3°/4° Posto (Sabato ore 23:00).</span>
+                  </div>
+
+                  {/* RISULTATO FINALE NEI 90/120 */}
+                  <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                     <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                           <span className="bg-amber-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
+                           Risultato Esatto Finale
+                        </label>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black">+30 PT</span>
+                     </div>
+                     <p className="text-[10px] text-slate-400 font-medium">Punteggio al termine dei 90' o 120' minuti (esclusi rigori).</p>
+                     <div className="flex items-center gap-4 justify-center pt-1">
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-amber-500 focus:border-amber-500 outline-none shadow-inner" placeholder="0" />
+                        <span className="text-2xl font-black text-slate-600">-</span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-amber-500 focus:border-amber-500 outline-none shadow-inner" placeholder="0" />
+                     </div>
+                  </div>
+
+                  {/* MODALITA DI FINE */}
+                  <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                     <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                           <span className="bg-amber-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">2</span>
+                           Come finisce la partita?
+                        </label>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black">+10 PT</span>
+                     </div>
+                     <div className="grid grid-cols-3 gap-2 pt-1">
+                       {[
+                          { id: 'REGULAR', label: 'Nei 90\'' },
+                          { id: 'OVERTIME', label: 'Supplementari' },
+                          { id: 'PENALTIES', label: 'Ai Rigori' }
+                        ].map(method => (
+                          <button
+                            key={method.id} type="button" disabled={isFinaleExpired}
+                            onClick={() => setFinalePrediction({ ...finalePrediction, f34_ending_method: method.id })}
+                            className={`py-3 px-1 text-[11px] font-black uppercase rounded-xl border transition-all ${finalePrediction.f34_ending_method === method.id ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'}`}
+                          >
+                            {method.label}
+                          </button>
+                        ))}
+                     </div>
+                  </div>
+
+                  {/* RISULTATI PARZIALI 1° E 2° TEMPO */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Esatto 1° Tempo</label>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
+                      </div>
+                      <div className="flex items-center gap-2 justify-center">
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_ht_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_ht_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                        <span className="font-bold text-slate-600">-</span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_ht_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_ht_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Esatto 2° Tempo</label>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
+                      </div>
+                      <div className="flex items-center gap-2 justify-center">
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_2nd_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_2nd_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                        <span className="font-bold text-slate-600">-</span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_2nd_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_2nd_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MARCATORI E MVP */}
+                  <div className="space-y-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest">MVP (Miglior Giocatore FIFA)</label>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+12 PT</span>
+                      </div>
+                      <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_mvp} onChange={e => setFinalePrediction({...finalePrediction, f34_mvp: e.target.value})} placeholder="Es: Griezmann" className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black text-slate-300 uppercase">Squadra 1° Gol</label>
+                          <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+5 PT</span>
+                        </div>
+                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f34_first_to_score: e.target.value})} placeholder="Es: Francia" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore</label>
+                          <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+11 PT</span>
+                        </div>
+                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_scorer} onChange={e => setFinalePrediction({...finalePrediction, f34_scorer: e.target.value})} placeholder="Es: Mbappé" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 pt-2 border-t border-slate-800/80">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-slate-300 uppercase">Minuto 1° Gol</label>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
+                      </div>
+                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se 0-0 scrivi 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500 text-center" />
+                    </div>
+                  </div>
+
+                  {/* DISCIPLINARE E FALLI */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest block">Statistiche Disciplinari & Falli</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Falli Fischiati <span className="text-amber-400">+6PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_fouls} onChange={e => setFinalePrediction({...finalePrediction, f34_fouls: e.target.value})} placeholder="Es: 18" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-yellow-400 font-bold uppercase block mb-1">🟨 Gialli <span className="text-slate-400">+3PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_yellow_cards} onChange={e => setFinalePrediction({...finalePrediction, f34_yellow_cards: e.target.value})} placeholder="Es: 3" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-rose-500 font-bold uppercase block mb-1">🟥 Rossi <span className="text-slate-400">+3PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_red_cards} onChange={e => setFinalePrediction({...finalePrediction, f34_red_cards: e.target.value})} placeholder="Es: 0" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                      <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
+                        <span className="text-[9px] text-blue-400 font-bold uppercase block mb-1">🥅 Rigori <span className="text-slate-400">+1PT</span></span>
+                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_penalties} onChange={e => setFinalePrediction({...finalePrediction, f34_penalties: e.target.value})} placeholder="Es: 0" className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Pop-up Footer */}
             <div className="p-4 border-t border-slate-800 bg-slate-900 shrink-0 rounded-b-3xl flex gap-3">
                {hasPlayedFinale && !isFinaleExpired && (
                  <button 
+                    type="button"
                     disabled={isSavingFinale}
                     onClick={handleResetFinale}
                     className="p-4 bg-slate-950 border border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all shadow-lg shrink-0 disabled:opacity-50"
@@ -499,11 +818,12 @@ export default function BracketPage() {
                  </button>
                )}
                <button 
+                  type="button"
                   disabled={isSavingFinale || isFinaleExpired}
                   onClick={handleSaveFinale}
                   className="flex-1 py-4 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                >
-                  {isSavingFinale ? <Loader2 size={16} className="animate-spin" /> : isFinaleExpired ? 'Pronostici Chiusi' : 'Salva!'}
+                  {isSavingFinale ? <Loader2 size={16} className="animate-spin" /> : isFinaleExpired ? 'Pronostici Chiusi' : 'Salva Tutte e 2 le Finali!'}
                </button>
             </div>
           </div>
@@ -535,7 +855,7 @@ export default function BracketPage() {
           </p>
         </div>
 
-        {/* BOTTONE LA FINALE (Mostrato in cima se l'evento è attivo) */}
+        {/* BOTTONE LA FINALE */}
         {isFinaleActive && (
           <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">
              <button 
@@ -548,7 +868,7 @@ export default function BracketPage() {
                 <div className="text-center relative z-10">
                    <h2 className="text-2xl sm:text-3xl font-black text-slate-950 uppercase italic tracking-tighter leading-none mb-1.5 drop-shadow-sm">LA FINALE</h2>
                    <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-950 bg-white/20 inline-block px-3 py-1 rounded-full">
-                     {hasPlayedFinale ? '✅ Modifica Pronostico' : 'Clicca qui!'}
+                     {hasPlayedFinale ? '✅ Modifica le 2 Schedine' : 'Clicca per Giocare!'}
                    </p>
                 </div>
              </button>
@@ -556,7 +876,6 @@ export default function BracketPage() {
         )}
 
         {STAGES.map((stage) => {
-          // Filtraggio squadre ufficiali caricate per questa fase
           const officialTeamsInStage = officialBracket.filter(ob => normalizeStage(ob.stage) === stage.id);
           const isStageFull = officialTeamsInStage.length >= stage.count;
 
@@ -577,11 +896,9 @@ export default function BracketPage() {
                   const currentSelection = selections[`${stage.id}-${i}`];
                   const cellNumber = i + 1;
                   
-                  // CONTROLLI STATUS UFFICIALI DELLA CELLA
                   const isOfficial = currentSelection && officialTeamsInStage.some(ob => cleanString(ob.team_name) === cleanString(currentSelection));
                   const isWrong = currentSelection && isStageFull && !isOfficial;
 
-                  // GESTIONE CSS CELLA E TESTO
                   let cellClass = 'border-slate-800 text-slate-600 hover:border-slate-700 bg-slate-900';
                   let numClass = 'text-slate-700';
                   let nameClass = 'text-slate-500';
@@ -691,7 +1008,6 @@ export default function BracketPage() {
                   const isTeamDisabled = (t: string) => currentStageTeams.includes(t) && t !== currentCellTeam;
                   const matchSearch = (t: string) => t.toLowerCase().includes(teamSearch.toLowerCase()) || formatTeamName(t).toLowerCase().includes(teamSearch.toLowerCase());
 
-                  // 1. SQUADRE QUALIFICATE DAL TURNO PRECEDENTE
                   const prevStageTeamsList = prevStageId ? getTeamsInStage(prevStageId) : [];
                   const filteredPrevTeams = prevStageTeamsList.filter(t => matchSearch(t));
                   
@@ -700,7 +1016,6 @@ export default function BracketPage() {
                       teams: g.teams.filter(t => filteredPrevTeams.includes(t))
                   })).filter(g => g.teams.length > 0);
 
-                  // 2. TUTTE LE SQUADRE (Gironi Nomi)
                   const availableGroups = TOURNAMENT_GROUPS.map(g => ({
                     name: g.name,
                     teams: g.teams.filter(t => matchSearch(t))
@@ -708,7 +1023,6 @@ export default function BracketPage() {
 
                   return (
                     <>
-                      {/* 1. QUALIFICATE DAL TURNO PRECEDENTE */}
                       {prevGroups.length > 0 && (
                          <div className="space-y-5 mb-10">
                             <div className="flex items-center gap-3 px-2">
@@ -743,7 +1057,6 @@ export default function BracketPage() {
                          </div>
                       )}
 
-                      {/* 2. TUTTI I GIRONI */}
                       <div className="space-y-8">
                         {availableGroups.map((group) => {
                           const sortedTeams = [...group.teams].sort((a, b) => {

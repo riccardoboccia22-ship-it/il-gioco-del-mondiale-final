@@ -19,7 +19,9 @@ import {
   Star,
   Shield,
   Search,
-  Lock
+  Lock,
+  Award,
+  Coins
 } from 'lucide-react';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
@@ -341,7 +343,11 @@ const AVATARS: AvatarDef[] = [
 
 export default function LeaderboardPage() {
   const router = useRouter();
+  
+  // STATI DELLE DUE CLASSIFICHE
+  const [viewMode, setViewMode] = useState<'GENERAL' | 'FINALE'>('GENERAL');
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [finaleLeaderboard, setFinaleLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // STATO PER LA RICERCA
@@ -356,14 +362,18 @@ export default function LeaderboardPage() {
   const [playerPredictions, setPlayerPredictions] = useState<any[]>([]);
   const [playerBrackets, setPlayerBrackets] = useState<any[]>([]);
   const [playerBonuses, setPlayerBonuses] = useState<any[]>([]);
+  const [playerFinale, setPlayerFinale] = useState<any[]>([]);
   
   // Tab Interno Modale
-  const [detailTab, setDetailTab] = useState<'MATCHES' | 'BRACKET' | 'BONUS'>('MATCHES');
+  const [detailTab, setDetailTab] = useState<'MATCHES' | 'BRACKET' | 'BONUS' | 'FINALE'>('MATCHES');
 
   // Variabili globali caricate una sola volta
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
   
+  // STATI APP SETTINGS
+  const [isFinaleActive, setIsFinaleActive] = useState(false);
+
   // STATO PER LE ELIMINAZIONI A CASCATA
   const [eliminatedTeams, setEliminatedTeams] = useState<Set<string>>(new Set());
 
@@ -388,22 +398,40 @@ export default function LeaderboardPage() {
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (!profile || !profile.full_name) { router.push('/setup-profilo'); return; }
 
-      const [profRes, offBracketRes, offBonusRes] = await Promise.all([
+      const [profRes, offBracketRes, offBonusRes, finaleRes, settingsRes] = await Promise.all([
         supabase.from('profiles').select('*'),
         supabase.from('official_bracket').select('*'),
-        supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle()
+        supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
+        supabase.from('final_match_predictions').select('user_id, total_points'),
+        supabase.from('app_settings').select('is_finale_active').eq('id', 1).maybeSingle()
       ]);
 
       if (profRes.error) throw profRes.error;
 
+      if (settingsRes.data) {
+        setIsFinaleActive(settingsRes.data.is_finale_active);
+      }
+
+      // 1. CLASSIFICA GENERALE (Mondiale)
       if (profRes.data) {
-        const sorted = profRes.data.sort((a, b) => {
+        const sorted = [...profRes.data].sort((a, b) => {
           const rankA = a.ranking ?? 9999;
           const rankB = b.ranking ?? 9999;
           if (rankA === 9999 && rankB === 9999) return (b.points || 0) - (a.points || 0);
           return rankA - rankB;
         });
         setLeaderboard(sorted);
+        
+        // 2. CLASSIFICA SUPER JACKPOT (Solo chi ha giocato la Finale)
+        if (finaleRes.data) {
+          const finaleBoard = finaleRes.data.map(fin => {
+            const p = profRes.data.find(profile => profile.id === fin.user_id);
+            if (!p) return null;
+            return { ...p, finale_points: fin.total_points || 0 };
+          }).filter(p => p !== null).sort((a: any, b: any) => b.finale_points - a.finale_points);
+          
+          setFinaleLeaderboard(finaleBoard);
+        }
       }
 
       const offBracketData = offBracketRes.data || [];
@@ -433,16 +461,15 @@ export default function LeaderboardPage() {
     return 0;
   };
 
-  const handlePlayerClick = async (player: any) => {
+  const handlePlayerClick = async (player: any, defaultTab: 'MATCHES' | 'BRACKET' | 'BONUS' | 'FINALE' = 'MATCHES') => {
     setSelectedPlayer(player);
-    setDetailTab('MATCHES'); 
+    setDetailTab(defaultTab); 
     setShowDetailsModal(true);
     setLoadingDetails(true);
 
     try {
       // 1. CARICAMENTO GIRONI
-      const { data: preds, error: e1 } = await supabase.from('predictions').select('*').eq('user_id', player.id);
-      if (e1) throw e1;
+      const { data: preds } = await supabase.from('predictions').select('*').eq('user_id', player.id);
       let combinedMatches: any[] = [];
       
       if (preds && preds.length > 0) {
@@ -463,9 +490,8 @@ export default function LeaderboardPage() {
       }
       setPlayerPredictions(combinedMatches);
 
-      // 2. CARICAMENTO TABELLONE CON LOGICA ELIMINAZIONE ISTANTANEA
-      const { data: bData, error: e2 } = await supabase.from('brackets').select('*').eq('user_id', player.id);
-      if (e2) throw e2;
+      // 2. CARICAMENTO TABELLONE
+      const { data: bData } = await supabase.from('brackets').select('*').eq('user_id', player.id);
       const processedBrackets: any[] = [];
       const seenBrackets = new Set(); 
       
@@ -473,20 +499,16 @@ export default function LeaderboardPage() {
          const uS = normalizeStage(b.stage);
          const cleanT = cleanString(b.team_name);
          const uniqueKey = `${uS}-${cleanT}`;
-         
          if (!cleanT) return;
          
          const officialTeamsInStage = officialBracket.filter(ob => normalizeStage(ob.stage) === uS);
          const isCorrect = officialTeamsInStage.some(ob => cleanString(ob.team_name) === cleanT);
-         
-         // La squadra è eliminata se è nel set delle eliminate (calcolato tramite l'albero ufficiale)
          const isEliminated = eliminatedTeams.has(cleanT);
          const isStageFull = officialTeamsInStage.length >= (STAGE_CAPACITY[uS] || 99);
          
          if (!seenBrackets.has(uniqueKey)) {
             seenBrackets.add(uniqueKey);
             const pts = STAGE_POINTS[uS] || 0;
-            
             if (isCorrect) {
                processedBrackets.push({ team: b.team_name, stageLabel: STAGE_LABELS[uS], points: pts, status: 'CORRECT', stageValue: pts });
             } else if (isEliminated || isStageFull) {
@@ -509,9 +531,7 @@ export default function LeaderboardPage() {
       }));
 
       // 3. CARICAMENTO BONUS 
-      const { data: uBonus, error: e3 } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
-      if (e3 && e3.code !== 'PGRST116') throw e3; 
-      
+      const { data: uBonus } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
       const processedBonuses: any[] = [];
       
       const isGroupsClosed = !!(officialBonuses && (
@@ -565,6 +585,47 @@ export default function LeaderboardPage() {
           return b.sortOrder - a.sortOrder;
       }));
 
+      // 4. CARICAMENTO LA FINALE (Sabato & Domenica)
+      const { data: finaleData } = await supabase.from('final_match_predictions').select('*').eq('user_id', player.id).maybeSingle();
+      const processedFinale: any[] = [];
+      if (finaleData) {
+        const addFin = (matchLabel: string, label: string, val: any, maxPts: number) => {
+          if (val === null || val === undefined || val === '') return;
+          processedFinale.push({
+            matchLabel, label, answer: String(val), points: 0, status: 'PENDING', maxPts
+          });
+        };
+
+        // DOMENICA
+        if (finaleData.home_score != null && finaleData.away_score != null) addFin('🏆 Finalissima (Domenica)', 'Risultato Esatto', `${finaleData.home_score} - ${finaleData.away_score}`, 30);
+        addFin('🏆 Finalissima (Domenica)', 'Esito e Modalità', finaleData.ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
+        addFin('🏆 Finalissima (Domenica)', 'MVP (FIFA)', finaleData.f12_mvp, 12);
+        if (finaleData.f12_ht_home_score != null) addFin('🏆 Finalissima (Domenica)', 'Esatto 1° Tempo', `${finaleData.f12_ht_home_score} - ${finaleData.f12_ht_away_score}`, 10);
+        if (finaleData.f12_2nd_home_score != null) addFin('🏆 Finalissima (Domenica)', 'Esatto 2° Tempo', `${finaleData.f12_2nd_home_score} - ${finaleData.f12_2nd_away_score}`, 10);
+        addFin('🏆 Finalissima (Domenica)', 'Squadra 1° Gol', finaleData.f12_first_to_score, 5);
+        addFin('🏆 Finalissima (Domenica)', 'Marcatore', finaleData.f12_scorer, 11);
+        addFin('🏆 Finalissima (Domenica)', 'Minuto 1° Gol', finaleData.first_goal_minute, 10);
+        addFin('🏆 Finalissima (Domenica)', 'Falli Fischiati', finaleData.f12_fouls, 6);
+        addFin('🏆 Finalissima (Domenica)', '🟨 Cartellini Gialli', finaleData.f12_yellow_cards, 3);
+        addFin('🏆 Finalissima (Domenica)', '🟥 Cartellini Rossi', finaleData.f12_red_cards, 3);
+        addFin('🏆 Finalissima (Domenica)', '🥅 Rigori Fischiati', finaleData.f12_penalties, 1);
+
+        // SABATO
+        if (finaleData.f34_home_score != null && finaleData.f34_away_score != null) addFin('🥉 3°/4° Posto (Sabato)', 'Risultato Esatto', `${finaleData.f34_home_score} - ${finaleData.f34_away_score}`, 30);
+        addFin('🥉 3°/4° Posto (Sabato)', 'Esito e Modalità', finaleData.f34_ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.f34_ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
+        addFin('🥉 3°/4° Posto (Sabato)', 'MVP (FIFA)', finaleData.f34_mvp, 12);
+        if (finaleData.f34_ht_home_score != null) addFin('🥉 3°/4° Posto (Sabato)', 'Esatto 1° Tempo', `${finaleData.f34_ht_home_score} - ${finaleData.f34_ht_away_score}`, 10);
+        if (finaleData.f34_2nd_home_score != null) addFin('🥉 3°/4° Posto (Sabato)', 'Esatto 2° Tempo', `${finaleData.f34_2nd_home_score} - ${finaleData.f34_2nd_away_score}`, 10);
+        addFin('🥉 3°/4° Posto (Sabato)', 'Squadra 1° Gol', finaleData.f34_first_to_score, 5);
+        addFin('🥉 3°/4° Posto (Sabato)', 'Marcatore', finaleData.f34_scorer, 11);
+        addFin('🥉 3°/4° Posto (Sabato)', 'Minuto 1° Gol', finaleData.f34_first_goal_minute, 10);
+        addFin('🥉 3°/4° Posto (Sabato)', 'Falli Fischiati', finaleData.f34_fouls, 6);
+        addFin('🥉 3°/4° Posto (Sabato)', '🟨 Cartellini Gialli', finaleData.f34_yellow_cards, 3);
+        addFin('🥉 3°/4° Posto (Sabato)', '🟥 Cartellini Rossi', finaleData.f34_red_cards, 3);
+        addFin('🥉 3°/4° Posto (Sabato)', '🥅 Rigori Fischiati', finaleData.f34_penalties, 1);
+      }
+      setPlayerFinale(processedFinale);
+
     } catch (error) {
       console.error(error);
       toast.error('Errore nel caricare i dettagli.');
@@ -589,12 +650,6 @@ export default function LeaderboardPage() {
     if (current < previous) return <ChevronUp className="text-emerald-500" size={16} strokeWidth={3} />;
     return <ChevronDown className="text-rose-500" size={16} strokeWidth={3} />;
   };
-
-  const filteredLeaderboard = leaderboard.filter(player => {
-    const query = searchQuery.toLowerCase();
-    return (player.username?.toLowerCase().includes(query)) || 
-           (player.full_name?.toLowerCase().includes(query));
-  });
 
   const renderBonusAnswer = (answer: string, label: string, status: string) => {
     if (!answer) return null;
@@ -651,17 +706,15 @@ export default function LeaderboardPage() {
     return <span className={`${textClass} block mt-0.5 leading-none`}>{answer}</span>;
   };
 
-  const isGroupsClosed = !!(officialBonuses && (
-    (officialBonuses.high_scoring_match && officialBonuses.high_scoring_match !== 'TBD' && officialBonuses.high_scoring_match.trim() !== '') ||
-    (officialBonuses.highest_scoring_group && officialBonuses.highest_scoring_group !== 'TBD' && officialBonuses.highest_scoring_group.trim() !== '') ||
-    (officialBonuses.lowest_scoring_group && officialBonuses.lowest_scoring_group !== 'TBD' && officialBonuses.lowest_scoring_group.trim() !== '')
-  ));
+  const filteredLeaderboard = leaderboard.filter(player => {
+    const query = searchQuery.toLowerCase();
+    return (player.username?.toLowerCase().includes(query)) || (player.full_name?.toLowerCase().includes(query));
+  });
 
-  const isTournamentFinished = !!(officialBonuses && (
-    (officialBonuses.mvp_world_cup && officialBonuses.mvp_world_cup !== 'TBD' && officialBonuses.mvp_world_cup.trim() !== '') ||
-    (officialBonuses.top_scorer && officialBonuses.top_scorer !== 'TBD' && officialBonuses.top_scorer.trim() !== '') ||
-    (officialBonuses.best_goalkeeper && officialBonuses.best_goalkeeper !== 'TBD' && officialBonuses.best_goalkeeper.trim() !== '')
-  ));
+  const filteredFinaleLeaderboard = finaleLeaderboard.filter(player => {
+    const query = searchQuery.toLowerCase();
+    return (player.username?.toLowerCase().includes(query)) || (player.full_name?.toLowerCase().includes(query));
+  });
 
   if (loading)
     return (
@@ -681,8 +734,26 @@ export default function LeaderboardPage() {
         </p>
       </header>
 
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         
+        {/* === SWITCHER CLASSIFICHE === */}
+        {isFinaleActive && (
+          <div className="flex bg-slate-900 border border-slate-800 p-1.5 rounded-2xl mb-8 shadow-inner animate-in fade-in duration-500">
+            <button 
+              onClick={() => setViewMode('GENERAL')}
+              className={`flex-1 py-3 px-2 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all ${viewMode === 'GENERAL' ? 'bg-slate-800 text-yellow-500 shadow-md border border-yellow-500/20' : 'text-slate-500 hover:text-white hover:bg-slate-800/50'}`}
+            >
+              <Trophy size={16} /> <span>Mondiale</span>
+            </button>
+            <button 
+              onClick={() => setViewMode('FINALE')}
+              className={`flex-1 py-3 px-2 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all ${viewMode === 'FINALE' ? 'bg-gradient-to-r from-yellow-600 to-amber-500 text-slate-950 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'text-slate-500 hover:text-white hover:bg-slate-800/50'}`}
+            >
+              <Coins size={16} /> <span>MINI-GAME FINALE</span>
+            </button>
+          </div>
+        )}
+
         {/* BARRA DI RICERCA UTENTI */}
         <div className="relative mb-6">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
@@ -697,64 +768,118 @@ export default function LeaderboardPage() {
           />
         </div>
 
-        <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic border-b border-slate-800/50 pb-2">
-          <div className="flex-1 pl-14 sm:pl-16">Giocatore</div>
-          <div className="flex gap-3 sm:gap-6 md:gap-10 pr-2">
-            <div className="w-6 sm:w-8 text-center" title="Punti Gironi">Gir</div>
-            <div className="w-6 sm:w-8 text-center" title="Punti Fase Finale">FF</div>
-            <div className="w-6 sm:w-8 text-center" title="Punti Bonus">Bon</div>
-            <div className="w-10 sm:w-12 text-center text-yellow-500">Tot</div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {filteredLeaderboard.map((player) => {
-            const currentRank = Number(player.ranking);
-            const isPodium = currentRank === 1;
-            const currentAvatar = AVATARS.find(a => a.id === player.avatar_id) || AVATARS[0];
-            
-            return (
-              <div key={player.id} onClick={() => handlePlayerClick(player)} className={`flex items-center p-4 sm:p-5 rounded-[2rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${isPodium ? 'bg-gradient-to-r from-yellow-500/10 to-slate-900/40 border-yellow-500/40 shadow-2xl shadow-yellow-500/5 hover:scale-[1.02]' : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/80 hover:border-slate-700'}`}>
-                <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
-                  <div className="w-12 sm:w-14 flex items-center justify-between shrink-0 bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 shadow-inner">
-                    <div className="flex-1 flex justify-center">{getRankIcon(player.ranking)}</div>
-                    <div className="flex-1 flex justify-center">{getTrendIcon(player.ranking, player.previous_ranking)}</div>
-                  </div>
-                  <div className="flex items-center gap-3 min-w-0 flex-1 pr-1">
-                    <div className={`w-8 sm:w-10 h-8 sm:h-10 shrink-0 rounded-full flex items-center justify-center text-lg sm:text-xl shadow-inner overflow-hidden bg-gradient-to-br ${currentAvatar.color} border border-slate-800`} title={currentAvatar.name}>
-                      {currentAvatar.flagCode ? <img src={`https://flagcdn.com/w80/${currentAvatar.flagCode}.png`} alt={currentAvatar.name} className="w-full h-full object-cover" /> : <span className="drop-shadow-md">{currentAvatar.emoji}</span>}
-                    </div>
-                    <div className="flex flex-col justify-center min-w-0">
-                      <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>{player.username}</p>
-                      {player.full_name && (
-                        <p className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">
-                          {player.full_name}
-                        </p>
-                      )}
-                      {(player.exact_matches || 0) > 0 && <p className="text-[9px] font-bold text-slate-500 mt-1 flex items-center gap-1"><Target size={10} className="text-emerald-500" /> {player.exact_matches} esatt{player.exact_matches === 1 ? 'o' : 'i'}</p>}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 sm:gap-6 md:gap-10 shrink-0 ml-2">
-                  <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">{player.points_groups || 0}</div>
-                  <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">{player.points_bracket || 0}</div>
-                  <div className={`w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold ${(player.points_bonus || 0) > 0 ? 'text-purple-400' : 'text-slate-500'}`}>{player.points_bonus || 0}</div>
-                  <div className={`w-10 sm:w-12 text-center font-black italic text-lg sm:text-xl md:text-3xl ${isPodium ? 'text-yellow-500' : 'text-white'}`}>{player.points || 0}</div>
-                </div>
+        {/* === VISTA CLASSIFICA GENERALE === */}
+        {viewMode === 'GENERAL' && (
+          <>
+            <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic border-b border-slate-800/50 pb-2">
+              <div className="flex-1 pl-14 sm:pl-16">Giocatore</div>
+              <div className="flex gap-3 sm:gap-6 md:gap-10 pr-2">
+                <div className="w-6 sm:w-8 text-center" title="Punti Gironi">Gir</div>
+                <div className="w-6 sm:w-8 text-center" title="Punti Fase Finale">FF</div>
+                <div className="w-6 sm:w-8 text-center" title="Punti Bonus">Bon</div>
+                <div className="w-10 sm:w-12 text-center text-yellow-500">Tot</div>
               </div>
-            );
-          })}
+            </div>
 
-          {filteredLeaderboard.length === 0 && !loading && (
-            <div className="text-center py-12"><Trophy className="mx-auto w-12 h-12 text-slate-800 mb-3" /><p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nessun giocatore trovato</p></div>
-          )}
-        </div>
+            <div className="space-y-3">
+              {filteredLeaderboard.map((player) => {
+                const currentRank = Number(player.ranking);
+                const isPodium = currentRank === 1;
+                const currentAvatar = AVATARS.find(a => a.id === player.avatar_id) || AVATARS[0];
+                
+                return (
+                  <div key={player.id} onClick={() => handlePlayerClick(player, 'MATCHES')} className={`flex items-center p-4 sm:p-5 rounded-[2rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${isPodium ? 'bg-gradient-to-r from-yellow-500/10 to-slate-900/40 border-yellow-500/40 shadow-2xl shadow-yellow-500/5 hover:scale-[1.02]' : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/80 hover:border-slate-700'}`}>
+                    <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className="w-12 sm:w-14 flex items-center justify-between shrink-0 bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 shadow-inner">
+                        <div className="flex-1 flex justify-center">{getRankIcon(player.ranking)}</div>
+                        <div className="flex-1 flex justify-center">{getTrendIcon(player.ranking, player.previous_ranking)}</div>
+                      </div>
+                      <div className="flex items-center gap-3 min-w-0 flex-1 pr-1">
+                        <div className={`w-8 sm:w-10 h-8 sm:h-10 shrink-0 rounded-full flex items-center justify-center text-lg sm:text-xl shadow-inner overflow-hidden bg-gradient-to-br ${currentAvatar.color} border border-slate-800`} title={currentAvatar.name}>
+                          {currentAvatar.flagCode ? <img src={`https://flagcdn.com/w80/${currentAvatar.flagCode}.png`} alt={currentAvatar.name} className="w-full h-full object-cover" /> : <span className="drop-shadow-md">{currentAvatar.emoji}</span>}
+                        </div>
+                        <div className="flex flex-col justify-center min-w-0">
+                          <p className={`font-black uppercase italic text-xs sm:text-sm md:text-base tracking-tight leading-none truncate w-full ${isPodium ? 'text-yellow-400' : 'text-slate-200'}`}>{player.username}</p>
+                          {player.full_name && (
+                            <p className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-0.5">
+                              {player.full_name}
+                            </p>
+                          )}
+                          {(player.exact_matches || 0) > 0 && <p className="text-[9px] font-bold text-slate-500 mt-1 flex items-center gap-1"><Target size={10} className="text-emerald-500" /> {player.exact_matches} esatt{player.exact_matches === 1 ? 'o' : 'i'}</p>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:gap-6 md:gap-10 shrink-0 ml-2">
+                      <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">{player.points_groups || 0}</div>
+                      <div className="w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500">{player.points_bracket || 0}</div>
+                      <div className={`w-6 sm:w-8 text-center text-[9px] sm:text-[10px] md:text-xs font-bold ${(player.points_bonus || 0) > 0 ? 'text-purple-400' : 'text-slate-500'}`}>{player.points_bonus || 0}</div>
+                      <div className={`w-10 sm:w-12 text-center font-black italic text-lg sm:text-xl md:text-3xl ${isPodium ? 'text-yellow-500' : 'text-white'}`}>{player.points || 0}</div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredLeaderboard.length === 0 && (
+                <div className="text-center py-12"><Trophy className="mx-auto w-12 h-12 text-slate-800 mb-3" /><p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nessun giocatore trovato</p></div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* === VISTA CLASSIFICA LA FINALE (SUPER JACKPOT) === */}
+        {viewMode === 'FINALE' && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic border-b border-slate-800/50 pb-2">
+              <div className="flex-1 pl-4">Giocatore a Jackpot</div>
+              <div className="w-16 sm:w-20 text-right text-yellow-500 pr-2">Punti Jkpt</div>
+            </div>
+
+            <div className="space-y-3">
+              {filteredFinaleLeaderboard.map((player, idx) => {
+                const currentAvatar = AVATARS.find(a => a.id === player.avatar_id) || AVATARS[0];
+                const isLeader = idx === 0;
+                
+                return (
+                  <div key={player.id} onClick={() => handlePlayerClick(player, 'FINALE')} className={`flex items-center p-4 sm:p-5 rounded-[2rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${isLeader ? 'bg-gradient-to-r from-amber-500/10 to-slate-900/40 border-amber-500/40 shadow-2xl shadow-amber-500/5 hover:scale-[1.02]' : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/80 hover:border-slate-700'}`}>
+                    <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 flex-1 pr-1">
+                        <div className={`w-10 sm:w-12 h-10 sm:h-12 shrink-0 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-inner overflow-hidden bg-gradient-to-br ${currentAvatar.color} border border-slate-800`} title={currentAvatar.name}>
+                          {currentAvatar.flagCode ? <img src={`https://flagcdn.com/w80/${currentAvatar.flagCode}.png`} alt={currentAvatar.name} className="w-full h-full object-cover" /> : <span className="drop-shadow-md">{currentAvatar.emoji}</span>}
+                        </div>
+                        <div className="flex flex-col justify-center min-w-0">
+                          <p className={`font-black uppercase italic text-sm sm:text-base tracking-tight leading-none truncate w-full ${isLeader ? 'text-amber-400' : 'text-slate-200'}`}>{player.username}</p>
+                          {player.full_name && (
+                            <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-tight whitespace-normal break-words line-clamp-2 mt-1">
+                              {player.full_name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center shrink-0 ml-2 border-l border-slate-800/50 pl-4 sm:pl-6">
+                      <div className={`w-16 sm:w-20 text-right font-black italic text-2xl sm:text-3xl ${isLeader ? 'text-amber-500 drop-shadow' : 'text-white'}`}>{player.finale_points}</div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredFinaleLeaderboard.length === 0 && (
+                <div className="text-center py-16 bg-slate-900/30 rounded-3xl border border-slate-800/50">
+                  <Award className="mx-auto w-12 h-12 text-slate-700 mb-3" />
+                  <p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nessun pronostico per la Finale</p>
+                  <p className="text-[10px] text-slate-600 mt-2 font-medium">I giocatori appariranno qui appena salveranno le loro schedine.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* --- MODALE DETTAGLIO PUNTI UTENTE A SCOMPARTIMENTI --- */}
       {showDetailsModal && selectedPlayer && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 pb-24 sm:pb-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[70vh] max-h-[600px] overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col h-[75vh] max-h-[640px] overflow-hidden">
             
             <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-4 shrink-0">
               <div>
@@ -773,15 +898,20 @@ export default function LeaderboardPage() {
 
             {/* BARRA DEI MINI-TAB */}
             <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/80 mb-4 shrink-0">
-              <button onClick={() => setDetailTab('MATCHES')} className={`flex-1 py-2 rounded-lg font-black text-[9px] sm:text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${detailTab === 'MATCHES' ? 'bg-slate-800 text-yellow-500 shadow-md' : 'text-slate-500 hover:text-white'}`}>
+              <button onClick={() => setDetailTab('MATCHES')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'MATCHES' ? 'bg-slate-800 text-yellow-500 shadow-md' : 'text-slate-500 hover:text-white'}`}>
                 <Gamepad2 size={12}/> Partite
               </button>
-              <button onClick={() => setDetailTab('BRACKET')} className={`flex-1 py-2 rounded-lg font-black text-[9px] sm:text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${detailTab === 'BRACKET' ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
+              <button onClick={() => setDetailTab('BRACKET')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'BRACKET' ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
                 <Trophy size={12}/> Tabellone
               </button>
-              <button onClick={() => setDetailTab('BONUS')} className={`flex-1 py-2 rounded-lg font-black text-[9px] sm:text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${detailTab === 'BONUS' ? 'bg-purple-500/20 border border-purple-500/30 text-purple-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
+              <button onClick={() => setDetailTab('BONUS')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'BONUS' ? 'bg-purple-500/20 border border-purple-500/30 text-purple-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
                 <Star size={12}/> Bonus
               </button>
+              {isFinaleActive && (
+                <button onClick={() => setDetailTab('FINALE')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'FINALE' ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
+                  <Award size={12}/> La Finale
+                </button>
+              )}
             </div>
 
             <div className="overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0 space-y-2">
@@ -835,7 +965,6 @@ export default function LeaderboardPage() {
                        playerBrackets.map((br, idx) => {
                          const isCorrect = br.status === 'CORRECT';
                          const isWrong = br.status === 'WRONG';
-                         const isPending = br.status === 'PENDING';
                          
                          return (
                            <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center transition-colors ${
@@ -901,11 +1030,44 @@ export default function LeaderboardPage() {
                            );
                          })
                        )}
-                       
-                       {isGroupsClosed && !isTournamentFinished && (
-                         <div className="mt-6 mb-2 flex items-center justify-center gap-1.5 text-[9px] font-black text-slate-600 uppercase tracking-widest border-t border-slate-800/50 pt-4">
-                          
+                     </div>
+                   )}
+
+                   {/* TAB LA FINALE */}
+                   {detailTab === 'FINALE' && (
+                     <div className="flex flex-col h-full">
+                       {playerFinale.length === 0 ? (
+                         <div className="text-center py-10 opacity-70">
+                            <Award className="mx-auto w-10 h-10 text-slate-700 mb-2" />
+                            <p className="text-slate-600 text-[10px] font-black uppercase tracking-widest">Nessun pronostico salvato</p>
                          </div>
+                       ) : (
+                         playerFinale.map((fin, idx) => {
+                           const isCorrect = fin.status === 'CORRECT';
+                           const isWrong = fin.status === 'WRONG';
+                           return (
+                             <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center mb-2 transition-colors ${
+                               isCorrect ? 'bg-amber-950/20 border-amber-500/40' :
+                               isWrong ? 'bg-rose-950/10 border-rose-900/30 opacity-70' :
+                               'bg-slate-900/30 border-slate-800/50'
+                             }`}>
+                                <div className="flex flex-col min-w-0">
+                                   <span className="text-[7px] font-black uppercase tracking-widest text-slate-500">{fin.matchLabel}</span>
+                                   <span className={`text-[9px] font-bold uppercase tracking-widest ${isCorrect ? 'text-amber-400' : isWrong ? 'text-rose-400/70' : 'text-slate-300'}`}>{fin.label}</span>
+                                   <span className={`text-[11px] font-black uppercase italic truncate mt-0.5 ${isWrong ? 'text-rose-500 line-through' : 'text-white'}`}>{fin.answer}</span>
+                                </div>
+                                <div className="flex flex-col items-end shrink-0 ml-2">
+                                  <span className={`text-xs font-black px-2 py-1 rounded-lg border ${
+                                    isCorrect ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
+                                    isWrong ? 'text-rose-400/60 bg-rose-500/5 border-rose-500/10' : 
+                                    'text-slate-500 bg-slate-800/50 border-slate-700/50'
+                                  }`}>
+                                    {isCorrect ? `+${fin.points} PT` : isWrong ? '0 PT' : `Max ${fin.maxPts} PT`}
+                                  </span>
+                                </div>
+                             </div>
+                           );
+                         })
                        )}
                      </div>
                    )}

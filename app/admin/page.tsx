@@ -8,7 +8,7 @@ import {
   Trophy, Users, Zap, Search, Trash2, ChevronDown, ChevronUp,
   BarChart3, RefreshCw, Star, X, MessageCircle, ArrowLeft,
   User, CheckCircle, AlertTriangle, Plus, Minus, Award, Megaphone, 
-  Shield, Download, Gift, Activity, Key, Gamepad2, ListOrdered, Flag, CalendarDays
+  Shield, Download, Gift, Activity, Key, Gamepad2, ListOrdered, Flag, CalendarDays, Coins, Medal
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
@@ -237,7 +237,7 @@ const AutocompleteInput = ({
         />
       </div>
       
-      {isOpen && value.length > 0 && (
+      {isOpen && value && value.length > 0 && (
         <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
           {filteredSuggestions.length > 0 ? (
             filteredSuggestions.map((suggestion, index) => {
@@ -317,6 +317,7 @@ export default function AdminPage() {
   
   const [announcement, setAnnouncement] = useState('');
   const [isFinaleActive, setIsFinaleActive] = useState(false);
+  const [activeFinaleAdminTab, setActiveFinaleAdminTab] = useState<'SUNDAY' | 'SATURDAY'>('SUNDAY');
   
   const [newScorerName, setNewScorerName] = useState('');
   const [newScorerTeam, setNewScorerTeam] = useState('');
@@ -327,13 +328,19 @@ export default function AdminPage() {
 
   const [bonusData, setBonusData] = useState({ red: '', top: '', penalties: '', own_goals: '', mvp_world_cup: '', best_goalkeeper: '', high: '', high_group: '', low_group: '' });
   
-  // STATI REALI INPUT SEZIONE "LA FINALE"
+  // STATI REALI INPUT SEZIONE "LA FINALE" (Senza "Squadra Campione")
   const [finaleResultData, setFinaleResultData] = useState({
-    champion_team: '',
-    home_score: '',
-    away_score: '',
-    ending_method: 'REGULAR',
-    first_goal_minute: ''
+    // DOMENICA
+    home_score: '', away_score: '', ending_method: 'REGULAR', f12_mvp: '',
+    f12_ht_home_score: '', f12_ht_away_score: '', f12_2nd_home_score: '', f12_2nd_away_score: '',
+    f12_first_to_score: '', f12_scorer: '', first_goal_minute: '', f12_fouls: '',
+    f12_yellow_cards: '', f12_red_cards: '', f12_penalties: '',
+    
+    // SABATO
+    f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
+    f34_ht_home_score: '', f34_ht_away_score: '', f34_2nd_home_score: '', f34_2nd_away_score: '',
+    f34_first_to_score: '', f34_scorer: '', f34_first_goal_minute: '', f34_fouls: '',
+    f34_yellow_cards: '', f34_red_cards: '', f34_penalties: ''
   });
   const [finaleReportText, setFinaleReportText] = useState('');
 
@@ -391,6 +398,44 @@ export default function AdminPage() {
     if (settingsRes.data) {
       setAnnouncement(settingsRes.data.announcement || '');
       setIsFinaleActive(settingsRes.data.is_finale_active || false);
+    }
+
+    // Caricamento Dati Ufficiali della finale dal record master (se salvato)
+    const officialFinaleRow = fPredictions?.find(f => f.user_id === '00000000-0000-0000-0000-000000000000');
+    if (officialFinaleRow) {
+      setFinaleResultData({
+        home_score: officialFinaleRow.home_score?.toString() || '',
+        away_score: officialFinaleRow.away_score?.toString() || '',
+        ending_method: officialFinaleRow.ending_method || 'REGULAR',
+        f12_mvp: officialFinaleRow.f12_mvp || '',
+        f12_ht_home_score: officialFinaleRow.f12_ht_home_score?.toString() || '',
+        f12_ht_away_score: officialFinaleRow.f12_ht_away_score?.toString() || '',
+        f12_2nd_home_score: officialFinaleRow.f12_2nd_home_score?.toString() || '',
+        f12_2nd_away_score: officialFinaleRow.f12_2nd_away_score?.toString() || '',
+        f12_first_to_score: officialFinaleRow.f12_first_to_score || '',
+        f12_scorer: officialFinaleRow.f12_scorer || '',
+        first_goal_minute: officialFinaleRow.first_goal_minute?.toString() || '',
+        f12_fouls: officialFinaleRow.f12_fouls?.toString() || '',
+        f12_yellow_cards: officialFinaleRow.f12_yellow_cards?.toString() || '',
+        f12_red_cards: officialFinaleRow.f12_red_cards?.toString() || '',
+        f12_penalties: officialFinaleRow.f12_penalties?.toString() || '',
+
+        f34_home_score: officialFinaleRow.f34_home_score?.toString() || '',
+        f34_away_score: officialFinaleRow.f34_away_score?.toString() || '',
+        f34_ending_method: officialFinaleRow.f34_ending_method || 'REGULAR',
+        f34_mvp: officialFinaleRow.f34_mvp || '',
+        f34_ht_home_score: officialFinaleRow.f34_ht_home_score?.toString() || '',
+        f34_ht_away_score: officialFinaleRow.f34_ht_away_score?.toString() || '',
+        f34_2nd_home_score: officialFinaleRow.f34_2nd_home_score?.toString() || '',
+        f34_2nd_away_score: officialFinaleRow.f34_2nd_away_score?.toString() || '',
+        f34_first_to_score: officialFinaleRow.f34_first_to_score || '',
+        f34_scorer: officialFinaleRow.f34_scorer || '',
+        f34_first_goal_minute: officialFinaleRow.f34_first_goal_minute?.toString() || '',
+        f34_fouls: officialFinaleRow.f34_fouls?.toString() || '',
+        f34_yellow_cards: officialFinaleRow.f34_yellow_cards?.toString() || '',
+        f34_red_cards: officialFinaleRow.f34_red_cards?.toString() || '',
+        f34_penalties: officialFinaleRow.f34_penalties?.toString() || ''
+      });
     }
 
     const tempGroups: Record<string, string[]> = {};
@@ -479,7 +524,6 @@ export default function AdminPage() {
       .sort((a, b) => a.dateVal - b.dateVal);
   }, [matches, searchTerm]);
 
-  // CORRETTO: Uso di .update() invece di .upsert() per aggiornare solo l'annuncio
   const saveAnnouncement = async (text: string) => {
     const { error } = await supabase
       .from('app_settings')
@@ -490,12 +534,9 @@ export default function AdminPage() {
     else toast.success(text === '' ? 'Annuncio rimosso!' : 'Annuncio pubblicato!');
   };
 
-  // CORRETTO: Uso di .update() per evitare sovrascritture o reset non voluti
   const toggleFinaleStatus = async () => {
     const currentStatus = isFinaleActive;
     const newStatus = !currentStatus;
-    
-    // Aggiornamento ottimistico
     setIsFinaleActive(newStatus);
     
     const { error } = await supabase
@@ -505,78 +546,153 @@ export default function AdminPage() {
 
     if (error) {
       toast.error('Errore durante il cambio stato');
-      setIsFinaleActive(currentStatus); // Rollback in caso di errore
+      setIsFinaleActive(currentStatus);
     } else {
-      toast.success(newStatus ? 'Fase "LA FINALE" Attivata! Pop-up sbloccato.' : 'Fase "LA FINALE" Disattivata.');
+      toast.success(newStatus ? 'Fase "LA FINALE" Attivata! Schedina sbloccata per gli utenti.' : 'Fase "LA FINALE" Disattivata.');
     }
   };
 
-  const handleCalculateFinaleWinners = () => {
-    if (!finaleResultData.champion_team || !finaleResultData.home_score || !finaleResultData.away_score || !finaleResultData.first_goal_minute) {
-      return toast.error('Inserisci tutti i dati reali della finale per calcolare i vincitori');
-    }
-
-    const realCamp = cleanString(finaleResultData.champion_team);
-    const realHScore = parseInt(finaleResultData.home_score);
-    const realAScore = parseInt(finaleResultData.away_score);
-    const realMethod = finaleResultData.ending_method;
-    const realMin = parseInt(finaleResultData.first_goal_minute);
-
-    const scoredUsers = userFinalePredictions.map(pred => {
-      let currentPts = 0;
-      const isCampCorrect = cleanString(pred.champion_team) === realCamp;
-      const isScoreCorrect = parseInt(pred.home_score) === realHScore && parseInt(pred.away_score) === realAScore;
-      const isMethodCorrect = pred.ending_method === realMethod;
-      
-      if (isScoreCorrect) currentPts += 10;
-      if (isCampCorrect) currentPts += 5;
-      if (isMethodCorrect) currentPts += 5; // Combinato: +5 punti se indovina la modalità
-
-      const userMin = parseInt(pred.first_goal_minute) || 0;
-      const minDistance = Math.abs(userMin - realMin);
-
-      const uProf = profiles.find(p => p.id === pred.user_id);
-      return {
-        username: uProf ? uProf.username : 'Anonimo',
-        points: currentPts,
-        isScoreCorrect,
-        isCampCorrect,
-        isMethodCorrect,
-        minute: userMin,
-        distance: minDistance
-      };
-    });
-
-    const maxPts = Math.max(...scoredUsers.map(u => u.points), 0);
-    const topScorersList = scoredUsers.filter(u => u.points === maxPts && maxPts > 0);
-
-    let sortedWinners = [...topScorersList].sort((a, b) => a.distance - b.distance);
-
-    let report = `🏆 *RISULTATI COMPETIZIONE "LA FINALE"* 🏆\n\n`;
-    report += `📊 *Dati Reali:* ${finaleResultData.champion_team} Campione, Risultato: ${realHScore}-${realAScore} (${realMethod}), Minuto 1° Gol: ${realMin}'\n\n`;
+  // FUNZIONE CHIRURGICA: Calcola lo score del singolo match basandosi sui pesi scelti
+  const scoreSingleMatch = (p: any, o: any, isSunday: boolean) => {
+    let pts = 0;
     
-    if (sortedWinners.length > 0) {
-      report += `👑 *VINCITORE PREMIO EXTRA/JACKPOT:* \n`;
-      report += `🥇 *${sortedWinners[0].username}* con ${sortedWinners[0].points} PT (Minuto inserito: ${sortedWinners[0].minute}', Distanza dal reale: ${sortedWinners[0].distance} min)\n\n`;
-      
-      if (sortedWinners.length > 1) {
-        report += `👥 *In lizza a pari punti ma spareggiati per il minuto:* \n`;
-        sortedWinners.slice(1).forEach((w, rank) => {
-          report += `${rank + 2}°. *${w.username}* (${w.points} pt, errore di ${w.distance} min)\n`;
-        });
-        report += `\n`;
-      }
-    } else {
-      report += `🧊 Nessun utente ha totalizzato punti in questa fase.\n\n`;
+    const pHome = isSunday ? p.home_score : p.f34_home_score;
+    const pAway = isSunday ? p.away_score : p.f34_away_score;
+    const oHome = isSunday ? o.home_score : o.f34_home_score;
+    const oAway = isSunday ? o.away_score : o.f34_away_score;
+
+    const pMethod = isSunday ? p.ending_method : p.f34_ending_method;
+    const oMethod = isSunday ? o.ending_method : o.f34_ending_method;
+
+    const pMvp = isSunday ? p.f12_mvp : p.f34_mvp;
+    const oMvp = isSunday ? o.f12_mvp : o.f34_mvp;
+
+    const pHtH = isSunday ? p.f12_ht_home_score : p.f34_ht_home_score;
+    const pHtA = isSunday ? p.f12_ht_away_score : p.f34_ht_away_score;
+    const oHtH = isSunday ? o.f12_ht_home_score : o.f34_ht_home_score;
+    const oHtA = isSunday ? o.f12_ht_away_score : o.f34_ht_away_score;
+
+    const p2ndH = isSunday ? p.f12_2nd_home_score : p.f34_2nd_home_score;
+    const p2ndA = isSunday ? p.f12_2nd_away_score : p.f34_2nd_away_score;
+    const o2ndH = isSunday ? o.f12_2nd_home_score : o.f34_2nd_home_score;
+    const o2ndA = isSunday ? o.f12_2nd_away_score : o.f34_2nd_away_score;
+
+    const pFirst = isSunday ? p.f12_first_to_score : p.f34_first_to_score;
+    const oFirst = isSunday ? o.f12_first_to_score : o.f34_first_to_score;
+
+    const pScorer = isSunday ? p.f12_scorer : p.f34_scorer;
+    const oScorer = isSunday ? o.f12_scorer : o.f34_scorer;
+
+    const pMin = isSunday ? p.first_goal_minute : p.f34_first_goal_minute;
+    const oMin = isSunday ? o.first_goal_minute : o.f34_first_goal_minute;
+
+    const pFouls = isSunday ? p.f12_fouls : p.f34_fouls;
+    const oFouls = isSunday ? o.f12_fouls : o.f34_fouls;
+
+    const pYel = isSunday ? p.f12_yellow_cards : p.f34_yellow_cards;
+    const oYel = isSunday ? o.f12_yellow_cards : o.f34_yellow_cards;
+
+    const pRed = isSunday ? p.f12_red_cards : p.f34_red_cards;
+    const oRed = isSunday ? o.f12_red_cards : o.f34_red_cards;
+
+    const pPen = isSunday ? p.f12_penalties : p.f34_penalties;
+    const oPen = isSunday ? o.f12_penalties : o.f34_penalties;
+
+    if (pHome !== null && pAway !== null && oHome !== null && oAway !== null) {
+      if (parseInt(pHome) === parseInt(oHome) && parseInt(pAway) === parseInt(oAway)) pts += 30;
+    }
+    if (pMethod && oMethod && pMethod === oMethod) pts += 10;
+    if (pMvp && oMvp && cleanString(pMvp) === cleanString(oMvp)) pts += 12;
+    if (pHtH !== null && pHtA !== null && oHtH !== null && oHtA !== null) {
+      if (parseInt(pHtH) === parseInt(oHtH) && parseInt(pHtA) === parseInt(oHtA)) pts += 10;
+    }
+    if (p2ndH !== null && p2ndA !== null && o2ndH !== null && o2ndA !== null) {
+      if (parseInt(p2ndH) === parseInt(o2ndH) && parseInt(p2ndA) === parseInt(o2ndA)) pts += 10;
+    }
+    if (pFirst && oFirst && cleanString(pFirst) === cleanString(oFirst)) pts += 5;
+    if (pScorer && oScorer && cleanString(pScorer) === cleanString(oScorer)) pts += 11;
+    if (pMin !== null && oMin !== null && parseInt(pMin) === parseInt(oMin)) pts += 10;
+    if (pFouls !== null && oFouls !== null && parseInt(pFouls) === parseInt(oFouls)) pts += 6;
+    if (pYel !== null && oYel !== null && parseInt(pYel) === parseInt(oYel)) pts += 3;
+    if (pRed !== null && oRed !== null && parseInt(pRed) === parseInt(oRed)) pts += 3;
+    if (pPen !== null && oPen !== null && parseInt(pPen) === parseInt(oPen)) pts += 1;
+
+    return pts;
+  };
+
+  const handleSaveAndCalculateFinale = async () => {
+    if (finaleResultData.home_score === '' || finaleResultData.away_score === '' || finaleResultData.f34_home_score === '') {
+      return toast.error('Inserisci almeno i Risultati Esatti finali di Sabato e Domenica per procedere!');
     }
 
-    report += `📝 *Classifica Completa de "LA FINALE":*\n`;
-    [...scoredUsers].sort((a,b) => b.points - a.points || a.distance - b.distance).forEach(u => {
-      report += `- *${u.username}*: ${u.points} pt (Score: ${u.isScoreCorrect ? '✓' : '✗'}, Camp: ${u.isCampCorrect ? '✓' : '✗'}, Mode: ${u.isMethodCorrect ? '✓' : '✗'} | Errore Min: ${u.distance}m)\n`;
-    });
+    const toastId = toast.loading('Salvataggio dati reali e ricalcolo classifiche Jackpot...');
+    try {
+      const parseNum = (val: string) => val === '' ? null : parseInt(val);
 
-    setFinaleReportText(report);
-    toast.success('Graduatoria de "LA FINALE" calcolata con successo!');
+      const officialPayload = {
+        user_id: '00000000-0000-0000-0000-000000000000',
+        home_score: parseNum(finaleResultData.home_score),
+        away_score: parseNum(finaleResultData.away_score),
+        ending_method: finaleResultData.ending_method,
+        f12_mvp: finaleResultData.f12_mvp || null,
+        f12_ht_home_score: parseNum(finaleResultData.f12_ht_home_score),
+        f12_ht_away_score: parseNum(finaleResultData.f12_ht_away_score),
+        f12_2nd_home_score: parseNum(finaleResultData.f12_2nd_home_score),
+        f12_2nd_away_score: parseNum(finaleResultData.f12_2nd_away_score),
+        f12_first_to_score: finaleResultData.f12_first_to_score || null,
+        f12_scorer: finaleResultData.f12_scorer || null,
+        first_goal_minute: parseNum(finaleResultData.first_goal_minute),
+        f12_fouls: parseNum(finaleResultData.f12_fouls),
+        f12_yellow_cards: parseNum(finaleResultData.f12_yellow_cards),
+        f12_red_cards: parseNum(finaleResultData.f12_red_cards),
+        f12_penalties: parseNum(finaleResultData.f12_penalties),
+
+        f34_home_score: parseNum(finaleResultData.f34_home_score),
+        f34_away_score: parseNum(finaleResultData.f34_away_score),
+        f34_ending_method: finaleResultData.f34_ending_method,
+        f34_mvp: finaleResultData.f34_mvp || null,
+        f34_ht_home_score: parseNum(finaleResultData.f34_ht_home_score),
+        f34_ht_away_score: parseNum(finaleResultData.f34_ht_away_score),
+        f34_2nd_home_score: parseNum(finaleResultData.f34_2nd_home_score),
+        f34_2nd_away_score: parseNum(finaleResultData.f34_2nd_away_score),
+        f34_first_to_score: finaleResultData.f34_first_to_score || null,
+        f34_scorer: finaleResultData.f34_scorer || null,
+        f34_first_goal_minute: parseNum(finaleResultData.f34_first_goal_minute),
+        f34_fouls: parseNum(finaleResultData.f34_fouls),
+        f34_yellow_cards: parseNum(finaleResultData.f34_yellow_cards),
+        f34_red_cards: parseNum(finaleResultData.f34_red_cards),
+        f34_penalties: parseNum(finaleResultData.f34_penalties),
+        total_points: 0
+      };
+
+      const { error: masterErr } = await supabase.from('final_match_predictions').upsert(officialPayload, { onConflict: 'user_id' });
+      if (masterErr) throw masterErr;
+
+      const { data: allUsersPredictions } = await supabase.from('final_match_predictions').select('*').not('user_id', 'eq', '00000000-0000-0000-0000-000000000000');
+      
+      let logsReport = `📊 *RELAZIONE DI CALCOLO PUNTI JACKPOT INDIPENDENTE* 📊\n\n`;
+
+      if (allUsersPredictions && allUsersPredictions.length > 0) {
+        for (const pred of allUsersPredictions) {
+          let sundayPoints = scoreSingleMatch(pred, officialPayload, true);
+          let saturdayPoints = scoreSingleMatch(pred, officialPayload, false);
+
+          const computedTotal = sundayPoints + saturdayPoints;
+          await supabase.from('final_match_predictions').update({ total_points: computedTotal }).eq('user_id', pred.user_id);
+
+          const prof = profiles.find(p => p.id === pred.user_id);
+          logsReport += `- *${prof ? prof.username : 'ID ' + pred.user_id.substring(0,6)}*: ${computedTotal} PT Totali (Sabato: ${saturdayPoints} pt | Domenica: ${sundayPoints} pt)\n`;
+        }
+      } else {
+        logsReport += `⚠️ Nessuna schedina inserita dagli utenti fino a questo momento.`;
+      }
+
+      setFinaleReportText(logsReport);
+      toast.success('Risultati salvati e Classifica Super Jackpot ricalcolata!', { id: toastId });
+      fetchData();
+    } catch(e: any) {
+      toast.error('Errore durante l\'aggiornamento: ' + e.message, { id: toastId });
+    }
   };
 
   const addScorer = async (e: React.FormEvent) => {
@@ -684,7 +800,7 @@ export default function AdminPage() {
   const syncLeaderboard = async (isManual = true) => {
     if (isManual && !window.confirm('Ricalcolare punti e spareggi per tutti?')) return;
     setSyncing(true);
-    const syncToast = !isManual ? toast.loading('Sincronizzazione Classifica...') : null;
+    const syncToast = !isManual ? toast.loading('Sincronizzazione Classifica Generale...') : null;
     
     try {
       const [{ data: allMatches }, { data: offBonuses }, { data: offBracket }] = await Promise.all([
@@ -714,13 +830,8 @@ export default function AdminPage() {
 
       let maxBonusPoints = 0;
       if (offBonuses) {
-         if (isGroupsClosed) {
-           maxBonusPoints += 15;
-         }
-         if (isTournamentClosed) {
-           maxBonusPoints += 30;
-           maxBonusPoints += 9;
-         }
+         if (isGroupsClosed) maxBonusPoints += 15;
+         if (isTournamentClosed) maxBonusPoints += 39;
       }
       
       const totalMaxPoints = maxGroupPoints + maxBracketPoints + maxBonusPoints;
@@ -768,13 +879,11 @@ export default function AdminPage() {
         const ub = userBonuses?.find(b => b.user_id === profile.id);
         if (ub && offBonuses) {
           const bMap: any = {};
-          
           if (isGroupsClosed) {
               bMap.high_scoring_match = 5;
               bMap.highest_scoring_group = 5;
               bMap.lowest_scoring_group = 5;
           }
-
           if (isTournamentClosed) {
               bMap.top_scorer = 10;
               bMap.mvp_world_cup = 10;
@@ -785,13 +894,7 @@ export default function AdminPage() {
           }
 
           Object.entries(bMap).forEach(([k, pts]: any) => { 
-            if (
-                offBonuses[k] != null && 
-                String(offBonuses[k]).trim() !== '' && 
-                String(offBonuses[k]).trim() !== 'TBD' && 
-                ub[k] != null && 
-                String(ub[k]).trim() !== ''
-            ) {
+            if (offBonuses[k] != null && String(offBonuses[k]).trim() !== '' && String(offBonuses[k]).trim() !== 'TBD' && ub[k] != null && String(ub[k]).trim() !== '') {
               const offValues = String(offBonuses[k]).split(',').map(v => cleanString(v));
               const uVal = cleanString(String(ub[k]));
               if (offValues.includes(uVal)) pBon += pts; 
@@ -829,19 +932,12 @@ export default function AdminPage() {
       });
 
       const ranked = sorted.map((u, i) => ({ ...u, ranking: (i + 1).toString() }));
-      
       for (const p of ranked) {
         await supabase.from('profiles').upsert(p, { onConflict: 'id' });
       }
       
       if (syncToast) toast.dismiss(syncToast);
-      
-      if (isManual) {
-        toast.success('Punti ricalcolati forzatamente!');
-      } else {
-        toast.success('Classifica aggiornata in automatico! 🏆');
-      }
-      
+      toast.success(isManual ? 'Punti ricalcolati per la Classifica Generale!' : 'Classifica Generale sincronizzata! 🏆');
       fetchData(); 
     } catch (err: any) { toast.error(err.message); } finally { setSyncing(false); }
   };
@@ -1023,7 +1119,6 @@ export default function AdminPage() {
 
   const copyPrizesReport = () => {
     const sorted = [...profiles].sort((a, b) => parseInt(a.ranking || '999') - parseInt(b.ranking || '999'));
-
     let awardedUserIds = new Set();
     const results: any = {};
 
@@ -1040,75 +1135,42 @@ export default function AdminPage() {
     };
 
     const genSort = (a: any, b: any) => parseInt(a.ranking || '999') - parseInt(b.ranking || '999');
-    
     const girSort = (a: any, b: any) => {
       if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0);
       if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
-      if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0); 
-      return (b.points_bonus || 0) - (a.points_bonus || 0); 
+      return (b.points_bracket || 0) - (a.points_bracket || 0); 
     };
-
     const brackSort = (a: any, b: any) => {
       if (b.points_bracket !== a.points_bracket) return (b.points_bracket || 0) - (a.points_bracket || 0);
       if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
-      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); 
-      return (b.points_bonus || 0) - (a.points_bonus || 0); 
+      return (b.points_groups || 0) - (a.points_groups || 0); 
     };
-
     const bonusSort = (a: any, b: any) => {
       if (b.points_bonus !== a.points_bonus) return (b.points_bonus || 0) - (a.points_bonus || 0);
       if (a.ranking !== b.ranking) return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
-      if (b.points_groups !== a.points_groups) return (b.points_groups || 0) - (a.points_groups || 0); 
-      return (b.points_bracket || 0) - (a.points_bracket || 0); 
+      return (b.points_groups || 0) - (a.points_groups || 0); 
     };
-
     const cecchSort = (a: any, b: any) => {
       if (b.exact_matches !== a.exact_matches) return (b.exact_matches || 0) - (a.exact_matches || 0);
       return parseInt(a.ranking || '999') - parseInt(b.ranking || '999'); 
     };
-
     const zeroSort = (a: any, b: any) => {
       if (a.ranking !== b.ranking) return parseInt(b.ranking || '999') - parseInt(a.ranking || '999');
-      if (a.points_bracket !== b.points_bracket) return (a.points_bracket || 0) - (b.points_bracket || 0);
-      return (a.points_bonus || 0) - (b.points_bonus || 0);
+      return (a.points_bracket || 0) - (b.points_bracket || 0);
     };
 
-    assignPrize('gen1', genSort); 
-    assignPrize('gen2', genSort); 
-    assignPrize('gen3', genSort); 
-    assignPrize('gen4', genSort); 
-    assignPrize('gen5', genSort); 
-    assignPrize('gir', girSort); 
-    assignPrize('playoff', brackSort); 
-    assignPrize('bonus', bonusSort); 
-    assignPrize('cecchino', cecchSort); 
-
-    assignPrize('gen6', genSort); 
-    assignPrize('gen7', genSort); 
-    assignPrize('gen8', genSort); 
+    assignPrize('gen1', genSort); assignPrize('gen2', genSort); assignPrize('gen3', genSort); assignPrize('gen4', genSort); assignPrize('gen5', genSort); 
+    assignPrize('gir', girSort); assignPrize('playoff', brackSort); assignPrize('bonus', bonusSort); assignPrize('cecchino', cecchSort); 
+    assignPrize('gen6', genSort); assignPrize('gen7', genSort); assignPrize('gen8', genSort); 
     assignPrize('zero', zeroSort, (u) => u.exact_matches === 0 || u.exact_matches === null); 
 
     let report = `🏆 *VINCITORI PREMI MONDIALE 2026* 🏆\n\n`;
-
     report += `👑 *CLASSIFICA GENERALE*\n`;
-    report += `1° Premio (200€): *${results.gen1?.username || 'N/D'}*\n`;
-    report += `2° Premio (140€): *${results.gen2?.username || 'N/D'}*\n`;
-    report += `3° Premio (80€): *${results.gen3?.username || 'N/D'}*\n`;
-    report += `4° Premio (50€): *${results.gen4?.username || 'N/D'}*\n`;
-    report += `5° Premio (30€): *${results.gen5?.username || 'N/D'}*\n`;
-    report += `6° Premio (20€): *${results.gen6?.username || 'N/D'}*\n`;
-    report += `7° Premio (20€): *${results.gen7?.username || 'N/D'}*\n`;
-    report += `8° Premio (10€): *${results.gen8?.username || 'N/D'}*\n`;
-
-    report += `\n📊 *PREMI PER FASE*\n`;
-    report += `🏟️ Re dei Gironi (30€): *${results.gir?.username || 'N/D'}*\n`;
-    report += `⚡ Mago dei Playoff (30€): *${results.playoff?.username || 'N/D'}*\n`;
-    report += `🔮 Oracolo dei Bonus (30€): *${results.bonus?.username || 'N/D'}*\n`;
-
-    report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n`;
-    report += `🎯 Il Cecchino (30€): *${results.cecchino?.username || 'N/D'}*\n`;
-    report += `👁️ Il Veggente (20€): *(Verifica Manuale)*\n`;
-    report += `🧊 Zero Assoluto (10€): *${results.zero?.username || 'N/D'}*\n`;
+    report += `1° Premio: *${results.gen1?.username || 'N/D'}*\n2° Premio: *${results.gen2?.username || 'N/D'}*\n3° Premio: *${results.gen3?.username || 'N/D'}*\n`;
+    report += `4° Premio: *${results.gen4?.username || 'N/D'}*\n5° Premio: *${results.gen5?.username || 'N/D'}*\n6° Premio: *${results.gen6?.username || 'N/D'}*\n`;
+    report += `7° Premio: *${results.gen7?.username || 'N/D'}*\n8° Premio: *${results.gen8?.username || 'N/D'}*\n`;
+    report += `\n📊 *PREMI PER FASE*\n🏟️ Re dei Gironi: *${results.gir?.username || 'N/D'}*\n⚡ Mago dei Playoff: *${results.playoff?.username || 'N/D'}*\n🔮 Oracolo dei Bonus: *${results.bonus?.username || 'N/D'}*\n`;
+    report += `\n🎯 *SPECIALITÀ E GOLIARDICI*\n🎯 Il Cecchino: *${results.cecchino?.username || 'N/D'}*\n👁️ Il Veggente: *(Verifica Manuale Jackpot)*\n🧊 Zero Assoluto: *${results.zero?.username || 'N/D'}*\n`;
 
     navigator.clipboard.writeText(report);
     toast.success('Report Premi Ottimizzato e Copiato! 🏆', { icon: '🎁' });
@@ -1119,11 +1181,8 @@ export default function AdminPage() {
     let text = `🏆 *CLASSIFICA MONDIALE 2026* 🏆\n\n`;
     sorted.forEach((p, i) => {
         let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '⚽';
-        const exactStr = p.exact_matches > 0 ? ` [🎯 ${p.exact_matches} esatt${p.exact_matches === 1 ? 'o' : 'i'}]` : '';
-        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt${exactStr}\n`;
+        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
     });
-    text += `\n👉 Guarda la classifica completa:\nwww.iltuopronostico.it`;
-
     navigator.clipboard.writeText(text);
     toast.success('Classifica copiata per WhatsApp! 📱', { icon: '💬' });
   };
@@ -1131,24 +1190,17 @@ export default function AdminPage() {
   const copyCompletionReport = () => {
     const stats = getCompletionStats();
     let text = `📋 *STATO COMPLETAMENTO PRONOSTICI* 📋\n\n`;
-
     stats.forEach(u => {
-      const icon = u.pct === 100 ? '✅' : u.pct > 0 ? '⚠️' : '❌';
-      text += `👤 *${u.username}* (${u.pct}%) ${icon}\n`;
+      text += `👤 *${u.username}* (${u.pct}%) ${u.pct === 100 ? '✅' : '❌'}\n`;
     });
-
-    text += `\n👉 Entra per completare: www.iltuopronostico.it`;
     navigator.clipboard.writeText(text);
     toast.success('Stato completamento copiato! 📋', { icon: '📋' });
   };
 
   const copyWinnerReport = () => {
     const winners = getWinnerStats();
-    let text = `🏆 *CHI VINCERÀ IL MONDIALE?* 🏆\n(Le scelte del gruppo)\n\n`;
-    winners.forEach(w => {
-      text += `${getEmoji(w.name)} *${w.name}:* ${w.pct}% (${w.count} voti)\n`;
-    });
-    text += `\n👉 Scopri chi ha votato chi:\nwww.iltuopronostico.it`;
+    let text = `🏆 *CHI VINCERÀ IL MONDIALE?* 🏆\n\n`;
+    winners.forEach(w => { text += `${getEmoji(w.name)} *${w.name}:* ${w.pct}% (${w.count} voti)\n`; });
     navigator.clipboard.writeText(text);
     toast.success('Statistiche Vincitore copiate! 🏆', { icon: '💬' });
   };
@@ -1157,7 +1209,6 @@ export default function AdminPage() {
     const userStats = profiles.map(p => {
       const exactMatches: string[] = [];
       const uPreds = predictions.filter(pred => pred.user_id === p.id);
-
       uPreds.forEach(pred => {
         const m = matches.find(match => match.id === pred.match_id && match.is_finished);
         if (m && m.home_score_final !== null && m.away_score_final !== null) {
@@ -1166,180 +1217,64 @@ export default function AdminPage() {
           }
         }
       });
-
-      return {
-        username: p.username,
-        count: exactMatches.length,
-        matches: exactMatches
-      };
+      return { username: p.username, count: exactMatches.length, matches: exactMatches };
     }).sort((a, b) => b.count - a.count);
 
-    let text = `🎯 *CLASSIFICA CECCHINI* 🎯\n(Risultati Esatti)\n\n`;
-
-    if (userStats.length === 0) {
-      text += `Ancora nessun iscritto!\n`;
-    } else {
-      userStats.forEach((u, i) => {
-        let medal = '🎯';
-        if (u.count === 0) medal = '🧊';
-        else if (i === 0) medal = '🥇';
-        else if (i === 1) medal = '🥈';
-        else if (i === 2) medal = '🥉';
-        
-        text += `${medal} *${u.username}*: ${u.count} esatt${u.count === 1 ? 'o' : 'i'}\n`;
-        if (u.count > 0) {
-          text += `   ↳ ${u.matches.join('\n   ↳ ')}\n\n`;
-        } else {
-          text += `\n`;
-        }
-      });
-    }
-
-    text += `👉 Guarda i dettagli:\nwww.iltuopronostico.it`;
-
+    let text = `🎯 *CLASSIFICA CECCHINI* 🎯\n\n`;
+    userStats.forEach((u, i) => {
+        let medal = u.count === 0 ? '🧊' : i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+        text += `${medal} *${u.username}*: ${u.count} esatti\n`;
+    });
     navigator.clipboard.writeText(text);
     toast.success('Classifica Cecchini copiata! 🎯', { icon: '🎯' });
   };
 
   const copyBonusReport = () => {
     let text = `📊 *LE PREVISIONI BONUS DEL GRUPPO* 📊\n\n`;
-    
     const fields = [
       { l: '✨ MVP MONDIALE', k: 'mvp_world_cup', type: 'PLAYER' },
       { l: '⚽ CAPOCANNONIERE', k: 'top_scorer', type: 'PLAYER' },
-      { l: '🧤 MIGLIOR PORTIERE', k: 'best_goalkeeper', type: 'PLAYER' },
-      { l: '🔥 MATCH CON PIÙ GOL', k: 'high_scoring_match', type: 'MATCH' },
-      { l: '📈 GIRONE CON PIÙ GOL', k: 'highest_scoring_group', type: 'GROUP' },
-      { l: '📉 GIRONE CON MENO GOL', k: 'lowest_scoring_group', type: 'GROUP' }
+      { l: '🧤 MIGLIOR PORTIERE', k: 'best_goalkeeper', type: 'PLAYER' }
     ];
-    
     fields.forEach(f => {
       const details = getBonusDetails(f.k);
       if (details.length > 0) {
         text += `*${f.l}:*\n`;
-        details.forEach(d => {
-           let emj = '';
-           let displayName = formatMatchName(d.originalName);
-
-           if (f.type === 'PLAYER') {
-               const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
-               const player = allPlayers.find(p => cleanString(p.name) === cleanString(d.originalName));
-               if (player) emj = `${getEmoji(player.country)} `;
-           } 
-           else if (f.type === 'MATCH' && d.originalName.includes('-')) {
-               const [t1, t2] = d.originalName.split(/\s*-\s*/);
-               emj = `${getEmoji(t1)} ${getEmoji(t2)} `;
-               displayName = `${formatTeamName(t1)} - ${formatTeamName(t2)}`;
-           } 
-           else if (f.type === 'GROUP') {
-               const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(d.originalName));
-               if (group) {
-                   emj = group.teams.map(t => getEmoji(t)).join('') + ' ';
-               }
-           }
-
-           text += `- ${emj}*${displayName}* (${d.count} voti)\n`;
-        });
+        details.forEach(d => { text += `- *${formatMatchName(d.originalName)}* (${d.count} voti)\n`; });
         text += `\n`;
       }
     });
-
-    text += `👉 Entra nell'app per vedere i dettagli:\nwww.iltuopronostico.it`;
-
     navigator.clipboard.writeText(text);
     toast.success('Statistiche Bonus copiate! 📊', { icon: '💬' });
   };
 
   const exportClassificaCSV = () => {
     const sortedProfiles = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
-    
     const headers = ["Username", "Nome Completo", "Punti Totali", "Stato Pagamento", "Metodo Di Pagamento"];
-    const matchHeaders = matches.map(m => `Match ${m.id} (${formatTeamName(m.home_team)}-${formatTeamName(m.away_team)})`);
-    const bracketHeaders = ["Sedicesimi", "Ottavi", "Quarti", "Semifinali", "Finaliste", "Vincitore"];
-    const bonusHeaders = ["MVP", "Capocannoniere", "Miglior Portiere", "Match + Gol", "Girone + Gol", "Girone - Gol", "Autogol", "Rigori", "Rossi"];
-
-    const allHeaders = [...headers, ...matchHeaders, ...bracketHeaders, ...bonusHeaders];
-    let csvContent = allHeaders.map(h => `"${String(h).replace(/"/g, '""')}"`).join(';') + "\n";
-
+    let csvContent = headers.map(h => `"${h}"`).join(';') + "\n";
     sortedProfiles.forEach(p => {
-      const uPreds = predictions.filter(pr => pr.user_id === p.id);
-      const uBrackets = allBrackets.filter(b => b.user_id === p.id);
-      const uBonuses = allUserBonuses.find(b => b.user_id === p.id) || {};
-
-      const matchData = matches.map(m => {
-        const pred = uPreds.find(pr => pr.match_id === m.id);
-        return pred && pred.home_score !== null ? `${pred.home_score}-${pred.away_score}` : '';
-      });
-
-      const getStageTeams = (stage: string) => uBrackets.filter(b => normalizeStage(b.stage) === stage).map(b => b.team_name).join(', ');
-      const bracketData = [
-        getStageTeams('R32'),
-        getStageTeams('R16'),
-        getStageTeams('QF'),
-        getStageTeams('SF'),
-        getStageTeams('F'),
-        getStageTeams('WINNER')
-      ];
-
-      const bonusData = [
-        uBonuses.mvp_world_cup || '',
-        uBonuses.top_scorer || '',
-        uBonuses.best_goalkeeper || '',
-        uBonuses.high_scoring_match || '',
-        uBonuses.highest_scoring_group || '',
-        uBonuses.lowest_scoring_group || '',
-        uBonuses.total_own_goals ?? '',
-        uBonuses.total_penalties ?? '',
-        uBonuses.total_red_cards ?? ''
-      ];
-
-      const row = [
-        p.username || '',
-        p.full_name || '',
-        p.points || 0,
-        p.is_paid ? 'PAGATO' : 'DA PAGARE',
-        p.payment_method || '--',
-        ...matchData,
-        ...bracketData,
-        ...bonusData
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(';');
-
+      const row = [p.username || '', p.full_name || '', p.points || 0, p.is_paid ? 'PAGATO' : 'DA PAGARE', p.payment_method || '--'].map(val => `"${val}"`).join(';');
       csvContent += row + "\n";
     });
-
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    
     link.setAttribute("href", url);
-    link.setAttribute("download", `backup_completo_mondiale_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `classifica_mondiale_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Super Backup scaricato con successo! 📊');
+    toast.success('Backup CSV Scaricato!');
   };
 
   const copyWhatsAppReport = () => {
     if (profiles.length === 0) return toast.error('Nessuno in classifica!');
     const sorted = [...profiles].sort((a, b) => (parseInt(a.ranking || '999') - parseInt(b.ranking || '999')));
-    
-    let text = `🏆 *CLASSIFICA MONDIALE 2026 - AGGIORNAMENTO* 🏆\n\n`;
-    sorted.forEach((p, i) => {
-      let medal = '⚽';
-      if (i === 0) medal = '🥇';
-      if (i === 1) medal = '🥈';
-      if (i === 2) medal = '🥉';
-      if (i < 10) {
-        text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
-      }
+    let text = `🏆 *CLASSIFICA MONDIALE 2026 - IN TEMPO REALE* 🏆\n\n`;
+    sorted.slice(0, 10).forEach((p, i) => {
+      let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '⚽';
+      text += `${medal} *${p.ranking}. ${p.username}* - ${p.points} pt\n`;
     });
-
-    if (sorted.length > 10) {
-      text += `\n...e altri ${sorted.length - 10} giocatori!\n`;
-    }
-
-    text += `\n👉 Guarda la classifica completa: www.tuodominio.it/leaderboard`;
-
     navigator.clipboard.writeText(text);
     toast.success('Bollettino copiato! Incollalo su WhatsApp 📱', { icon: '💬' });
   };
@@ -1359,21 +1294,12 @@ export default function AdminPage() {
   const totalUsers = profiles.length;
   const paidUsers = profiles.filter(p => p.is_paid).length;
   const unpaidUsers = totalUsers - paidUsers;
-
-  const unpaidUsersList = profiles.filter(p => !p.is_paid);
-  const satispayUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Satispay');
-  const paypalUsers = profiles.filter(p => p.is_paid && p.payment_method === 'PayPal');
-  const contantiUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Contanti');
-  const bonificoUsers = profiles.filter(p => p.is_paid && p.payment_method === 'Bonifico');
-  const otherPaidUsers = profiles.filter(p => p.is_paid && !['Satispay', 'PayPal', 'Contanti', 'Bonifico'].includes(p.payment_method));
-
   const paymentGroups = [
-    { label: '⏳ DA PAGARE', users: unpaidUsersList, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-    { label: '💙 SATISPAY', users: satispayUsers, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-    { label: '🔵 PAYPAL', users: paypalUsers, color: 'text-sky-500', bg: 'bg-sky-500/10' },
-    { label: '💵 CONTANTI', users: contantiUsers, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: '🏦 BONIFICO', users: bonificoUsers, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-    { label: '✅ ALTRI PAGAMENTI', users: otherPaidUsers, color: 'text-teal-400', bg: 'bg-teal-500/10' }
+    { label: '⏳ DA PAGARE', users: profiles.filter(p => !p.is_paid), color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: '💙 SATISPAY', users: profiles.filter(p => p.is_paid && p.payment_method === 'Satispay'), color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { label: '🔵 PAYPAL', users: profiles.filter(p => p.is_paid && p.payment_method === 'PayPal'), color: 'text-sky-500', bg: 'bg-sky-500/10' },
+    { label: '💵 CONTANTI', users: profiles.filter(p => p.is_paid && p.payment_method === 'Contanti'), color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: '🏦 BONIFICO', users: profiles.filter(p => p.is_paid && p.payment_method === 'Bonifico'), color: 'text-indigo-400', bg: 'bg-indigo-500/10' }
   ].filter(g => g.users.length > 0);
 
   return (
@@ -1385,7 +1311,8 @@ export default function AdminPage() {
       <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4 relative">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
         
-        <div className="absolute right-2 top-0 flex items-center gap-1">
+        {/* BOTTONI WHATSAPP E RICALCOLO RIPRISTINATI */}
+        <div className="absolute right-2 top-0 flex items-center gap-2">
           <button 
             onClick={copyWhatsAppReport} 
             className="p-2 text-slate-500 hover:text-emerald-400 transition-colors bg-slate-900 border border-slate-800 rounded-full shadow-lg"
@@ -1402,37 +1329,162 @@ export default function AdminPage() {
             <RefreshCw size={18} />
           </button>
         </div>
-        
-        <div className="w-full max-w-2xl bg-slate-900/80 p-4 rounded-3xl border border-slate-800 shadow-xl">
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={copyClassificaReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-emerald-500 bg-slate-950 border border-slate-800 hover:bg-emerald-500/10 transition-colors rounded-xl">
-              <MessageCircle size={14} /> Classifica
-            </button>
-            <button onClick={copyPrizesReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-yellow-500 bg-slate-950 border border-yellow-500/30 hover:bg-yellow-500/10 transition-colors rounded-xl">
-              <Gift size={14} /> Premi
-            </button>
-            <button onClick={copyCompletionReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-slate-400 bg-slate-950 border border-slate-800 hover:bg-slate-800/50 transition-colors rounded-xl">
-              <MessageCircle size={14} /> Stato
-            </button>
-            <button onClick={copyWinnerReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-blue-400 bg-slate-950 border border-slate-800 hover:bg-blue-400/10 transition-colors rounded-xl">
-              <MessageCircle size={14} /> Vincitore
-            </button>
-            <button onClick={copyCecchiniReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-rose-400 bg-slate-950 border border-slate-800 hover:bg-rose-400/10 transition-colors rounded-xl">
-              <MessageCircle size={14} /> Cecchini
-            </button>
-            <button onClick={copyBonusReport} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-purple-400 bg-slate-950 border border-slate-800 hover:bg-purple-400/10 transition-colors rounded-xl">
-              <MessageCircle size={14} /> Dati Bonus
-            </button>
-            <div className="col-span-2">
-                <button onClick={exportClassificaCSV} className="w-full flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black uppercase text-cyan-400 bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 transition-colors rounded-xl">
-                  <Download size={14} /> Excel Backup Completo
-                </button>
-            </div>
-          </div>
+
+        <div className="w-full max-w-2xl bg-slate-900/80 p-4 rounded-3xl border border-slate-800 shadow-xl grid grid-cols-2 gap-3">
+            <button onClick={copyClassificaReport} className="flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-slate-800 hover:bg-emerald-500/10 rounded-xl text-emerald-500"><MessageCircle size={14} /> Classifica</button>
+            <button onClick={copyPrizesReport} className="flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-yellow-500/30 hover:bg-yellow-500/10 rounded-xl text-yellow-500"><Gift size={14} /> Premi</button>
+            <button onClick={copyCompletionReport} className="flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-slate-800 hover:bg-slate-800/50 rounded-xl text-slate-400"><MessageCircle size={14} /> Stato</button>
+            <button onClick={copyWinnerReport} className="flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-slate-800 hover:bg-blue-400/10 rounded-xl text-blue-400"><MessageCircle size={14} /> Vincitore</button>
+            <button onClick={copyCecchiniReport} className="flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-slate-800 hover:bg-rose-400/10 rounded-xl text-rose-400"><MessageCircle size={14} /> Cecchini</button>
+            <button onClick={copyBonusReport} className="flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-slate-800 hover:bg-purple-400/10 rounded-xl text-purple-400"><MessageCircle size={14} /> Dati Bonus</button>
+            <button onClick={exportClassificaCSV} className="col-span-2 flex items-center justify-center gap-1.5 px-3 py-3 text-[10px] sm:text-xs font-black bg-slate-950 border border-slate-800 hover:bg-cyan-400/10 rounded-xl text-cyan-400"><Download size={14} /> Excel Backup Completo</button>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto space-y-5">
+        
+        {/* ----- SEZIONE: LA FINALE (SUPER JACKPOT ESTESO) ----- */}
+        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-yellow-500">
+          <button onClick={() => setOpenSection({ ...openSection, laFinale: !openSection.laFinale })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
+            <div className="flex items-center gap-3"><Trophy className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">LA FINALE — MINI GAME</h2></div>
+            {openSection.laFinale ? <ChevronUp /> : <ChevronDown />}
+          </button>
+          
+          {openSection.laFinale && (
+            <div className="p-5 bg-slate-950/30 space-y-6">
+              
+              {/* INTERRUTTORE POPUP */}
+              <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-between shadow-inner">
+                <div className="flex flex-col pr-4">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">Stato Finestre di Gioco</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase mt-1">Sblocca o blocca la compilazione per gli utenti</span>
+                </div>
+                <button type="button" onClick={toggleFinaleStatus} className={`px-4 py-2.5 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all shrink-0 border ${isFinaleActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-md' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
+                  {isFinaleActive ? '✓ ATTIVA (POP-UP ON)' : '❌ DISATTIVATA'}
+                </button>
+              </div>
+
+              {/* NAVIGAZIONE SUB-TAB PARTITE ADMIN */}
+              <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                <button type="button" onClick={() => setActiveFinaleAdminTab('SUNDAY')} className={`flex-1 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeFinaleAdminTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-500 hover:text-white'}`}>
+                  <Trophy size={14}/> 🏆 Finalissima (Domenica)
+                </button>
+                <button type="button" onClick={() => setActiveFinaleAdminTab('SATURDAY')} className={`flex-1 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeFinaleAdminTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-500 hover:text-white'}`}>
+                  <Medal size={14}/> 🥉 3°/4° Posto (Sabato)
+                </button>
+              </div>
+
+              {/* FORM IMPUTAZIONI DATI REALI */}
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-4 shadow-inner">
+                
+                {activeFinaleAdminTab === 'SUNDAY' ? (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <h4 className="text-[10px] text-yellow-500 font-black uppercase tracking-widest text-center border-b border-slate-800 pb-2">Inserimento Reale: Finalissima 1°/2° Posto</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Casa Finali</span>
+                        <input value={finaleResultData.home_score} onChange={e => setFinaleResultData({...finaleResultData, home_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Ospiti Finali</span>
+                        <input value={finaleResultData.away_score} onChange={e => setFinaleResultData({...finaleResultData, away_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {['REGULAR', 'OVERTIME', 'PENALTIES'].map(m => (
+                        <button key={m} type="button" onClick={() => setFinaleResultData({ ...finaleResultData, ending_method: m })} className={`py-2 text-[9px] font-black uppercase rounded-lg border ${finaleResultData.ending_method === m ? 'bg-yellow-500 text-slate-950 border-yellow-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'}`}>{m === 'REGULAR' ? '90\'' : m === 'OVERTIME' ? 'Suppl.' : 'Rigori'}</button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 1° Tempo (Es. 1-0)</span>
+                        <div className="flex gap-1"><input value={finaleResultData.f12_ht_home_score} onChange={e => setFinaleResultData({...finaleResultData, f12_ht_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f12_ht_away_score} onChange={e => setFinaleResultData({...finaleResultData, f12_ht_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 2° Tempo (Es. 0-1)</span>
+                        <div className="flex gap-1"><input value={finaleResultData.f12_2nd_home_score} onChange={e => setFinaleResultData({...finaleResultData, f12_2nd_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f12_2nd_away_score} onChange={e => setFinaleResultData({...finaleResultData, f12_2nd_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                      </div>
+                    </div>
+                    <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                      <input value={finaleResultData.f12_mvp} onChange={e => setFinaleResultData({...finaleResultData, f12_mvp: e.target.value})} type="text" placeholder="MVP FIFA UFFICIALE" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center focus:border-yellow-500 outline-none" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={finaleResultData.f12_first_to_score} onChange={e => setFinaleResultData({...finaleResultData, f12_first_to_score: e.target.value})} type="text" placeholder="SQUADRA 1° GOL" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
+                        <input value={finaleResultData.f12_scorer} onChange={e => setFinaleResultData({...finaleResultData, f12_scorer: e.target.value})} type="text" placeholder="MARCATORE MATCH" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
+                      </div>
+                      <input value={finaleResultData.first_goal_minute} onChange={e => setFinaleResultData({...finaleResultData, first_goal_minute: e.target.value})} type="number" placeholder="MINUTO 1° GOL (TIE-BREAKER)" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-center focus:border-yellow-500 outline-none" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-800/60 text-center text-[8px] font-black text-slate-400">
+                      <div><span>Falli</span><input value={finaleResultData.f12_fouls} onChange={e => setFinaleResultData({...finaleResultData, f12_fouls: e.target.value})} type="number" placeholder="20" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>🟨 Gialli</span><input value={finaleResultData.f12_yellow_cards} onChange={e => setFinaleResultData({...finaleResultData, f12_yellow_cards: e.target.value})} type="number" placeholder="4" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>🟥 Rossi</span><input value={finaleResultData.f12_red_cards} onChange={e => setFinaleResultData({...finaleResultData, f12_red_cards: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>🥅 Rigori</span><input value={finaleResultData.f12_penalties} onChange={e => setFinaleResultData({...finaleResultData, f12_penalties: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <h4 className="text-[10px] text-amber-500 font-black uppercase tracking-widest text-center border-b border-slate-800 pb-2">Inserimento Reale: Finale 3°/4° Posto</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Casa Finali</span>
+                        <input value={finaleResultData.f34_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_home_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Ospiti Finali</span>
+                        <input value={finaleResultData.f34_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_away_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {['REGULAR', 'OVERTIME', 'PENALTIES'].map(m => (
+                        <button key={m} type="button" onClick={() => setFinaleResultData({ ...finaleResultData, f34_ending_method: m })} className={`py-2 text-[9px] font-black uppercase rounded-lg border ${finaleResultData.f34_ending_method === m ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-950 text-slate-400 border-slate-800'}`}>{m === 'REGULAR' ? '90\'' : m === 'OVERTIME' ? 'Suppl.' : 'Rigori'}</button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 1° Tempo</span>
+                        <div className="flex gap-1"><input value={finaleResultData.f34_ht_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_ht_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f34_ht_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_ht_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 2° Tempo</span>
+                        <div className="flex gap-1"><input value={finaleResultData.f34_2nd_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_2nd_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f34_2nd_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_2nd_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                      </div>
+                    </div>
+                    <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                      <input value={finaleResultData.f34_mvp} onChange={e => setFinaleResultData({...finaleResultData, f34_mvp: e.target.value})} type="text" placeholder="MVP FIFA UFFICIALE" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center focus:border-amber-500 outline-none" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={finaleResultData.f34_first_to_score} onChange={e => setFinaleResultData({...finaleResultData, f34_first_to_score: e.target.value})} type="text" placeholder="SQUADRA 1° GOL" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
+                        <input value={finaleResultData.f34_scorer} onChange={e => setFinaleResultData({...finaleResultData, f34_scorer: e.target.value})} type="text" placeholder="MARCATORE MATCH" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
+                      </div>
+                      <input value={finaleResultData.f34_first_goal_minute} onChange={e => setFinaleResultData({...finaleResultData, f34_first_goal_minute: e.target.value})} type="number" placeholder="MINUTO 1° GOL" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-center focus:border-amber-500 outline-none" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-800/60 text-center text-[8px] font-black text-slate-400">
+                      <div><span>Falli</span><input value={finaleResultData.f34_fouls} onChange={e => setFinaleResultData({...finaleResultData, f34_fouls: e.target.value})} type="number" placeholder="18" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>🟨 Gialli</span><input value={finaleResultData.f34_yellow_cards} onChange={e => setFinaleResultData({...finaleResultData, f34_yellow_cards: e.target.value})} type="number" placeholder="3" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>🟥 Rossi</span><input value={finaleResultData.f34_red_cards} onChange={e => setFinaleResultData({...finaleResultData, f34_red_cards: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>🥅 Rigori</span><input value={finaleResultData.f34_penalties} onChange={e => setFinaleResultData({...finaleResultData, f34_penalties: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                    </div>
+                  </div>
+                )}
+
+                <button type="button" onClick={handleSaveAndCalculateFinale} className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 py-4.5 mt-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95">
+                  <Coins size={16}/> 🏆 Salva Risultati Ufficiali & Calcola Jackpot
+                </button>
+              </div>
+
+              {/* BLOCCO DISPACCIO LOGS CALCOLATI */}
+              {finaleReportText && (
+                <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-3 shadow-md animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Log Ricalcolo Punti Erogati</span>
+                  </div>
+                  <pre className="text-[11px] font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-52 overflow-y-auto custom-scrollbar bg-slate-950 p-3 rounded-xl border border-slate-800/60 shadow-inner">
+                    {finaleReportText}
+                  </pre>
+                </div>
+              )}
+
+            </div>
+          )}
+        </section>
 
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, annuncio: !openSection.annuncio })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
@@ -1442,139 +1494,11 @@ export default function AdminPage() {
           {openSection.annuncio && (
             <div className="p-5 bg-slate-950/30">
               <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-3">Questo messaggio apparirà in cima al Profilo di tutti i giocatori.</p>
-              <textarea
-                value={announcement}
-                onChange={(e) => setAnnouncement(e.target.value)}
-                placeholder="Es: LIVE: Stasera Brasile-Francia! Controllate i vostri risultati..."
-                className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-bold text-sm text-white outline-none focus:border-blue-500 min-h-[100px] custom-scrollbar"
-              />
+              <textarea value={announcement} onChange={(e) => setAnnouncement(e.target.value)} placeholder="Es: LIVE: Stasera Brasile-Francia! Controllate i vostri risultati..." className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl font-bold text-sm text-white outline-none focus:border-blue-500 min-h-[100px] custom-scrollbar" />
               <div className="flex gap-4 pt-4">
                 <button onClick={() => { setAnnouncement(''); saveAnnouncement(''); }} className="p-5 bg-slate-900 border border-slate-700 text-slate-500 hover:text-rose-500 rounded-2xl transition-colors"><Trash2 size={20} /></button>
                 <button onClick={() => saveAnnouncement(announcement)} className="flex-1 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">Pubblica Annuncio</button>
               </div>
-            </div>
-          )}
-        </section>
-
-        {/* ----- NUOVA SEZIONE: LA FINALE ----- */}
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-yellow-500">
-          <button onClick={() => setOpenSection({ ...openSection, laFinale: !openSection.laFinale })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3"><Trophy className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">LA FINALE</h2></div>
-            {openSection.laFinale ? <ChevronUp /> : <ChevronDown />}
-          </button>
-          {openSection.laFinale && (
-            <div className="p-5 bg-slate-950/30 space-y-6">
-              
-              {/* ACCENSIONE/SPEGNIMENTO POPUP IN APP_SETTINGS */}
-              <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-between shadow-inner">
-                <div className="flex flex-col pr-4">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">Stato Fase Finale</span>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase mt-1">Attiva o disattiva la visibilità del pop-up per gli utenti</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={toggleFinaleStatus}
-                  className={`px-4 py-2.5 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all shrink-0 border ${isFinaleActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-slate-950 text-slate-500 border-slate-800'}`}
-                >
-                  {isFinaleActive ? '✓ ATTIVA (POP-UP ON)' : '❌ DISATTIVATA'}
-                </button>
-              </div>
-
-              {/* INPUT RISULTATI REALI */}
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-4 shadow-inner">
-                <h3 className="text-xs font-black text-yellow-500 uppercase tracking-widest text-center mb-1">Inserimento Dati Reali della Finale</h3>
-                
-                <div className="space-y-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Squadra Campione</span>
-                  <AutocompleteInput 
-                    value={finaleResultData.champion_team} 
-                    onChange={val => setFinaleResultData({ ...finaleResultData, champion_team: val })} 
-                    placeholder="SQUADRA CAMPIONE UFFICIALE" 
-                    suggestions={TEAMS_2026.map(t => ({ name: t, country: t }))} 
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Gol Casa (Regular)</span>
-                    <input 
-                      value={finaleResultData.home_score} 
-                      onChange={e => setFinaleResultData({...finaleResultData, home_score: e.target.value})} 
-                      type="number" 
-                      placeholder="0" 
-                      className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-base text-center outline-none focus:border-yellow-500" 
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Gol Ospiti (Regular)</span>
-                    <input 
-                      value={finaleResultData.away_score} 
-                      onChange={e => setFinaleResultData({...finaleResultData, away_score: e.target.value})} 
-                      type="number" 
-                      placeholder="0" 
-                      className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-base text-center outline-none focus:border-yellow-500" 
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-1.5 mt-1">
-                  {[
-                    { id: 'REGULAR', label: '90 Minuti' },
-                    { id: 'OVERTIME', label: 'Suppl.' },
-                    { id: 'PENALTIES', label: 'Rigori' }
-                  ].map(method => (
-                    <button
-                      key={method.id}
-                      type="button"
-                      onClick={() => setFinaleResultData({ ...finaleResultData, ending_method: method.id })}
-                      className={`py-2 px-1 text-[10px] font-black uppercase rounded-xl border transition-all ${finaleResultData.ending_method === method.id ? 'bg-yellow-500 text-slate-950 border-yellow-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'}`}
-                    >
-                      {method.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Minuto Primo Gol (Tie-Breaker)</span>
-                  <input 
-                    value={finaleResultData.first_goal_minute} 
-                    onChange={e => setFinaleResultData({...finaleResultData, first_goal_minute: e.target.value})} 
-                    type="number" 
-                    placeholder="Es. 24 (Inserisci 0 se finisce 0-0)" 
-                    className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-sm focus:border-yellow-500 outline-none" 
-                  />
-                </div>
-
-                <button 
-                  type="button" 
-                  onClick={handleCalculateFinaleWinners} 
-                  className="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 py-4 mt-2 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all"
-                >
-                  🏆 Calcola Classifica e Vincitore
-                </button>
-              </div>
-
-              {/* REPORT GRADUATORIA GENERATA */}
-              {finaleReportText && (
-                <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-3 shadow-md animate-in fade-in duration-300">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Resoconto Calcolato</span>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(finaleReportText);
-                        toast.success('Report copiato negli appunti!');
-                      }}
-                      className="text-[9px] font-black uppercase bg-slate-950 border border-slate-700 hover:border-yellow-500 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-inner"
-                    >
-                      <MessageCircle size={12}/> Copia Report
-                    </button>
-                  </div>
-                  <pre className="text-[11px] font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto custom-scrollbar bg-slate-950 p-3 rounded-xl border border-slate-800/60 shadow-inner">
-                    {finaleReportText}
-                  </pre>
-                </div>
-              )}
-
             </div>
           )}
         </section>
@@ -1587,9 +1511,7 @@ export default function AdminPage() {
           </button>
           {openSection.liveStats && (
             <div className="p-5 bg-slate-950/30">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4">
-                Questi dati aggiornano la Dashboard di tutti gli utenti, ma <strong className="text-rose-500">NON</strong> influenzeranno la classifica finché non chiuderai il Mondiale.
-              </p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4">Questi dati aggiornano la Dashboard di tutti gli utenti, ma <strong className="text-rose-500">NON</strong> influenzeranno la classifica finché non chiuderai il Mondiale.</p>
               <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
@@ -1605,10 +1527,7 @@ export default function AdminPage() {
                     <input value={bonusData.red} onChange={e => setBonusData({...bonusData, red: e.target.value})} type="number" placeholder="0" className="bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-white text-xl text-center focus:border-emerald-500 outline-none" />
                   </div>
                 </div>
-
-                <button type="button" onClick={saveLiveStats} className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 mt-2 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">
-                  SALVA E MOSTRA SULLA DASHBOARD
-                </button>
+                <button type="button" onClick={saveLiveStats} className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 mt-2 rounded-2xl font-black uppercase text-xs tracking-widest italic shadow-xl transition-all">SALVA E MOSTRA SULLA DASHBOARD</button>
               </form>
             </div>
           )}
@@ -1622,21 +1541,14 @@ export default function AdminPage() {
           </button>
           {openSection.bonus && (
             <div className="p-5 bg-slate-950/30">
-              
-              {/* CHIUSURA GIRONI */}
               <div className="mb-8 p-5 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl">
                  <h3 className="text-sm font-black text-yellow-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Flag size={16}/> Chiusura Gironi</h3>
-                 <p className="text-[10px] text-slate-400 mb-4 leading-relaxed font-bold">
-                   Clicca qui per auto-calcolare il <strong className="text-white">Match con più gol</strong> e i <strong className="text-white">Gironi con più/meno gol</strong> in base ai risultati salvati. <strong className="text-emerald-400">Assegnerà immediatamente i punti</strong> in classifica.
-                 </p>
-                 <button type="button" onClick={closeGroupStage} className="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all">
-                   🏁 Calcola Bonus Gironi
-                 </button>
+                 <p className="text-[10px] text-slate-400 mb-4 leading-relaxed font-bold">Clicca qui per auto-calcolare il <strong className="text-white">Match con più gol</strong> e i <strong className="text-white">Gironi con più/meno gol</strong> in base ai risultati salvati. <strong className="text-emerald-400">Assegnerà immediatamente i punti</strong> in classifica generale.</p>
+                 <button type="button" onClick={closeGroupStage} className="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all">🏁 Calcola Bonus Gironi</button>
               </div>
 
               <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                   <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2 border-t border-slate-800/50 pt-6"><Trophy size={16}/> Chiusura Mondiale</h3>
-                  
                   <div className="space-y-1">
                     <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">MVP Mondiale (Interruttore Finale)</span>
                     <AutocompleteInput value={bonusData.mvp_world_cup} onChange={val => setBonusData({ ...bonusData, mvp_world_cup: val })} placeholder="MVP MONDIALE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
@@ -1649,12 +1561,9 @@ export default function AdminPage() {
                     <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">Miglior Portiere</span>
                     <AutocompleteInput value={bonusData.best_goalkeeper} onChange={val => setBonusData({ ...bonusData, best_goalkeeper: val })} placeholder="MIGLIOR PORTIERE" suggestions={WORLD_CUP_GOALKEEPERS} />
                   </div>
-
                   <div className="flex gap-3 pt-6 mt-4 border-t border-slate-800/50">
                     <button type="button" onClick={resetBonuses} className="p-4 bg-slate-900 border border-rose-500/30 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all" title="Azzera tutto"><Trash2 size={20} /></button>
-                    <button type="button" onClick={saveEndTournamentBonuses} className="flex-1 bg-purple-600 hover:bg-purple-500 py-4 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest shadow-xl transition-all">
-                      🏆 CHIUDI MONDIALE E ASSEGNA TUTTO
-                    </button>
+                    <button type="button" onClick={saveEndTournamentBonuses} className="flex-1 bg-purple-600 hover:bg-purple-500 py-4 rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-widest shadow-xl transition-all">🏆 CHIUDI MONDIALE E ASSEGNA TUTTO</button>
                   </div>
               </form>
             </div>
@@ -1666,58 +1575,22 @@ export default function AdminPage() {
             <div className="flex items-center gap-3"><Award className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Top Marcatori Live</h2></div>
             {openSection.marcatori ? <ChevronUp /> : <ChevronDown />}
           </button>
-          
           {openSection.marcatori && (
             <div className="p-5 bg-slate-950/30 space-y-6">
-              
               <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
-                <AutocompleteInput 
-                  value={newScorerName} 
-                  onChange={(val) => setNewScorerName(val)} 
-                  placeholder="Nome (es. K. Mbappé)" 
-                  suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} 
-                  onSelectCustom={(item) => {
-                    const code = getFlagCode(item.country);
-                    if (code) setNewScorerTeam(code);
-                  }}
-                />
+                <AutocompleteInput value={newScorerName} onChange={(val) => setNewScorerName(val)} placeholder="Nome (es. K. Mbappé)" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} onSelectCustom={(item) => { const code = getFlagCode(item.country); if (code) setNewScorerTeam(code); }} />
                 <div className="flex w-full sm:w-auto gap-3 shrink-0">
-                  <select 
-                    value={newScorerTeam} 
-                    onChange={(e) => setNewScorerTeam(e.target.value)}
-                    className="flex-1 sm:w-40 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500 appearance-none text-center"
-                  >
-                    <option value="">Nazione...</option>
-                    {COUNTRY_OPTIONS.map(c => (
-                        <option key={c.code + c.name} value={c.code}>{c.name.toUpperCase()}</option>
-                    ))}
-                  </select>
-                  <button onClick={(e) => addScorer(e)} className="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-2xl text-white transition-all shadow-lg active:scale-95 shrink-0">
-                    <Plus size={20} />
-                  </button>
+                  <select value={newScorerTeam} onChange={(e) => setNewScorerTeam(e.target.value)} className="flex-1 sm:w-40 bg-slate-900 border border-slate-800 p-4 rounded-2xl font-black text-xs text-white uppercase outline-none focus:border-cyan-500 text-center">{COUNTRY_OPTIONS.map(c => (<option key={c.code + c.name} value={c.code}>{c.name.toUpperCase()}</option>))}</select>
+                  <button onClick={(e) => addScorer(e)} className="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-2xl text-white transition-all shadow-lg shrink-0"><Plus size={20} /></button>
                 </div>
               </div>
-
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                {topScorers.length === 0 && (
-                   <p className="text-center text-slate-600 font-black text-xs uppercase py-4">Nessun marcatore inserito</p>
-                )}
                 {topScorers.map(scorer => (
                   <div key={scorer.id} className="flex items-center justify-between bg-slate-900 p-3 rounded-2xl border border-slate-800">
+                    <div className="flex items-center gap-3"><img src={`https://flagcdn.com/w40/${scorer.team_code}.png`} alt="" className="w-6 h-auto rounded-sm" /><span className="font-black text-sm uppercase text-slate-200">{scorer.name}</span></div>
                     <div className="flex items-center gap-3">
-                      <img src={`https://flagcdn.com/w40/${scorer.team_code}.png`} alt="" className="w-6 h-auto rounded-sm" />
-                      <span className="font-black text-sm uppercase text-slate-200">{scorer.name}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 bg-slate-950 rounded-xl border border-slate-800 p-1">
-                        <button onClick={() => updateScorerGoals(scorer.id, scorer.goals, -1)} className="p-2 text-slate-500 hover:text-rose-500 transition-colors"><Minus size={14}/></button>
-                        <span className="w-6 text-center font-black text-cyan-400">{scorer.goals}</span>
-                        <button onClick={() => updateScorerGoals(scorer.id, scorer.goals, 1)} className="p-2 text-slate-500 hover:text-emerald-500 transition-colors"><Plus size={14}/></button>
-                      </div>
-                      <button onClick={() => deleteScorer(scorer.id)} className="p-3 text-rose-500 bg-rose-500/10 hover:bg-rose-500 hover:text-white rounded-xl transition-colors">
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex items-center gap-1 bg-slate-950 rounded-xl border border-slate-800 p-1"><button onClick={() => updateScorerGoals(scorer.id, scorer.goals, -1)} className="p-2 text-slate-500 hover:text-rose-500"><Minus size={14}/></button><span className="w-6 text-center font-black text-cyan-400">{scorer.goals}</span><button onClick={() => updateScorerGoals(scorer.id, scorer.goals, 1)} className="p-2 text-slate-500 hover:text-emerald-500"><Plus size={14}/></button></div>
+                      <button onClick={() => deleteScorer(scorer.id)} className="p-3 text-rose-500 bg-rose-500/10 hover:bg-rose-500 rounded-xl"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -1726,207 +1599,79 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE 1: ISCRIZIONI E QUOTE OTTIMIZZATA PER GRUPPI */}
+        {/* SEZIONE: ISCRIZIONI E QUOTE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({totalUsers})</h2></div>
             {openSection.iscrizioni ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.iscrizioni && (
-            <div className="bg-slate-950/50 flex flex-col">
-              <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
-                 <div className="flex gap-4 text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-emerald-400">💰 Pagati: {paidUsers}</span>
-                    <span className="text-orange-400">⏳ Da Pagare: {unpaidUsers}</span>
-                 </div>
-              </div>
-
-              <div className="flex flex-col space-y-4 p-4">
-                {paymentGroups.map((group) => (
-                  <div key={group.label} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
-                    <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-800 ${group.bg}`}>
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${group.color}`}>{group.label}</span>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border border-current ${group.color}`}>{group.users.length} Utent{group.users.length === 1 ? 'e' : 'i'}</span>
+            <div className="bg-slate-950/50 flex flex-col divide-y divide-slate-800/50">
+              {paymentGroups.map((group) => (
+                <div key={group.label} className="p-4 space-y-3">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${group.color}`}>{group.label} ({group.users.length})</span>
+                  {group.users.map(p => (
+                    <div key={p.id} className="flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-slate-800">
+                      <p className="font-black text-xs uppercase italic text-white">{p.username} <span className="text-slate-400 font-bold not-italic font-sans text-[10px]">({p.full_name || 'Nessun Nome'})</span></p>
+                      <select value={p.payment_method || ''} onChange={(e) => updatePaymentMethod(p.id, e.target.value)} className="bg-slate-900 p-2 rounded-lg text-[10px] font-black text-orange-500 border border-slate-700">
+                        <option value="">⏳ DA PAGARE</option>
+                        <option value="Satispay">SATISPAY</option><option value="PayPal">PAYPAL</option><option value="Contanti">CONTANTI</option><option value="Bonifico">BONIFICO</option>
+                      </select>
                     </div>
-                    <div className="divide-y divide-slate-800/50">
-                      {group.users.sort((a, b) => a.username.localeCompare(b.username)).map(p => (
-                        <div key={p.id} className="p-4 flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex items-start gap-2">
-                            <div className="mt-1">
-                              {p.is_paid ? (
-                                <span className="text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Quota pagata">💰</span>
-                              ) : (
-                                <span className="text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded text-[10px]" title="Da pagare">⏳</span>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-black text-xs uppercase truncate italic">
-                                {p.username}
-                                {p.full_name ? (
-                                  <span className="text-slate-400 font-bold not-italic lowercase text-[11px] ml-1">
-                                    ({p.full_name})
-                                  </span>
-                                ) : (
-                                  <span className="text-rose-500 font-bold not-italic lowercase text-[10px] ml-1">
-                                    (Nessun Nome)
-                                  </span>
-                                )}
-                                <span className="text-yellow-500 ml-2">#{p.ranking || '--'}</span>
-                              </p>
-                              <p className="text-[8px] text-slate-500 mt-1">{p.points || 0} PT ({p.points_groups}G+{p.points_bracket}B) - Esatti: {p.exact_matches || 0}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex gap-2 shrink-0 self-center">
-                            <div className="relative">
-                              <select 
-                                value={p.payment_method || (p.is_paid ? 'Pagato' : '')} 
-                                onChange={(e) => updatePaymentMethod(p.id, e.target.value)} 
-                                className={`px-3 py-2 pr-6 rounded-xl text-[9px] font-black uppercase transition-all outline-none appearance-none cursor-pointer text-center ${p.is_paid || p.payment_method ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-orange-500 border border-orange-500/30 hover:bg-orange-500/10'}`}
-                              >
-                                <option value="">⏳ NON PAGATO</option>
-                                <option value="Pagato" hidden>💰 PAGATO ✓</option>
-                                <option value="Satispay">SATISPAY</option>
-                                <option value="PayPal">PAYPAL</option>
-                                <option value="Contanti">CONTANTI</option>
-                                <option value="Bonifico">BONIFICO</option>
-                              </select>
-                              <ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${p.is_paid || p.payment_method ? 'text-slate-950' : 'text-orange-500'}`} />
-                            </div>
-                            <button 
-                              onClick={() => handleResetPassword(p.id, p.username)} 
-                              className="p-2 text-blue-500 bg-blue-500/10 rounded-xl hover:bg-blue-500 hover:text-white transition-all"
-                              title="Resetta Password"
-                            >
-                              <Key size={16} />
-                            </button>
-                            <button onClick={() => deleteUser(p.id, p.username)} className="p-2 text-rose-500 bg-rose-500/10 rounded-xl hover:bg-rose-500 hover:text-white transition-all" title="Elimina Utente">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </section>
 
-        {/* ----- SEZIONE RISULTATI (RAGGRUPPAMENTO PER GIORNO + SCROLL AUTOMATICO) ----- */}
+        {/* ----- SEZIONE RISULTATI GIRONI ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
             {openSection.risultati ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.risultati && (
-            <div className="p-4 space-y-6 bg-slate-950/30">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="CERCA SQUADRA O GRUPPO..." 
-                  className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase outline-none focus:border-yellow-500 text-white" 
-                  onChange={e => setSearchTerm(e.target.value)} 
-                />
-              </div>
-              
-              <div className="space-y-6">
-                {groupedMatchesByDay.map(({ dayName, matchesArray }) => {
-                  const isToday = dayName === todayKey;
-                  return (
-                    <div 
-                      key={dayName} 
-                      id={`admin-day-${dayName}`} 
-                      className={`space-y-3 p-4 rounded-[2rem] border transition-all ${isToday ? 'bg-slate-900/80 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/30' : 'bg-slate-900/30 border-slate-800'}`}
-                    >
-                      <div className="flex items-center gap-3 mb-2 px-2">
-                        <CalendarDays size={18} className={isToday ? "text-emerald-500" : "text-slate-500"} />
-                        <h3 className={`font-black uppercase italic tracking-tight ${isToday ? "text-emerald-400" : "text-slate-400"}`}>
-                          {dayName}
-                          {isToday && <span className="ml-2 text-[9px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full not-italic tracking-widest shadow-md">Oggi</span>}
-                        </h3>
-                      </div>
-                      
-                      <div className="grid gap-3">
-                        {matchesArray.map(m => {
-                          const hasR = m.is_finished && m.home_score_final !== null;
-                          return (
-                            <div key={m.id} className={`bg-slate-950 p-4 sm:p-5 rounded-[1.5rem] border transition-all ${hasR ? 'border-emerald-500/30' : 'border-slate-800'}`}>
-                              <div className="flex justify-between items-center mb-3 border-b border-slate-800/50 pb-2">
-                                 <span className="text-[9px] font-black text-slate-500 uppercase italic">
-                                   Match #{m.id} <span className="ml-1 opacity-70">({m.groupName})</span>
-                                 </span>
-                                 {hasR && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Risultato Finale</span>}
-                              </div>
-                              <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
-                                <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.home_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.home_team)}</span></div>
-                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 px-1"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} onChange={(e) => { if (e.target.value !== '') document.getElementById(`a-${m.id}`)?.focus(); }} className="w-10 h-10 bg-slate-900 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /><span className="text-slate-700 font-black">-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-900 rounded-xl text-center font-black text-yellow-500 border border-slate-700 outline-none focus:border-yellow-500" /></div>
-                                <div className="w-[30%] flex flex-col items-center gap-1.5"><img src={`https://flagcdn.com/w40/${getFlagCode(m.away_team) || 'un'}.png`} className="w-8 h-5 object-cover rounded shadow border border-slate-800" alt="" /><span className="text-[9px] sm:text-[10px] font-black uppercase text-center w-full italic text-white">{formatTeamName(m.away_team)}</span></div>
-                              </div>
-                              <button onClick={() => updateScore(m.id)} className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${hasR ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400'}`}>{hasR ? 'Aggiorna Risultato' : 'Conferma'}</button>
-                            </div>
-                          );
-                        })}
-                      </div>
+            <div className="p-4 space-y-4 bg-slate-950/30">
+              {groupedMatchesByDay.map(({ dayName, matchesArray }) => (
+                <div key={dayName} id={`admin-day-${dayName}`} className="space-y-3 p-4 bg-slate-900/30 rounded-[2rem] border border-slate-800">
+                  <h3 className="font-black text-slate-400 uppercase italic text-xs mb-2 pl-2">{dayName}</h3>
+                  {matchesArray.map(m => (
+                    <div key={m.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4">
+                      <span className="text-[10px] uppercase font-black text-slate-400 w-1/4 truncate">{formatTeamName(m.home_team)}</span>
+                      <div className="flex items-center gap-2"><input id={`h-${m.id}`} type="number" defaultValue={m.home_score_final ?? ''} className="w-10 h-10 bg-slate-900 text-center font-black rounded-lg text-yellow-400" /><span>-</span><input id={`a-${m.id}`} type="number" defaultValue={m.away_score_final ?? ''} className="w-10 h-10 bg-slate-900 text-center font-black rounded-lg text-yellow-400" /></div>
+                      <span className="text-[10px] uppercase font-black text-slate-400 w-1/4 text-right truncate">{formatTeamName(m.away_team)}</span>
+                      <button onClick={() => updateScore(m.id)} className="bg-yellow-500 text-slate-950 px-3 py-2 font-black uppercase text-[10px] rounded-lg">Salva</button>
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </section>
 
+        {/* ----- SEZIONE INSERIMENTO TABELLONE UFFICIALE ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-blue-500">
           <button onClick={() => setOpenSection({ ...openSection, tabellone: !openSection.tabellone })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3"><Trophy className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Fase Finale</h2></div>
+            <div className="flex items-center gap-3"><Trophy className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">fase finale</h2></div>
             {openSection.tabellone ? <ChevronUp /> : <ChevronDown />}
           </button>
           {openSection.tabellone && (
-            <div className="p-5 space-y-6 bg-slate-950/30">
-              
+            <div className="p-5 space-y-4 bg-slate-950/30">
               <div className="bg-blue-950/20 border border-blue-900/30 p-4 rounded-2xl flex flex-col gap-3">
-                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">Inserimento Ufficiale</p>
-                 <select value={qTeam} onChange={e => setQTeam(e.target.value)} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-xs text-white uppercase outline-none focus:border-blue-500">
-                    <option value="">1. SCEGLI SQUADRA...</option>
-                    {TEAMS_2026.map(t => (<option key={t} value={t}>{t}</option>))}
-                 </select>
-                 <select value={qStage} onChange={e => { setQStage(e.target.value); setQSlot(BRACKET_SLOTS[e.target.value][0].dbString); }} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-xs text-white uppercase outline-none focus:border-blue-500">
-                    {STAGES.map(s => (<option key={s.id} value={s.id}>{s.label}</option>))}
-                 </select>
-                 <select value={qSlot} onChange={e => setQSlot(e.target.value)} className="w-full bg-slate-900 border border-slate-800 p-4 rounded-xl font-black text-xs text-white uppercase outline-none focus:border-blue-500 text-center">
-                    {BRACKET_SLOTS[qStage].map(slot => (<option key={slot.dbString} value={slot.dbString}>{slot.label}</option>))}
-                 </select>
-                 <button onClick={saveQualif} className="w-full bg-blue-600 hover:bg-blue-500 py-4 mt-2 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
-                    INSERISCI NEL TABELLONE
-                 </button>
+                 <select value={qTeam} onChange={e => setQTeam(e.target.value)} className="w-full bg-slate-900 border border-slate-800 p-3.5 rounded-xl font-black text-xs text-white uppercase"><option value="">1. SCEGLI SQUADRA...</option>{TEAMS_2026.map(t => (<option key={t} value={t}>{t}</option>))}</select>
+                 <select value={qStage} onChange={e => { setQStage(e.target.value); setQSlot(BRACKET_SLOTS[e.target.value][0].dbString); }} className="w-full bg-slate-900 border border-slate-800 p-3.5 rounded-xl font-black text-xs text-white uppercase">{STAGES.map(s => (<option key={s.id} value={s.id}>{s.label}</option>))}</select>
+                 <select value={qSlot} onChange={e => setQSlot(e.target.value)} className="w-full bg-slate-900 border border-slate-800 p-3.5 rounded-xl font-black text-xs text-white uppercase text-center">{BRACKET_SLOTS[qStage].map(slot => (<option key={slot.dbString} value={slot.dbString}>{slot.label}</option>))}</select>
+                 <button onClick={saveQualif} className="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-black uppercase text-xs tracking-widest">INSERISCI NEL TABELLONE MONDIALE</button>
               </div>
-
-              <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="space-y-3">
                  {STAGES.map(stg => { 
                     const items = officialBracket.filter(o => normalizeStage(o.stage) === stg.id); 
                     if (items.length === 0) return null; 
-                    
                     return (
-                      <div key={stg.id} className="bg-slate-900 border border-slate-800/50 p-4 rounded-3xl">
-                         <h3 className="text-[10px] font-black text-blue-500 uppercase mb-3 border-b border-slate-800/50 pb-2 tracking-[0.2em]">{stg.label}</h3>
-                         <div className="flex flex-col gap-2">
-                            {items.map(o => {
-                               const slotLabel = BRACKET_SLOTS[stg.id].find(s => s.dbString === o.stage)?.label || 'Slot';
-                               return (
-                                 <div key={o.id} className="bg-slate-950 border border-slate-800 px-4 py-3 rounded-xl flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                       <span className="text-[11px] font-black uppercase text-white">{o.team_name}</span>
-                                       <span className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">Slot: {slotLabel}</span>
-                                    </div>
-                                    <button onClick={() => deleteQualif(o.id)} className="text-rose-500 p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500 hover:text-white transition-colors">
-                                       <Trash2 size={14} />
-                                    </button>
-                                 </div>
-                               )
-                            })}
-                         </div>
+                      <div key={stg.id} className="bg-slate-900 p-3 rounded-xl">
+                         <span className="text-[9px] font-black text-blue-400 block mb-2">{stg.label}</span>
+                         {items.map(o => (<div key={o.id} className="flex justify-between items-center text-xs p-2 bg-slate-950 rounded mb-1"><span>{o.team_name}</span><button onClick={() => deleteQualif(o.id)} className="text-rose-500"><Trash2 size={14}/></button></div>))}
                       </div>
                     ); 
                  })}
@@ -1935,112 +1680,19 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-xl">
-          <button onClick={() => setOpenSection({ ...openSection, statistiche: !openSection.statistiche })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
-            <div className="flex items-center gap-3"><BarChart3 className="text-cyan-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Globali</h2></div>
-            {openSection.statistiche ? <ChevronUp /> : <ChevronDown />}
-          </button>
-          
-          {openSection.statistiche && (
-            <div className="p-5 bg-slate-950/50 space-y-6">
-              
-              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
-                <p className="text-[9px] font-black text-yellow-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic shrink-0 flex items-center gap-1.5">
-                  <CheckCircle size={12}/> Completamento Pronostici
-                </p>
-                <div className="space-y-3 overflow-y-auto max-h-80 pr-2 custom-scrollbar">
-                  {getCompletionStats().map(u => (
-                    <div key={u.id} className="flex flex-col border-b border-slate-800/30 pb-2.5 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-center text-[10px] font-black uppercase italic mb-1">
-                        <span className="truncate pr-2 text-white">{u.username}</span>
-                        <div className="flex items-center gap-1">
-                          {u.pct < 100 && <AlertTriangle size={10} className="text-rose-500 animate-pulse"/>}
-                          <span className={u.pct === 100 ? 'text-emerald-400' : 'text-yellow-500'}>{u.pct}%</span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-slate-950 rounded-full h-1.5 mb-2 overflow-hidden border border-slate-800">
-                        <div className={`h-full rounded-full transition-all ${u.pct === 100 ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400'}`} style={{ width: `${u.pct}%` }}></div>
-                      </div>
-                      <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest px-1">
-                        <span title="Fase a Gironi">Gir: <span className={u.uPreds === 72 ? 'text-emerald-400' : 'text-slate-300'}>{u.uPreds}/72</span></span>
-                        <span title="Fase Finale (Tabellone)">FF: <span className={u.uBracks >= u.maxBracks ? 'text-emerald-400' : 'text-slate-300'}>{u.uBracks}/{u.maxBracks}</span></span>
-                        <span title="Domande Bonus">Bon: <span className={u.uBonus === 9 ? 'text-emerald-400' : 'text-slate-300'}>{u.uBonus}/9</span></span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
-                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rossi Avg</p>
-                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_red_cards')}>{getAverage('total_red_cards')}</p>
-                </div>
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
-                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Rigori Avg</p>
-                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_penalties')}>{getAverage('total_penalties')}</p>
-                </div>
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-md truncate">
-                  <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Autogol Avg</p>
-                  <p className="text-xl font-black text-cyan-400 truncate" title={getAverage('total_own_goals')}>{getAverage('total_own_goals')}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
-                {[
-                  { label: 'MVP Mondiale', key: 'mvp_world_cup' },
-                  { label: 'Capocannoniere', key: 'top_scorer' },
-                  { label: 'Miglior Portiere', key: 'best_goalkeeper' },
-                  { label: 'Match con più Gol', key: 'high_scoring_match' },
-                  { label: 'Girone con più Gol', key: 'highest_scoring_group' },
-                  { label: 'Girone con meno Gol', key: 'lowest_scoring_group' },
-                ].map((s) => (
-                  <div key={s.key} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col">
-                    <p className="text-[9px] font-black text-slate-500 uppercase mb-3 border-b border-slate-800/50 pb-1 italic">{s.label}</p>
-                    <div className="flex-1 flex flex-col justify-start">
-                      {getTopPicks(s.key).map(([name, count]: any) => (
-                        <div key={name} className="flex justify-between text-[10px] font-black uppercase italic mb-1.5">
-                          <span className="truncate pr-2 text-white">{name}</span>
-                          <span className="text-cyan-500 font-mono shrink-0">{count} voti</span>
-                        </div>
-                      ))}
-                      {getTopPicks(s.key).length === 0 && (
-                        <p className="text-[8px] text-slate-700 italic text-center py-2 uppercase mt-auto">Nessun voto registrato</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-            </div>
-          )}
-        </section>
       </div>
 
-      <nav className="fixed bottom-0 left-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      {/* FOOTER BAR */}
+      <nav className="fixed bottom-0 left-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-2xl">
         <div className="max-w-md mx-auto flex items-center justify-around py-2 px-1">
           {navItems.map((item) => (
-            <button 
-              key={item.path} 
-              onClick={() => router.push(item.path)}
-              className="relative flex flex-col items-center justify-between h-12 group transition-all"
-              style={{ width: `${100 / navItems.length}%` }}
-            >
-              <div className="flex items-end justify-center h-6 w-full">
-                <div className="text-slate-500 group-hover:text-slate-300 transition-all duration-300">
-                  {item.icon}
-                </div>
-              </div>
-              <div className="flex items-center justify-center h-6 w-full px-0.5">
-                <span className="text-[7px] sm:text-[8px] font-black uppercase text-center leading-[1.1] tracking-wider text-slate-600 group-hover:text-slate-400 transition-colors">
-                  {item.name}
-                </span>
-              </div>
+            <button key={item.path} onClick={() => router.push(item.path)} className="relative flex flex-col items-center justify-between h-12 group transition-all" style={{ width: `${100 / navItems.length}%` }}>
+              <div className="flex items-end justify-center h-6 w-full"><div className="text-slate-500 group-hover:text-slate-300">{item.icon}</div></div>
+              <div className="flex items-center justify-center h-6 w-full px-0.5"><span className="text-[7px] sm:text-[8px] font-black uppercase text-slate-600 group-hover:text-slate-400">{item.name}</span></div>
             </button>
           ))}
         </div>
       </nav>
-
     </div>
   );
 }

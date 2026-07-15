@@ -7,8 +7,9 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { 
   BookOpen, X, Edit3, Shield, Map, Trophy, Award, ChevronDown, ChevronUp,
-  ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, BarChart3, Search, Zap
+  ShieldCheck, Flame, ArrowUpToLine, ArrowDownToLine, Target, Goal, BarChart3, Search, Zap, Star
 } from 'lucide-react';
+import { WORLD_CUP_PLAYERS, WORLD_CUP_GOALKEEPERS } from '@/lib/players';
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
 
@@ -68,6 +69,11 @@ const getFlagCode = (team: string) => {
   if (t === 'usa') t = 'stati uniti';
   if (t === 'bosnia') t = 'bosnia ed erzegovina';
   return FLAG_MAP[t] || '';
+};
+
+const cleanString = (str: string) => {
+  if (!str) return '';
+  return formatMatchName(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
 const AVATARS = [
@@ -181,55 +187,7 @@ const AVATARS = [
   { id: 'purple', name: 'Viola', emoji: '🟣', color: 'from-purple-600 to-purple-400' },
   { id: 'orange', name: 'Arancione', emoji: '🟠', color: 'from-orange-500 to-orange-400' },
   { id: 'pink', name: 'Rosa', emoji: '🩷', color: 'from-pink-500 to-pink-300' },
-  { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' },
-  { id: 'algeria', name: 'Algeria', flagCode: 'dz', color: 'from-green-600 to-green-500' },
-  { id: 'arabia_saudita', name: 'Arabia Saudita', flagCode: 'sa', color: 'from-green-700 to-green-600' },
-  { id: 'argentina', name: 'Argentina', flagCode: 'ar', color: 'from-sky-400 to-sky-200' },
-  { id: 'australia', name: 'Australia', flagCode: 'au', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'austria', name: 'Austria', flagCode: 'at', color: 'from-red-600 to-red-500' },
-  { id: 'belgio', name: 'Belgio', flagCode: 'be', color: 'from-red-600 to-red-500' },
-  { id: 'bosnia', name: 'Bosnia Erzegovina', flagCode: 'ba', color: 'from-blue-700 to-blue-600' },
-  { id: 'brasile', name: 'Brasile', flagCode: 'br', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'canada', name: 'Canada', flagCode: 'ca', color: 'from-red-600 to-red-500' },
-  { id: 'capo_verde', name: 'Capo Verde', flagCode: 'cv', color: 'from-blue-700 to-blue-600' },
-  { id: 'colombia', name: 'Colombia', flagCode: 'co', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'corea_sud', name: 'Corea del Sud', flagCode: 'kr', color: 'from-red-600 to-red-500' },
-  { id: 'costa_avorio', name: "Costa d'Avorio", flagCode: 'ci', color: 'from-orange-500 to-orange-400' },
-  { id: 'croazia', name: 'Croazia', flagCode: 'hr', color: 'from-red-600 to-slate-200' },
-  { id: 'curacao', name: 'Curaçao', flagCode: 'cw', color: 'from-blue-600 to-blue-500' },
-  { id: 'ecuador', name: 'Ecuador', flagCode: 'ec', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'egitto', name: 'Egitto', flagCode: 'eg', color: 'from-red-600 to-red-500' },
-  { id: 'francia', name: 'Francia', flagCode: 'fr', color: 'from-blue-800 to-blue-700' },
-  { id: 'germania', name: 'Germania', flagCode: 'de', color: 'from-slate-200 to-slate-100' },
-  { id: 'ghana', name: 'Ghana', flagCode: 'gh', color: 'from-slate-200 to-slate-100' },
-  { id: 'giappone', name: 'Giappone', flagCode: 'jp', color: 'from-blue-600 to-blue-500' },
-  { id: 'giordania', name: 'Giordania', flagCode: 'jo', color: 'from-red-600 to-red-500' },
-  { id: 'haiti', name: 'Haiti', flagCode: 'ht', color: 'from-blue-700 to-blue-600' },
-  { id: 'inghilterra', name: 'Inghilterra', flagCode: 'gb-eng', color: 'from-slate-200 to-slate-100' },
-  { id: 'iran', name: 'Iran', flagCode: 'ir', color: 'from-slate-200 to-slate-100' },
-  { id: 'iraq', name: 'Iraq', flagCode: 'iq', color: 'from-green-600 to-green-500' },
-  { id: 'marocco', name: 'Marocco', flagCode: 'ma', color: 'from-red-600 to-red-500' },
-  { id: 'messico', name: 'Messico', flagCode: 'mx', color: 'from-green-600 to-green-500' },
-  { id: 'norvegia', name: 'Norvegia', flagCode: 'no', color: 'from-red-600 to-red-500' },
-  { id: 'nuova_zelanda', name: 'Nuova Zelanda', flagCode: 'nz', color: 'from-slate-200 to-slate-100' },
-  { id: 'olanda', name: 'Olanda', flagCode: 'nl', color: 'from-orange-500 to-orange-400' },
-  { id: 'panama', name: 'Panama', flagCode: 'pa', color: 'from-red-600 to-red-500' },
-  { id: 'paraguay', name: 'Paraguay', flagCode: 'py', color: 'from-red-600 to-red-500' },
-  { id: 'portogallo', name: 'Portogallo', flagCode: 'pt', color: 'from-red-600 to-red-500' },
-  { id: 'qatar', name: 'Qatar', flagCode: 'qa', color: 'from-rose-800 to-rose-700' },
-  { id: 'rep_ceca', name: 'Repubblica Ceca', flagCode: 'cz', color: 'from-red-600 to-red-500' },
-  { id: 'rd_congo', name: 'R.D. Congo', flagCode: 'cd', color: 'from-sky-500 to-sky-400' },
-  { id: 'scozia', name: 'Scozia', flagCode: 'gb-sct', color: 'from-blue-900 to-blue-800' },
-  { id: 'senegal', name: 'Senegal', flagCode: 'sn', color: 'from-green-600 to-green-500' },
-  { id: 'spagna', name: 'Spagna', flagCode: 'es', color: 'from-red-600 to-red-500' },
-  { id: 'stati_uniti', name: 'Stati Uniti', flagCode: 'us', color: 'from-slate-200 to-slate-100' },
-  { id: 'sudafrica', name: 'Sudafrica', flagCode: 'za', color: 'from-yellow-500 to-yellow-400' },
-  { id: 'svezia', name: 'Svezia', flagCode: 'se', color: 'from-yellow-400 to-yellow-300' },
-  { id: 'svizzera', name: 'Svizzera', flagCode: 'ch', color: 'from-red-600 to-red-500' },
-  { id: 'tunisia', name: 'Tunisia', flagCode: 'tn', color: 'from-red-600 to-slate-100' },
-  { id: 'turchia', name: 'Turchia', flagCode: 'tr', color: 'from-red-600 to-red-500' },
-  { id: 'uruguay', name: 'Uruguay', flagCode: 'uy', color: 'from-sky-400 to-sky-300' },
-  { id: 'uzbekistan', name: 'Uzbekistan', flagCode: 'uz', color: 'from-blue-600 to-blue-500' }
+  { id: 'brown', name: 'Marrone', emoji: '🟤', color: 'from-amber-800 to-amber-600' }
 ];
 
 export default function ProfilePage() {
@@ -240,6 +198,7 @@ export default function ProfilePage() {
   
   const [userProfile, setUserProfile] = useState<any>(null);
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
+  const [userBonusAnswers, setUserBonusAnswers] = useState<any>(null);
   const [topScorers, setTopScorers] = useState<any[]>([]);
   const [scorerSearch, setScorerSearch] = useState('');
   
@@ -248,10 +207,10 @@ export default function ProfilePage() {
   
   const [showScorersModal, setShowScorersModal] = useState(false);
   const [activeLiveTab, setActiveLiveTab] = useState<'scorers' | 'groups'>('scorers');
+  const [isLiveBonusesOpen, setIsLiveBonusesOpen] = useState(false);
 
   const [liveStats, setLiveStats] = useState<{ groupGoals: Record<string, number> }>({ groupGoals: {} });
 
-  // Stato esteso per gestire i bonus in modo avanzato
   const [bonusStats, setBonusStats] = useState({
     topMatch: null as any,
     topGroup: { name: '--', goals: 0 },
@@ -289,14 +248,16 @@ export default function ProfilePage() {
           bonus: profile.points_bonus || 0, rank: profile.ranking || '--', isPaid: profile.is_paid || false,
         });
 
-        const [offBonusRes, matchesRes, scorersRes] = await Promise.all([
+        const [offBonusRes, matchesRes, scorersRes, userBonusRes] = await Promise.all([
           supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
           supabase.from('matches').select('*').eq('is_finished', true),
-          supabase.from('top_scorers').select('*').order('goals', { ascending: false })
+          supabase.from('top_scorers').select('*').order('goals', { ascending: false }),
+          supabase.from('user_bonus_answers').select('*').eq('user_id', user.id).maybeSingle()
         ]);
 
         setOfficialBonuses(offBonusRes.data);
         setTopScorers(scorersRes.data || []);
+        setUserBonusAnswers(userBonusRes.data || null);
 
         const gGoals: Record<string, number> = {};
         GROUPS.forEach(g => gGoals[g] = 0);
@@ -307,14 +268,12 @@ export default function ProfilePage() {
         matchesRes.data?.forEach(m => {
             const goals = (m.home_score_final || 0) + (m.away_score_final || 0);
             
-            // Calcolo gironi
             const homeFormatted = formatMatchName(m.home_team).toLowerCase();
             const groupObj = TOURNAMENT_GROUPS.find(gr => gr.teams.some(t => t.toLowerCase() === homeFormatted));
             if (groupObj) {
                 gGoals[groupObj.name] += goals;
             }
 
-            // Calcolo match con più gol
             if (goals > maxMatchGoals) {
                 maxMatchGoals = goals;
                 computedTopMatch = m;
@@ -323,7 +282,6 @@ export default function ProfilePage() {
 
         setLiveStats({ groupGoals: gGoals });
 
-        // Assegnazione logica Bonus (Ufficiale vs Calcolata)
         let topMatch = computedTopMatch;
         if (offBonusRes.data?.high_scoring_match) {
             const found = matchesRes.data?.find(m => {
@@ -406,6 +364,53 @@ export default function ProfilePage() {
   const copyPaymentInfo = () => {
     navigator.clipboard.writeText("Quota Mondiale 2026 - Contattare Ricky per saldo");
     toast.success("Info pagamento copiate!");
+  };
+
+  const renderPlayerWithFlag = (playerName: string) => {
+    if (!playerName) return <span className="text-slate-600 not-italic mt-1 block">Vuoto</span>;
+    const allPlayers = [...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS];
+    const player = allPlayers.find(p => cleanString(p.name) === cleanString(playerName));
+    const flagCode = player ? getFlagCode(player.country) : null;
+    return (
+      <div className="flex items-center justify-center gap-1.5 mt-1">
+        {flagCode && <img src={`https://flagcdn.com/w20/${flagCode}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px] shadow-sm opacity-90 shrink-0" alt="" />}
+        <span className="text-[10px] font-bold text-white uppercase italic truncate leading-tight">{playerName}</span>
+      </div>
+    );
+  };
+
+  const renderMatchWithFlags = (matchStr: string) => {
+    if (!matchStr) return <span className="text-slate-600 not-italic mt-1 block">Vuoto</span>;
+    const parts = matchStr.split('-');
+    if (parts.length !== 2) return <span className="text-[9px] font-bold text-white uppercase italic truncate mt-1 block leading-tight">{formatMatchName(matchStr)}</span>;
+    const [t1, t2] = parts.map(s => s.trim());
+    const f1 = getFlagCode(t1);
+    const f2 = getFlagCode(t2);
+    return (
+      <div className="flex items-center justify-center gap-1 mt-1 w-full">
+        {f1 && <img src={`https://flagcdn.com/w20/${f1}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px] shadow-sm opacity-90 shrink-0" alt="" />}
+        <span className="text-[8px] font-bold text-white uppercase italic truncate flex-1">{t1.substring(0,3)} - {t2.substring(0,3)}</span>
+        {f2 && <img src={`https://flagcdn.com/w20/${f2}.png`} className="w-3.5 h-2.5 object-cover rounded-[2px] shadow-sm opacity-90 shrink-0" alt="" />}
+      </div>
+    );
+  };
+
+  const renderGroupWithFlags = (groupName: string) => {
+    if (!groupName) return <span className="text-slate-600 not-italic mt-1 block">Vuoto</span>;
+    const group = TOURNAMENT_GROUPS.find(g => cleanString(g.name) === cleanString(groupName));
+    return (
+      <div className="flex flex-col items-center mt-1 gap-1">
+         <span className="text-[10px] font-bold text-white uppercase italic truncate leading-none">{groupName}</span>
+         {group && (
+            <div className="flex gap-0.5">
+               {group.teams.map((t, i) => {
+                 const fc = getFlagCode(t);
+                 return fc ? <img key={i} src={`https://flagcdn.com/w20/${fc}.png`} className="w-3 h-2 object-cover rounded-[1px] opacity-80" alt={t}/> : null;
+               })}
+            </div>
+         )}
+      </div>
+    );
   };
 
   if (isPageLoading) return <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans"><div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div></main>;
@@ -521,89 +526,102 @@ export default function ProfilePage() {
                  </div>
               </div>
 
-              {/* 🌟 Bonus Live Match/Gironi - MIGLIORATO */}
+              {/* 🌟 Bonus Live Match/Gironi - COLLASSABILE */}
               <div className="flex flex-col gap-3 mb-5">
-                
-                {/* Match + Gol */}
-                <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-rose-500/30 p-4 rounded-2xl relative overflow-hidden shadow-lg">
-                  <div className="absolute -right-6 -top-6 opacity-5 text-rose-500"><Flame size={120} /></div>
-                  
-                  <div className="flex justify-between items-center mb-4 relative z-10">
-                     <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5"><Flame size={14}/> Match + Gol</span>
-                     <span className="bg-rose-500/10 text-rose-400 text-[10px] px-2.5 py-1 rounded-md font-bold border border-rose-500/20 shadow-sm">
-                       {bonusStats.topMatch ? (bonusStats.topMatch.home_score_final + bonusStats.topMatch.away_score_final) : 0} Gol Totali
-                     </span>
-                  </div>
+                <button 
+                  onClick={() => setIsLiveBonusesOpen(!isLiveBonusesOpen)} 
+                  className="w-full flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-2xl hover:bg-slate-900 transition-colors"
+                >
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5">
+                    <Flame size={14} className="text-rose-500"/> Andamento Bonus (Gol)
+                  </span>
+                  {isLiveBonusesOpen ? <ChevronUp size={16} className="text-slate-500"/> : <ChevronDown size={16} className="text-slate-500"/>}
+                </button>
 
-                  {bonusStats.topMatch ? (
-                    <div className="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 relative z-10 shadow-inner">
-                       <div className="flex flex-col items-center gap-1.5 w-1/3">
-                          <img src={`https://flagcdn.com/w40/${getFlagCode(bonusStats.topMatch.home_team)}.png`} className="w-8 h-6 object-cover rounded-sm shadow-md" alt="" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
-                          <span className="text-[9px] font-black text-slate-300 uppercase truncate w-full text-center">{formatMatchName(bonusStats.topMatch.home_team)}</span>
-                       </div>
-                       
-                       <div className="flex items-center justify-center w-1/3">
-                          <div className="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xl font-black text-white tracking-widest shadow-lg">
-                             {bonusStats.topMatch.home_score_final} - {bonusStats.topMatch.away_score_final}
-                          </div>
-                       </div>
-                       
-                       <div className="flex flex-col items-center gap-1.5 w-1/3">
-                          <img src={`https://flagcdn.com/w40/${getFlagCode(bonusStats.topMatch.away_team)}.png`} className="w-8 h-6 object-cover rounded-sm shadow-md" alt="" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
-                          <span className="text-[9px] font-black text-slate-300 uppercase truncate w-full text-center">{formatMatchName(bonusStats.topMatch.away_team)}</span>
-                       </div>
+                {isLiveBonusesOpen && (
+                  <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {/* Match + Gol */}
+                    <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-rose-500/30 p-4 rounded-2xl relative overflow-hidden shadow-lg">
+                      <div className="absolute -right-6 -top-6 opacity-5 text-rose-500"><Flame size={120} /></div>
+                      
+                      <div className="flex justify-between items-center mb-4 relative z-10">
+                         <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5"><Flame size={14}/> Match + Gol</span>
+                         <span className="bg-rose-500/10 text-rose-400 text-[10px] px-2.5 py-1 rounded-md font-bold border border-rose-500/20 shadow-sm">
+                           {bonusStats.topMatch ? (bonusStats.topMatch.home_score_final + bonusStats.topMatch.away_score_final) : 0} Gol Totali
+                         </span>
+                      </div>
+
+                      {bonusStats.topMatch ? (
+                        <div className="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 relative z-10 shadow-inner">
+                           <div className="flex flex-col items-center gap-1.5 w-1/3">
+                              <img src={`https://flagcdn.com/w40/${getFlagCode(bonusStats.topMatch.home_team)}.png`} className="w-8 h-6 object-cover rounded-sm shadow-md" alt="" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                              <span className="text-[9px] font-black text-slate-300 uppercase truncate w-full text-center">{formatMatchName(bonusStats.topMatch.home_team)}</span>
+                           </div>
+                           
+                           <div className="flex items-center justify-center w-1/3">
+                              <div className="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xl font-black text-white tracking-widest shadow-lg">
+                                 {bonusStats.topMatch.home_score_final} - {bonusStats.topMatch.away_score_final}
+                              </div>
+                           </div>
+                           
+                           <div className="flex flex-col items-center gap-1.5 w-1/3">
+                              <img src={`https://flagcdn.com/w40/${getFlagCode(bonusStats.topMatch.away_team)}.png`} className="w-8 h-6 object-cover rounded-sm shadow-md" alt="" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                              <span className="text-[9px] font-black text-slate-300 uppercase truncate w-full text-center">{formatMatchName(bonusStats.topMatch.away_team)}</span>
+                           </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-slate-500 text-[10px] font-black uppercase tracking-widest">Nessun match completato</div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="text-center py-4 text-slate-500 text-[10px] font-black uppercase tracking-widest">Nessun match completato</div>
-                  )}
-                </div>
 
-                {/* Gironi Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Girone + Gol */}
-                  <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-emerald-500/30 p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-lg">
-                     <div className="absolute -right-4 -bottom-4 opacity-5 text-emerald-500"><ArrowUpToLine size={80} /></div>
-                     <div className="flex items-center gap-1.5 mb-3 relative z-10">
-                        <ArrowUpToLine size={14} className="text-emerald-500"/>
-                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Girone + Gol</span>
-                     </div>
-                     
-                     <div className="flex items-end justify-between mt-1 relative z-10">
-                        <div className="flex flex-col">
-                           <span className="text-sm font-black text-white leading-none mb-1.5">{bonusStats.topGroup.name}</span>
-                           <div className="flex gap-1">
-                              {TOURNAMENT_GROUPS.find(g => g.name === bonusStats.topGroup.name)?.teams.map(t => {
-                                 const fc = getFlagCode(t);
-                                 return fc ? <img key={t} src={`https://flagcdn.com/w20/${fc}.png`} className="w-3.5 h-2.5 object-cover rounded-[1px] opacity-80 shadow-sm" alt={t} /> : null;
-                              })}
-                           </div>
-                        </div>
-                        <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-md font-bold border border-emerald-500/20 shadow-sm">{bonusStats.topGroup.goals} Gol</span>
-                     </div>
-                  </div>
+                    {/* Gironi Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Girone + Gol */}
+                      <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-emerald-500/30 p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-lg">
+                         <div className="absolute -right-4 -bottom-4 opacity-5 text-emerald-500"><ArrowUpToLine size={80} /></div>
+                         <div className="flex items-center gap-1.5 mb-3 relative z-10">
+                            <ArrowUpToLine size={14} className="text-emerald-500"/>
+                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Girone + Gol</span>
+                         </div>
+                         
+                         <div className="flex items-end justify-between mt-1 relative z-10">
+                            <div className="flex flex-col">
+                               <span className="text-sm font-black text-white leading-none mb-1.5">{bonusStats.topGroup.name}</span>
+                               <div className="flex gap-1">
+                                  {TOURNAMENT_GROUPS.find(g => g.name === bonusStats.topGroup.name)?.teams.map(t => {
+                                     const fc = getFlagCode(t);
+                                     return fc ? <img key={t} src={`https://flagcdn.com/w20/${fc}.png`} className="w-3.5 h-2.5 object-cover rounded-[1px] opacity-80 shadow-sm" alt={t} /> : null;
+                                  })}
+                               </div>
+                            </div>
+                            <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-md font-bold border border-emerald-500/20 shadow-sm">{bonusStats.topGroup.goals} Gol</span>
+                         </div>
+                      </div>
 
-                  {/* Girone - Gol */}
-                  <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-blue-500/30 p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-lg">
-                     <div className="absolute -right-4 -bottom-4 opacity-5 text-blue-500"><ArrowDownToLine size={80} /></div>
-                     <div className="flex items-center gap-1.5 mb-3 relative z-10">
-                        <ArrowDownToLine size={14} className="text-blue-500"/>
-                        <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Girone - Gol</span>
-                     </div>
-                     
-                     <div className="flex items-end justify-between mt-1 relative z-10">
-                        <div className="flex flex-col">
-                           <span className="text-sm font-black text-white leading-none mb-1.5">{bonusStats.worstGroup.name}</span>
-                           <div className="flex gap-1">
-                              {TOURNAMENT_GROUPS.find(g => g.name === bonusStats.worstGroup.name)?.teams.map(t => {
-                                 const fc = getFlagCode(t);
-                                 return fc ? <img key={t} src={`https://flagcdn.com/w20/${fc}.png`} className="w-3.5 h-2.5 object-cover rounded-[1px] opacity-80 shadow-sm" alt={t} /> : null;
-                              })}
-                           </div>
-                        </div>
-                        <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-md font-bold border border-blue-500/20 shadow-sm">{bonusStats.worstGroup.goals} Gol</span>
-                     </div>
+                      {/* Girone - Gol */}
+                      <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-blue-500/30 p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between shadow-lg">
+                         <div className="absolute -right-4 -bottom-4 opacity-5 text-blue-500"><ArrowDownToLine size={80} /></div>
+                         <div className="flex items-center gap-1.5 mb-3 relative z-10">
+                            <ArrowDownToLine size={14} className="text-blue-500"/>
+                            <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Girone - Gol</span>
+                         </div>
+                         
+                         <div className="flex items-end justify-between mt-1 relative z-10">
+                            <div className="flex flex-col">
+                               <span className="text-sm font-black text-white leading-none mb-1.5">{bonusStats.worstGroup.name}</span>
+                               <div className="flex gap-1">
+                                  {TOURNAMENT_GROUPS.find(g => g.name === bonusStats.worstGroup.name)?.teams.map(t => {
+                                     const fc = getFlagCode(t);
+                                     return fc ? <img key={t} src={`https://flagcdn.com/w20/${fc}.png`} className="w-3.5 h-2.5 object-cover rounded-[1px] opacity-80 shadow-sm" alt={t} /> : null;
+                                  })}
+                               </div>
+                            </div>
+                            <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-md font-bold border border-blue-500/20 shadow-sm">{bonusStats.worstGroup.goals} Gol</span>
+                         </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Selettori del Mini-Tab Inline */}
@@ -686,16 +704,67 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Cerca Bomber Secondario */}
-              <div className="mt-4 pt-3 border-t border-slate-800/50">
-                <button onClick={() => setShowScorersModal(true)} className="w-full py-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-black rounded-xl uppercase tracking-widest text-[9px] sm:text-[10px] flex items-center justify-center gap-2 hover:bg-cyan-500/20 transition-all shadow-sm">
-                   <Search size={14}/> Cerca Bomber Nel Dettaglio
-                </button>
+                          </div>
+
+            {/* --- RIEPILOGO LA TUA SCHEDA BONUS --- */}
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-md w-full animate-in fade-in duration-500">
+              <div className="flex items-center justify-between mb-4 border-b border-slate-800/50 pb-3">
+                <div className="flex items-center gap-2">
+                  <Star size={14} className="text-purple-500" />
+                  <h2 className="text-purple-500 text-xs font-black uppercase italic tracking-widest">
+                    La Tua Scheda Bonus
+                  </h2>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">MVP Mondiale</span>
+                    {renderPlayerWithFlag(userBonusAnswers?.mvp_world_cup)}
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Capocannoniere</span>
+                    {renderPlayerWithFlag(userBonusAnswers?.top_scorer)}
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Miglior Portiere</span>
+                    {renderPlayerWithFlag(userBonusAnswers?.best_goalkeeper)}
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Match + Gol</span>
+                    {renderMatchWithFlags(userBonusAnswers?.high_scoring_match)}
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Girone + Gol</span>
+                    {renderGroupWithFlags(userBonusAnswers?.highest_scoring_group)}
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Girone - Gol</span>
+                    {renderGroupWithFlags(userBonusAnswers?.lowest_scoring_group)}
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Autogol</span>
+                    <span className="text-xs font-black text-white mt-1.5 flex items-center justify-center gap-1.5 drop-shadow-md">
+                      <span className="text-[12px]">💥</span> {userBonusAnswers?.total_own_goals ?? <span className="text-slate-600">--</span>}
+                    </span>
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Rigori</span>
+                    <span className="text-xs font-black text-white mt-1.5 flex items-center justify-center gap-1.5 drop-shadow-md">
+                      <span className="text-[12px]">🎯</span> {userBonusAnswers?.total_penalties ?? <span className="text-slate-600">--</span>}
+                    </span>
+                 </div>
+                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center flex flex-col justify-center min-h-[60px]">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight">Rossi</span>
+                    <span className="text-xs font-black text-white mt-1.5 flex items-center justify-center gap-1.5 drop-shadow-md">
+                      <span className="text-[12px]">🟥</span> {userBonusAnswers?.total_red_cards ?? <span className="text-slate-600">--</span>}
+                    </span>
+                 </div>
               </div>
             </div>
 
             {/* --- BOTTONI EXTRA --- */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mt-2">
               <button onClick={() => router.push('/groups')} className="py-4 bg-blue-600/10 border border-blue-500/30 text-blue-400 font-black rounded-2xl uppercase tracking-widest text-[11px] sm:text-xs hover:bg-blue-600/20 transition-all flex items-center justify-center gap-2 shadow-sm">
                 <Map size={16} /> Gironi Ufficiali
               </button>
@@ -705,7 +774,7 @@ export default function ProfilePage() {
             </div>
 
             {checkIsAdmin() && (
-              <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-rose-600/10 text-rose-500 border border-rose-600/20 font-black rounded-2xl uppercase tracking-widest text-[11px] hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+              <Link href="/admin" className="w-full flex items-center justify-center py-4 bg-rose-600/10 text-rose-500 border border-rose-600/20 font-black rounded-2xl uppercase tracking-widest text-[11px] hover:bg-rose-600 hover:text-white transition-all shadow-sm mt-2">
                 ⚙️ Pannello Admin
               </Link>
             )}
