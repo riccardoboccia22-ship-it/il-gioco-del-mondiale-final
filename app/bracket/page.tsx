@@ -245,8 +245,13 @@ export default function BracketPage() {
   const handleSaveFinale = async () => {
     if (!userId || isFinaleExpired) return;
     
-    // Controllo campi base obbligatori per salvare (almeno i risultati finali delle due partite)
-    if (finalePrediction.home_score === '' || finalePrediction.away_score === '' || finalePrediction.f34_home_score === '') {
+    // Controllo campi base obbligatori (ora verifica correttamente tutti e 4 i punteggi principali)
+    if (
+      finalePrediction.home_score === '' || 
+      finalePrediction.away_score === '' || 
+      finalePrediction.f34_home_score === '' || 
+      finalePrediction.f34_away_score === ''
+    ) {
       toast.error('Inserisci almeno i Risultati Esatti di entrambe le finali!');
       return;
     }
@@ -757,14 +762,14 @@ export default function BracketPage() {
                           <label className="text-[10px] font-black text-slate-300 uppercase">Squadra 1° Gol</label>
                           <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+5 PT</span>
                         </div>
-                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f34_first_to_score: e.target.value})} placeholder="Es: Francia" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500" />
+                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f34_first_to_score: e.target.value})} placeholder="Es: Francia" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">
                           <label className="text-[10px] font-black text-slate-300 uppercase">Marcatore</label>
                           <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+11 PT</span>
                         </div>
-                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_scorer} onChange={e => setFinalePrediction({...finalePrediction, f34_scorer: e.target.value})} placeholder="Es: Mbappé" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500" />
+                        <input type="text" disabled={isFinaleExpired} value={finalePrediction.f34_scorer} onChange={e => setFinalePrediction({...finalePrediction, f34_scorer: e.target.value})} placeholder="Es: Mbappé" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500" />
                       </div>
                     </div>
 
@@ -773,7 +778,7 @@ export default function BracketPage() {
                         <label className="text-[10px] font-black text-slate-300 uppercase">Minuto 1° Gol</label>
                         <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
-                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se 0-0 scrivi 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500 text-center" />
+                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se 0-0 scrivi 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
                     </div>
                   </div>
 
