@@ -376,7 +376,7 @@ export default function BracketPage() {
           f12_ht_home_score: '', f12_ht_away_score: '', f12_2nd_home_score: '', f12_2nd_away_score: '',
           f12_first_to_score: '', f12_scorer: '', first_goal_minute: '', f12_fouls: '',
           f12_yellow_cards: '', f12_red_cards: '', f12_penalties: '',
-          f34_home_score: '', away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
+          f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '', // PEZZA APPLICATA QUI (f34_away_score)
           f34_ht_home_score: '', f34_ht_away_score: '', f34_2nd_home_score: '', f34_2nd_away_score: '',
           f34_first_to_score: '', f34_scorer: '', f34_first_goal_minute: '', f34_fouls: '',
           f34_yellow_cards: '', f34_red_cards: '', f34_penalties: ''
@@ -410,7 +410,7 @@ export default function BracketPage() {
 
   const resetBracket = async () => {
     if (isExpired) return;
-    if (window.confirm('Sei sicuro di voler svuotare tutto il tabellone? (Le modifiche saranno effettive solo se premi "Conferma Scelte")')) {
+    if (window.confirm('Sei sicuro di voler svuotare tutto il tabellone? (Le modifiche saranno effettive solo se primi "Conferma Scelte")')) {
       setSelections({});
       toast.success('Tabellone svuotato! Premi Conferma per salvare.', { icon: '🧹' });
     }
@@ -925,7 +925,7 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Resto del layout */}
+      {/* Layout della pagina principale */}
       <header className="text-center mb-6 pt-4 flex flex-col items-center">
         <h1 className="text-4xl sm:text-5xl font-black text-yellow-500 uppercase italic tracking-tighter leading-none">Fase Finale</h1>
         <p className="text-slate-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.4em] mt-3 italic">
