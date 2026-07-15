@@ -245,7 +245,7 @@ export default function BracketPage() {
   const handleSaveFinale = async () => {
     if (!userId || isFinaleExpired) return;
     
-    // Controllo campi base obbligatori (ora verifica correttamente tutti e 4 i punteggi principali)
+    // Controllo campi base obbligatori (ora verifica sia finalissima che 3°/4° posto)
     if (
       finalePrediction.home_score === '' || 
       finalePrediction.away_score === '' || 
@@ -258,10 +258,22 @@ export default function BracketPage() {
     
     setIsSavingFinale(true);
     try {
-      const parseNum = (val: string) => val === '' ? null : parseInt(val);
+      const parseNum = (val: string) => {
+        if (val === '' || val === null || val === undefined) return null;
+        const parsed = parseInt(val, 10);
+        return isNaN(parsed) ? null : parsed;
+      };
+
+      // 1. Calcolo automatico di "champion_team" dal bracket salvato per risolvere il NOT NULL obbligatorio
+      const team1 = selections['F-0'] || 'Spagna';
+      const team2 = selections['F-1'] || 'Argentina';
+      const hScore = parseNum(finalePrediction.home_score) ?? 0;
+      const aScore = parseNum(finalePrediction.away_score) ?? 0;
+      const calculatedChampion = hScore >= aScore ? team1 : team2;
 
       const payload = {
         user_id: userId,
+        champion_team: calculatedChampion, // RISOLVE L'OBBLIGO NOT NULL SUL DATABASE
         home_score: parseNum(finalePrediction.home_score),
         away_score: parseNum(finalePrediction.away_score),
         ending_method: finalePrediction.ending_method,
@@ -272,7 +284,7 @@ export default function BracketPage() {
         f12_2nd_away_score: parseNum(finalePrediction.f12_2nd_away_score),
         f12_first_to_score: finalePrediction.f12_first_to_score || null,
         f12_scorer: finalePrediction.f12_scorer || null,
-        first_goal_minute: parseNum(finalePrediction.first_goal_minute),
+        first_goal_minute: parseNum(finalePrediction.first_goal_minute) ?? 0, // RISOLVE L'OBBLIGO NOT NULL SUL DATABASE CON FALLBACK A 0
         f12_fouls: parseNum(finalePrediction.f12_fouls),
         f12_yellow_cards: parseNum(finalePrediction.f12_yellow_cards),
         f12_red_cards: parseNum(finalePrediction.f12_red_cards),
@@ -310,8 +322,10 @@ export default function BracketPage() {
           colors: ['#eab308', '#ca8a04', '#ffffff']
         });
       }
-    } catch(e) {
-      toast.error('Errore durante il salvataggio della Schedina.');
+    } catch(e: any) {
+      console.error("Errore dettagliato database:", e);
+      // Mostrerà a schermo l'errore reale se qualcos'altro andasse storto (es. RLS, vincoli)
+      toast.error(`Errore nel database: ${e.message || e.details || 'Verifica la console'}`);
     } finally {
       setIsSavingFinale(false);
     }
