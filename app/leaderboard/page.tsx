@@ -24,7 +24,7 @@ import {
   Coins
 } from 'lucide-react';
 
-const FINALE_REVEAL_DATE = new Date('2026-07-18T23:00:00+02:00'); // Data e ora sblocco visualizzazione pronostici
+const FINALE_REVEAL_DATE = new Date('2026-06-18T23:00:00+02:00'); // Data e ora sblocco visualizzazione pronostici
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
 
@@ -47,9 +47,7 @@ const STAGE_POINTS: Record<string, number> = { R32: 2, R16: 4, QF: 6, SF: 8, F: 
 const STAGE_CAPACITY: Record<string, number> = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
 const STAGE_LABELS: Record<string, string> = { R32: 'Sedicesimi', R16: 'Ottavi', QF: 'Quarti', SF: 'Semifinale', F: 'Finalista', WINNER: 'Campione' };
 
-// Mappa esatta degli incroci del Tabellone per calcolare le eliminazioni istantanee
 const BRACKET_LINKS = [
-  // R32 -> R16
   { stage1: ['R32_SEDICESIMI_1E', 'R32_SEDICESIMI_3M1'], winner: 'R16_OTTAVI_V1' },
   { stage1: ['R32_SEDICESIMI_1I', 'R32_SEDICESIMI_3M2'], winner: 'R16_OTTAVI_V2' },
   { stage1: ['R32_SEDICESIMI_2A', 'R32_SEDICESIMI_2B'], winner: 'R16_OTTAVI_V3' },
@@ -66,8 +64,6 @@ const BRACKET_LINKS = [
   { stage1: ['R32_SEDICESIMI_2D', 'R32_SEDICESIMI_2G'], winner: 'R16_OTTAVI_V14' },
   { stage1: ['R32_SEDICESIMI_1B', 'R32_SEDICESIMI_3M7'], winner: 'R16_OTTAVI_V15' },
   { stage1: ['R32_SEDICESIMI_1K', 'R32_SEDICESIMI_3M8'], winner: 'R16_OTTAVI_V16' },
-
-  // R16 -> QF
   { stage1: ['R16_OTTAVI_V1', 'R16_OTTAVI_V2'], winner: 'QF_QUARTI_V1' },
   { stage1: ['R16_OTTAVI_V3', 'R16_OTTAVI_V4'], winner: 'QF_QUARTI_V2' },
   { stage1: ['R16_OTTAVI_V5', 'R16_OTTAVI_V6'], winner: 'QF_QUARTI_V3' },
@@ -76,18 +72,12 @@ const BRACKET_LINKS = [
   { stage1: ['R16_OTTAVI_V11', 'R16_OTTAVI_V12'], winner: 'QF_QUARTI_V6' },
   { stage1: ['R16_OTTAVI_V13', 'R16_OTTAVI_V14'], winner: 'QF_QUARTI_V7' },
   { stage1: ['R16_OTTAVI_V15', 'R16_OTTAVI_V16'], winner: 'QF_QUARTI_V8' },
-
-  // QF -> SF
   { stage1: ['QF_QUARTI_V1', 'QF_QUARTI_V2'], winner: 'SF_SEMIFINALI_V1' },
   { stage1: ['QF_QUARTI_V3', 'QF_QUARTI_V4'], winner: 'SF_SEMIFINALI_V2' },
   { stage1: ['QF_QUARTI_V5', 'QF_QUARTI_V6'], winner: 'SF_SEMIFINALI_V3' },
   { stage1: ['QF_QUARTI_V7', 'QF_QUARTI_V8'], winner: 'SF_SEMIFINALI_V4' },
-
-  // SF -> F
   { stage1: ['SF_SEMIFINALI_V1', 'SF_SEMIFINALI_V2'], winner: 'F_FINALE_1' },
   { stage1: ['SF_SEMIFINALI_V3', 'SF_SEMIFINALI_V4'], winner: 'F_FINALE_2' },
-
-  // F -> WINNER
   { stage1: ['F_FINALE_1', 'F_FINALE_2'], winner: 'WINNER_VINCITORE_1' }
 ];
 
@@ -150,7 +140,6 @@ const getEliminatedTeams = (officialBracketData: any[]) => {
      if (ob.team_name) slotMap[ob.stage] = cleanString(ob.team_name);
   });
 
-  // 1. Se i sedicesimi sono pieni, elimino in automatico tutte le altre squadre (uscite ai gironi)
   const r32Teams = officialBracketData.filter(ob => normalizeStage(ob.stage) === 'R32' && ob.team_name).map(ob => cleanString(ob.team_name));
   if (r32Teams.length === 32) {
      TOURNAMENT_GROUPS.forEach(g => g.teams.forEach(t => {
@@ -159,7 +148,6 @@ const getEliminatedTeams = (officialBracketData: any[]) => {
      }));
   }
 
-  // 2. Controllo incrociato: se lo slot del vincitore di un match è stato popolato, la squadra perdente è eliminata
   BRACKET_LINKS.forEach(link => {
      const winnerTeam = slotMap[link.winner];
      if (winnerTeam) {
@@ -346,38 +334,35 @@ const AVATARS: AvatarDef[] = [
 export default function LeaderboardPage() {
   const router = useRouter();
   
-  // STATI DELLE DUE CLASSIFICHE
   const [viewMode, setViewMode] = useState<'GENERAL' | 'FINALE'>('GENERAL');
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [finaleLeaderboard, setFinaleLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // STATO PER LA RICERCA E LOCK SBLOCCO
   const [searchQuery, setSearchQuery] = useState('');
   const [isFinaleVisible, setIsFinaleVisible] = useState(false);
 
-  // --- STATI PER LA MODALE DETTAGLI PUNTI ---
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   
-  // Scompartimenti Dati Utente
   const [playerPredictions, setPlayerPredictions] = useState<any[]>([]);
   const [playerBrackets, setPlayerBrackets] = useState<any[]>([]);
   const [playerBonuses, setPlayerBonuses] = useState<any[]>([]);
   const [playerFinale, setPlayerFinale] = useState<any[]>([]);
   
-  // Tab Interno Modale
   const [detailTab, setDetailTab] = useState<'MATCHES' | 'BRACKET' | 'BONUS' | 'FINALE'>('MATCHES');
 
-  // Variabili globali caricate una sola volta
+  // STATO PER I GRUPPI DELLA FINALE (Fisarmonica)
+  const [expandedFinaleGroups, setExpandedFinaleGroups] = useState<Record<string, boolean>>({
+    '🏆 FINALISSIMA': true,
+    '🥉 3°/4° POSTO': false
+  });
+
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
   
-  // STATI APP SETTINGS
   const [isFinaleActive, setIsFinaleActive] = useState(false);
-
-  // STATO PER LE ELIMINAZIONI A CASCATA
   const [eliminatedTeams, setEliminatedTeams] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -416,7 +401,6 @@ export default function LeaderboardPage() {
         setIsFinaleActive(settingsRes.data.is_finale_active);
       }
 
-      // 1. CLASSIFICA GENERALE (Mondiale)
       if (profRes.data) {
         const sorted = [...profRes.data].sort((a, b) => {
           const rankA = a.ranking ?? 9999;
@@ -426,7 +410,6 @@ export default function LeaderboardPage() {
         });
         setLeaderboard(sorted);
         
-        // 2. CLASSIFICA SUPER JACKPOT (Solo chi ha giocato la Finale)
         if (finaleRes.data) {
           const finaleBoard = finaleRes.data.map(fin => {
             const p = profRes.data.find(profile => profile.id === fin.user_id);
@@ -442,7 +425,6 @@ export default function LeaderboardPage() {
       setOfficialBracket(offBracketData);
       setOfficialBonuses(offBonusRes.data || null);
       
-      // Calcola le squadre matematicamente eliminate
       setEliminatedTeams(getEliminatedTeams(offBracketData));
 
     } catch (err) {
@@ -472,7 +454,6 @@ export default function LeaderboardPage() {
     setLoadingDetails(true);
 
     try {
-      // 1. CARICAMENTO GIRONI
       const { data: preds } = await supabase.from('predictions').select('*').eq('user_id', player.id);
       let combinedMatches: any[] = [];
       
@@ -494,7 +475,6 @@ export default function LeaderboardPage() {
       }
       setPlayerPredictions(combinedMatches);
 
-      // 2. CARICAMENTO TABELLONE
       const { data: bData } = await supabase.from('brackets').select('*').eq('user_id', player.id);
       const processedBrackets: any[] = [];
       const seenBrackets = new Set(); 
@@ -534,7 +514,6 @@ export default function LeaderboardPage() {
          return 0;
       }));
 
-      // 3. CARICAMENTO BONUS 
       const { data: uBonus } = await supabase.from('user_bonus_answers').select('*').eq('user_id', player.id).maybeSingle();
       const processedBonuses: any[] = [];
       
@@ -589,7 +568,6 @@ export default function LeaderboardPage() {
           return b.sortOrder - a.sortOrder;
       }));
 
-      // 4. CARICAMENTO LA FINALE (Sabato & Domenica)
       const { data: finaleData } = await supabase.from('final_match_predictions').select('*').eq('user_id', player.id).maybeSingle();
       const processedFinale: any[] = [];
       if (finaleData) {
@@ -600,33 +578,34 @@ export default function LeaderboardPage() {
           });
         };
 
-        // DOMENICA
-        if (finaleData.home_score != null && finaleData.away_score != null) addFin('🏆 Finalissima (Domenica)', 'Risultato Esatto', `${finaleData.home_score} - ${finaleData.away_score}`, 30);
-        addFin('🏆 Finalissima (Domenica)', 'Esito e Modalità', finaleData.ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
-        addFin('🏆 Finalissima (Domenica)', 'MVP (FIFA)', finaleData.f12_mvp, 12);
-        if (finaleData.f12_ht_home_score != null) addFin('🏆 Finalissima (Domenica)', 'Esatto 1° Tempo', `${finaleData.f12_ht_home_score} - ${finaleData.f12_ht_away_score}`, 10);
-        if (finaleData.f12_2nd_home_score != null) addFin('🏆 Finalissima (Domenica)', 'Esatto 2° Tempo', `${finaleData.f12_2nd_home_score} - ${finaleData.f12_2nd_away_score}`, 10);
-        addFin('🏆 Finalissima (Domenica)', 'Squadra 1° Gol', finaleData.f12_first_to_score, 5);
-        addFin('🏆 Finalissima (Domenica)', 'Marcatore', finaleData.f12_scorer, 11);
-        addFin('🏆 Finalissima (Domenica)', 'Minuto 1° Gol', finaleData.first_goal_minute, 10);
-        addFin('🏆 Finalissima (Domenica)', 'Falli Fischiati', finaleData.f12_fouls, 6);
-        addFin('🏆 Finalissima (Domenica)', '🟨 Cartellini Gialli', finaleData.f12_yellow_cards, 3);
-        addFin('🏆 Finalissima (Domenica)', '🟥 Cartellini Rossi', finaleData.f12_red_cards, 3);
-        addFin('🏆 Finalissima (Domenica)', '🥅 Rigori Fischiati', finaleData.f12_penalties, 1);
+        const l12 = '🏆 FINALISSIMA';
+        if (finaleData.home_score != null && finaleData.away_score != null) addFin(l12, 'Risultato Esatto', `${finaleData.home_score} - ${finaleData.away_score}`, 30);
+        addFin(l12, 'Esito e Modalità', finaleData.ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
+        addFin(l12, 'MVP (FIFA)', finaleData.f12_mvp, 12);
+        if (finaleData.f12_ht_home_score != null) addFin(l12, 'Esatto 1° Tempo', `${finaleData.f12_ht_home_score} - ${finaleData.f12_ht_away_score}`, 10);
+        if (finaleData.f12_2nd_home_score != null) addFin(l12, 'Esatto 2° Tempo', `${finaleData.f12_2nd_home_score} - ${finaleData.f12_2nd_away_score}`, 10);
+        addFin(l12, 'Squadra 1° Gol', finaleData.f12_first_to_score, 5);
+        addFin(l12, 'Marcatore', finaleData.f12_scorer, 11);
+        addFin(l12, 'Minuto 1° Gol', finaleData.first_goal_minute, 10);
+        addFin(l12, 'Falli Fischiati', finaleData.f12_fouls, 6);
+        addFin(l12, '🟨 Cartellini Gialli', finaleData.f12_yellow_cards, 3);
+        addFin(l12, '🟥 Cartellini Rossi', finaleData.f12_red_cards, 3);
+        addFin(l12, '🥅 Rigori Fischiati', finaleData.f12_penalties, 1);
 
-        // SABATO
-        if (finaleData.f34_home_score != null && finaleData.f34_away_score != null) addFin('🥉 3°/4° Posto (Sabato)', 'Risultato Esatto', `${finaleData.f34_home_score} - ${finaleData.f34_away_score}`, 30);
-        addFin('🥉 3°/4° Posto (Sabato)', 'Esito e Modalità', finaleData.f34_ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.f34_ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
-        addFin('🥉 3°/4° Posto (Sabato)', 'MVP (FIFA)', finaleData.f34_mvp, 12);
-        if (finaleData.f34_ht_home_score != null) addFin('🥉 3°/4° Posto (Sabato)', 'Esatto 1° Tempo', `${finaleData.f34_ht_home_score} - ${finaleData.f34_ht_away_score}`, 10);
-        if (finaleData.f34_2nd_home_score != null) addFin('🥉 3°/4° Posto (Sabato)', 'Esatto 2° Tempo', `${finaleData.f34_2nd_home_score} - ${finaleData.f34_2nd_away_score}`, 10);
-        addFin('🥉 3°/4° Posto (Sabato)', 'Squadra 1° Gol', finaleData.f34_first_to_score, 5);
-        addFin('🥉 3°/4° Posto (Sabato)', 'Marcatore', finaleData.f34_scorer, 11);
-        addFin('🥉 3°/4° Posto (Sabato)', 'Minuto 1° Gol', finaleData.f34_first_goal_minute, 10);
-        addFin('🥉 3°/4° Posto (Sabato)', 'Falli Fischiati', finaleData.f34_fouls, 6);
-        addFin('🥉 3°/4° Posto (Sabato)', '🟨 Cartellini Gialli', finaleData.f34_yellow_cards, 3);
-        addFin('🥉 3°/4° Posto (Sabato)', '🟥 Cartellini Rossi', finaleData.f34_red_cards, 3);
-        addFin('🥉 3°/4° Posto (Sabato)', '🥅 Rigori Fischiati', finaleData.f34_penalties, 1);
+        const l34 = '🥉 3°/4° POSTO';
+        // Invertiamo l'ordine visuale pescando l'away_score (Francia) come prima cifra e home_score (Inghilterra) come seconda
+        if (finaleData.f34_home_score != null && finaleData.f34_away_score != null) addFin(l34, 'Risultato Esatto', `${finaleData.f34_away_score} - ${finaleData.f34_home_score}`, 30);
+        addFin(l34, 'Esito e Modalità', finaleData.f34_ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.f34_ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
+        addFin(l34, 'MVP (FIFA)', finaleData.f34_mvp, 12);
+        if (finaleData.f34_ht_home_score != null) addFin(l34, 'Esatto 1° Tempo', `${finaleData.f34_ht_away_score} - ${finaleData.f34_ht_home_score}`, 10);
+        if (finaleData.f34_2nd_home_score != null) addFin(l34, 'Esatto 2° Tempo', `${finaleData.f34_2nd_away_score} - ${finaleData.f34_2nd_home_score}`, 10);
+        addFin(l34, 'Squadra 1° Gol', finaleData.f34_first_to_score, 5);
+        addFin(l34, 'Marcatore', finaleData.f34_scorer, 11);
+        addFin(l34, 'Minuto 1° Gol', finaleData.f34_first_goal_minute, 10);
+        addFin(l34, 'Falli Fischiati', finaleData.f34_fouls, 6);
+        addFin(l34, '🟨 Cartellini Gialli', finaleData.f34_yellow_cards, 3);
+        addFin(l34, '🟥 Cartellini Rossi', finaleData.f34_red_cards, 3);
+        addFin(l34, '🥅 Rigori Fischiati', finaleData.f34_penalties, 1);
       }
       setPlayerFinale(processedFinale);
 
@@ -636,6 +615,13 @@ export default function LeaderboardPage() {
     } finally {
       setLoadingDetails(false);
     }
+  };
+
+  const toggleFinaleGroup = (label: string) => {
+    setExpandedFinaleGroups(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
   };
 
   const getRankIcon = (rankValue: any) => {
@@ -758,7 +744,6 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        {/* BARRA DI RICERCA UTENTI */}
         <div className="relative mb-6">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search className="text-slate-500" size={18} />
@@ -912,7 +897,6 @@ export default function LeaderboardPage() {
                 <Star size={12}/> Bonus
               </button>
               
-              {/* Il TAB LA FINALE compare SEMPRE se isFinaleActive è true, ma il contenuto sarà bloccato */}
               {isFinaleActive && (
                 <button onClick={() => setDetailTab('FINALE')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'FINALE' ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
                   {isFinaleVisible ? <Award size={12}/> : <Lock size={12}/>} La Finale
@@ -1039,7 +1023,7 @@ export default function LeaderboardPage() {
                      </div>
                    )}
 
-                   {/* TAB LA FINALE */}
+                   {/* TAB LA FINALE CON FISARMONICA */}
                    {detailTab === 'FINALE' && (
                      <div className="flex flex-col h-full">
                        {!isFinaleVisible ? (
@@ -1051,37 +1035,65 @@ export default function LeaderboardPage() {
                             </p>
                          </div>
                        ) : playerFinale.length === 0 ? (
-                         <div className="text-center py-10 opacity-70">
+                         <div className="text-center py-10 opacity-70 flex flex-col items-center justify-center h-full">
                             <Award className="mx-auto w-10 h-10 text-slate-700 mb-2" />
                             <p className="text-slate-600 text-[10px] font-black uppercase tracking-widest">Nessun pronostico salvato</p>
                          </div>
                        ) : (
-                         playerFinale.map((fin, idx) => {
-                           const isCorrect = fin.status === 'CORRECT';
-                           const isWrong = fin.status === 'WRONG';
-                           return (
-                             <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center mb-2 transition-colors ${
-                               isCorrect ? 'bg-amber-950/20 border-amber-500/40' :
-                               isWrong ? 'bg-rose-950/10 border-rose-900/30 opacity-70' :
-                               'bg-slate-900/30 border-slate-800/50'
-                             }`}>
-                                <div className="flex flex-col min-w-0">
-                                   <span className="text-[7px] font-black uppercase tracking-widest text-slate-500">{fin.matchLabel}</span>
-                                   <span className={`text-[9px] font-bold uppercase tracking-widest ${isCorrect ? 'text-amber-400' : isWrong ? 'text-rose-400/70' : 'text-slate-300'}`}>{fin.label}</span>
-                                   <span className={`text-[11px] font-black uppercase italic truncate mt-0.5 ${isWrong ? 'text-rose-500 line-through' : 'text-white'}`}>{fin.answer}</span>
-                                </div>
-                                <div className="flex flex-col items-end shrink-0 ml-2">
-                                  <span className={`text-xs font-black px-2 py-1 rounded-lg border ${
-                                    isCorrect ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
-                                    isWrong ? 'text-rose-400/60 bg-rose-500/5 border-rose-500/10' : 
-                                    'text-slate-500 bg-slate-800/50 border-slate-700/50'
-                                  }`}>
-                                    {isCorrect ? `+${fin.points} PT` : isWrong ? '0 PT' : `Max ${fin.maxPts} PT`}
-                                  </span>
-                                </div>
+                         <div className="space-y-4 pb-4">
+                           {Object.entries(
+                             playerFinale.reduce((acc, curr) => {
+                               if (!acc[curr.matchLabel]) acc[curr.matchLabel] = [];
+                               acc[curr.matchLabel].push(curr);
+                               return acc;
+                             }, {} as Record<string, any[]>)
+                           ).map(([groupLabel, items], gIdx) => (
+                             <div key={gIdx} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
+                               <button 
+                                 onClick={() => toggleFinaleGroup(groupLabel)}
+                                 className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
+                               >
+                                 <div className="flex items-center gap-2">
+                                   {groupLabel.includes('🏆') ? <Trophy className="text-yellow-500" size={16}/> : <Medal className="text-amber-500" size={16}/>}
+                                   <span className={`text-[11px] font-black uppercase tracking-widest ${groupLabel.includes('🏆') ? 'text-yellow-500' : 'text-amber-500'}`}>
+                                     {groupLabel} {groupLabel.includes('🏆') ? '(Spagna - Argentina)' : '(Francia - Inghilterra)'}
+                                   </span>
+                                 </div>
+                                 {expandedFinaleGroups[groupLabel] ? <ChevronUp size={18} className="text-slate-500" /> : <ChevronDown size={18} className="text-slate-500" />}
+                               </button>
+                               
+                               {expandedFinaleGroups[groupLabel] && (
+                                 <div className="p-3 pt-0 space-y-2 bg-slate-900/20">
+                                   {items.map((fin, idx) => {
+                                     const isCorrect = fin.status === 'CORRECT';
+                                     const isWrong = fin.status === 'WRONG';
+                                     return (
+                                       <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center transition-colors ${
+                                         isCorrect ? 'bg-amber-950/20 border-amber-500/40' :
+                                         isWrong ? 'bg-rose-950/10 border-rose-900/30 opacity-70' :
+                                         'bg-slate-900/50 border-slate-800/80'
+                                       }`}>
+                                          <div className="flex flex-col min-w-0">
+                                             <span className={`text-[9px] font-bold uppercase tracking-widest ${isCorrect ? 'text-amber-400' : isWrong ? 'text-rose-400/70' : 'text-slate-300'}`}>{fin.label}</span>
+                                             <span className={`text-[11px] font-black uppercase italic truncate mt-0.5 ${isWrong ? 'text-rose-500 line-through' : 'text-white'}`}>{fin.answer}</span>
+                                          </div>
+                                          <div className="flex flex-col items-end shrink-0 ml-2">
+                                            <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${
+                                              isCorrect ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
+                                              isWrong ? 'text-rose-400/60 bg-rose-500/5 border-rose-500/10' : 
+                                              'text-slate-500 bg-slate-800/80 border-slate-700'
+                                            }`}>
+                                              {isCorrect ? `+${fin.points} PT` : isWrong ? '0 PT' : `Max ${fin.maxPts} PT`}
+                                            </span>
+                                          </div>
+                                       </div>
+                                     );
+                                   })}
+                                 </div>
+                               )}
                              </div>
-                           );
-                         })
+                           ))}
+                         </div>
                        )}
                      </div>
                    )}
