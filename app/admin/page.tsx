@@ -13,6 +13,41 @@ import {
 
 const ADMIN_EMAIL = 'ricky@mondiale.it';
 
+// ROSE REALI E COMPLETE PER I MENU A TENDINA DE LA FINALE (ORDINATE PER RUOLO: P, D, C, A)
+const PLAYERS_SPAGNA = [
+  'David Raya', 'Unai Simón', 'Joan García', 'Marc Pubill', 'Alejandro Grimaldo',
+  'Eric García', 'Marcos Llorente', 'Pedro Porro', 'Aymeric Laporte', 'Pau Cubarsí',
+  'Marc Cucurella', 'Pedri', 'Fabián Ruiz', 'Martin Zubimendi', 'Gavi', 'Rodri',
+  'Álex Baena', 'Mikel Merino', 'Mikel Oyarzabal', 'Dani Olmo', 'Nico Williams',
+  'Yéremy Pino', 'Ferran Torres', 'Borja Iglesias', 'Víctor Muñoz', 'Lamine Yamal'
+];
+
+const PLAYERS_ARGENTINA = [
+  'Emiliano Martínez', 'Gerónimo Rulli', 'Juan Musso', 'Gonzalo Montiel', 'Nahuel Molina',
+  'Cristian Romero', 'Lisandro Martínez', 'Nicolás Otamendi', 'Facundo Medina', 'Nicolás Tagliafico',
+  'Marcos Senesi', 'Rodrigo De Paul', 'Leandro Paredes', 'Alexis Mac Allister', 'Enzo Fernández',
+  'Giovani Lo Celso', 'Exequiel Palacios', 'Valentín Barco', 'Nicolás González', 'Lionel Messi',
+  'Lautaro Martínez', 'Julián Álvarez', 'Thiago Almada', 'Giuliano Simeone', 'Nico Paz',
+  'José Manuel López'
+];
+
+const PLAYERS_INGHILTERRA = [
+  'Jordan Pickford', 'Dean Henderson', 'James Trafford', 'John Stones', 'Marc Guéhi',
+  'Ezri Konsa', 'Dan Burn', 'Reece James', 'Djed Spence', 'Jarell Quansah', "Nico O'Reilly",
+  'Declan Rice', 'Jude Bellingham', 'Kobbie Mainoo', 'Jordan Henderson', 'Conor Gallagher',
+  'Morgan Rogers', 'Eberechi Eze', 'Elliot Anderson', 'Harry Kane', 'Bukayo Saka',
+  'Marcus Rashford', 'Anthony Gordon', 'Ollie Watkins', 'Noni Madueke', 'Ivan Toney'
+];
+
+const PLAYERS_FRANCIA = [
+  'Mike Maignan', 'Brice Samba', 'Robin Risser', 'Malo Gusto', 'Lucas Digne',
+  'Dayot Upamecano', 'Jules Koundé', 'Ibrahima Konaté', 'William Saliba', 'Théo Hernandez',
+  'Lucas Hernandez', 'Maxence Lacroix', "N'Golo Kanté", 'Aurélien Tchouaméni', 'Adrien Rabiot',
+  'Warren Zaïre-Emery', 'Manu Koné', 'Rayan Cherki', 'Maghnes Akliouche', 'Ousmane Dembélé',
+  'Marcus Thuram', 'Kylian Mbappé', 'Michael Olise', 'Désiré Doué', 'Jean-Philippe Mateta',
+  'Bradley Barcola'
+];
+
 const STAGES = [
   { id: 'R32', label: 'Sedicesimi (+2pt)', pts: 2 },
   { id: 'R16', label: 'Ottavi (+4pt)', pts: 4 },
@@ -268,7 +303,7 @@ const AutocompleteInput = ({
                 onClick={() => setIsOpen(false)}
                 className="w-full p-4 flex items-center gap-3 hover:bg-slate-800 transition-colors text-left"
               >
-                <User size={16} className="text-slate-500 shrink-0"/>
+                <User size={16} className="text-slate-400 shrink-0"/>
                 <span className="text-xs font-black uppercase text-slate-400">Usa custom: "{value}"</span>
               </button>
             )
@@ -328,15 +363,13 @@ export default function AdminPage() {
 
   const [bonusData, setBonusData] = useState({ red: '', top: '', penalties: '', own_goals: '', mvp_world_cup: '', best_goalkeeper: '', high: '', high_group: '', low_group: '' });
   
-  // STATI REALI INPUT SEZIONE "LA FINALE" (Senza "Squadra Campione")
+  // STATI MASTER INPUT RISULTATI REALI DE LA FINALE
   const [finaleResultData, setFinaleResultData] = useState({
-    // DOMENICA
     home_score: '', away_score: '', ending_method: 'REGULAR', f12_mvp: '',
     f12_ht_home_score: '', f12_ht_away_score: '', f12_2nd_home_score: '', f12_2nd_away_score: '',
     f12_first_to_score: '', f12_scorer: '', first_goal_minute: '', f12_fouls: '',
     f12_yellow_cards: '', f12_red_cards: '', f12_penalties: '',
     
-    // SABATO
     f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
     f34_ht_home_score: '', f34_ht_away_score: '', f34_2nd_home_score: '', f34_2nd_away_score: '',
     f34_first_to_score: '', f34_scorer: '', f34_first_goal_minute: '', f34_fouls: '',
@@ -621,16 +654,23 @@ export default function AdminPage() {
   };
 
   const handleSaveAndCalculateFinale = async () => {
-    if (finaleResultData.home_score === '' || finaleResultData.away_score === '' || finaleResultData.f34_home_score === '') {
-      return toast.error('Inserisci almeno i Risultati Esatti finali di Sabato e Domenica per procedere!');
+    if (finaleResultData.home_score === '' || finaleResultData.away_score === '' || finaleResultData.f34_home_score === '' || finaleResultData.f34_away_score === '') {
+      return toast.error('Inserisci i Risultati Esatti di entrambe le finali (Sabato e Domenica) per ricalcolare!');
     }
 
     const toastId = toast.loading('Salvataggio dati reali e ricalcolo classifiche Jackpot...');
     try {
       const parseNum = (val: string) => val === '' ? null : parseInt(val);
 
+      const team1 = officialBracket.find(ob => ob.stage === 'F_FINALE_1')?.team_name || 'Spagna';
+      const team2 = officialBracket.find(ob => ob.stage === 'F_FINALE_2')?.team_name || 'Argentina';
+      const hScore = parseNum(finaleResultData.home_score) ?? 0;
+      const aScore = parseNum(finaleResultData.away_score) ?? 0;
+      const calculatedChampion = hScore >= aScore ? team1 : team2;
+
       const officialPayload = {
         user_id: '00000000-0000-0000-0000-000000000000',
+        champion_team: calculatedChampion,
         home_score: parseNum(finaleResultData.home_score),
         away_score: parseNum(finaleResultData.away_score),
         ending_method: finaleResultData.ending_method,
@@ -641,7 +681,7 @@ export default function AdminPage() {
         f12_2nd_away_score: parseNum(finaleResultData.f12_2nd_away_score),
         f12_first_to_score: finaleResultData.f12_first_to_score || null,
         f12_scorer: finaleResultData.f12_scorer || null,
-        first_goal_minute: parseNum(finaleResultData.first_goal_minute),
+        first_goal_minute: parseNum(finaleResultData.first_goal_minute) ?? 0,
         f12_fouls: parseNum(finaleResultData.f12_fouls),
         f12_yellow_cards: parseNum(finaleResultData.f12_yellow_cards),
         f12_red_cards: parseNum(finaleResultData.f12_red_cards),
@@ -821,8 +861,8 @@ export default function AdminPage() {
       
       let maxBracketPoints = 0;
       offBracket?.forEach(ob => {
-         const uS = normalizeStage(ob.stage);
-         maxBracketPoints += STAGES.find(s => s.id === uS)?.pts || 0;
+          const uS = normalizeStage(ob.stage);
+          maxBracketPoints += STAGES.find(s => s.id === uS)?.pts || 0;
       });
 
       const isGroupsClosed = offBonuses && offBonuses.high_scoring_match && offBonuses.high_scoring_match !== 'TBD' && offBonuses.high_scoring_match.trim() !== '';
@@ -830,8 +870,8 @@ export default function AdminPage() {
 
       let maxBonusPoints = 0;
       if (offBonuses) {
-         if (isGroupsClosed) maxBonusPoints += 15;
-         if (isTournamentClosed) maxBonusPoints += 39;
+          if (isGroupsClosed) maxBonusPoints += 15;
+          if (isTournamentClosed) maxBonusPoints += 39;
       }
       
       const totalMaxPoints = maxGroupPoints + maxBracketPoints + maxBonusPoints;
@@ -1311,7 +1351,6 @@ export default function AdminPage() {
       <header className="flex flex-col items-center mb-8 pt-4 mt-8 sm:mt-4 relative">
         <h1 className="text-4xl font-black text-yellow-500 italic uppercase tracking-tighter leading-none mb-6">Control Tower</h1>
         
-        {/* BOTTONI WHATSAPP E RICALCOLO RIPRISTINATI */}
         <div className="absolute right-2 top-0 flex items-center gap-2">
           <button 
             onClick={copyWhatsAppReport} 
@@ -1343,7 +1382,7 @@ export default function AdminPage() {
 
       <div className="max-w-3xl mx-auto space-y-5">
         
-        {/* ----- SEZIONE: LA FINALE (SUPER JACKPOT ESTESO) ----- */}
+        {/* ----- SEZIONE: LA FINALE (SUPER JACKPOT CON SELEZIONI ROBUSTE) ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-yellow-500">
           <button onClick={() => setOpenSection({ ...openSection, laFinale: !openSection.laFinale })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Trophy className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">LA FINALE — MINI GAME</h2></div>
@@ -1366,28 +1405,29 @@ export default function AdminPage() {
 
               {/* NAVIGAZIONE SUB-TAB PARTITE ADMIN */}
               <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-                <button type="button" onClick={() => setActiveFinaleAdminTab('SUNDAY')} className={`flex-1 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeFinaleAdminTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-500 hover:text-white'}`}>
-                  <Trophy size={14}/> 🏆 Finalissima (Domenica)
+                <button type="button" onClick={() => setActiveFinaleAdminTab('SUNDAY')} className={`flex-1 py-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeFinaleAdminTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-400 hover:bg-slate-900'}`}>
+                  🏆 🇪🇸 SPAGNA - ARGENTINA 🇦🇷
                 </button>
-                <button type="button" onClick={() => setActiveFinaleAdminTab('SATURDAY')} className={`flex-1 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeFinaleAdminTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-500 hover:text-white'}`}>
-                  <Medal size={14}/> 🥉 3°/4° Posto (Sabato)
+                <button type="button" onClick={() => setActiveFinaleAdminTab('SATURDAY')} className={`flex-1 py-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${activeFinaleAdminTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-900'}`}>
+                  🥉 🇫🇷 FRANCIA - INGHILTERRA 🏴󠁧󠁢󠁥󠁮󠁧󠁿
                 </button>
               </div>
 
-              {/* FORM IMPUTAZIONI DATI REALI */}
+              {/* FORM IMPUTAZIONI DATI REALI CON SELECT DI RUOLO */}
               <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-4 shadow-inner">
                 
+                {/* INTERFACCIA DOMENICA */}
                 {activeFinaleAdminTab === 'SUNDAY' ? (
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <h4 className="text-[10px] text-yellow-500 font-black uppercase tracking-widest text-center border-b border-slate-800 pb-2">Inserimento Reale: Finalissima 1°/2° Posto</h4>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Casa Finali</span>
-                        <input value={finaleResultData.home_score} onChange={e => setFinaleResultData({...finaleResultData, home_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Spagna</span>
+                        <input value={finaleResultData.home_score} onChange={e => setFinaleResultData({...finaleResultData, home_score: e.target.value})} type="number" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Ospiti Finali</span>
-                        <input value={finaleResultData.away_score} onChange={e => setFinaleResultData({...finaleResultData, away_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Argentina</span>
+                        <input value={finaleResultData.away_score} onChange={e => setFinaleResultData({...finaleResultData, away_score: e.target.value})} type="number" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
@@ -1397,27 +1437,61 @@ export default function AdminPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 1° Tempo (Es. 1-0)</span>
-                        <div className="flex gap-1"><input value={finaleResultData.f12_ht_home_score} onChange={e => setFinaleResultData({...finaleResultData, f12_ht_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f12_ht_away_score} onChange={e => setFinaleResultData({...finaleResultData, f12_ht_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 1° Tempo</span>
+                        <div className="flex gap-1"><input value={finaleResultData.f12_ht_home_score} onChange={e => setFinaleResultData({...finaleResultData, f12_ht_home_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f12_ht_away_score} onChange={e => setFinaleResultData({...finaleResultData, f12_ht_away_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 2° Tempo (Es. 0-1)</span>
-                        <div className="flex gap-1"><input value={finaleResultData.f12_2nd_home_score} onChange={e => setFinaleResultData({...finaleResultData, f12_2nd_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f12_2nd_away_score} onChange={e => setFinaleResultData({...finaleResultData, f12_2nd_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 2° Tempo</span>
+                        <div className="flex gap-1"><input value={finaleResultData.f12_2nd_home_score} onChange={e => setFinaleResultData({...finaleResultData, f12_2nd_home_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f12_2nd_away_score} onChange={e => setFinaleResultData({...finaleResultData, f12_2nd_away_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
                       </div>
                     </div>
                     <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                      <input value={finaleResultData.f12_mvp} onChange={e => setFinaleResultData({...finaleResultData, f12_mvp: e.target.value})} type="text" placeholder="MVP FIFA UFFICIALE" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center focus:border-yellow-500 outline-none" />
-                      <div className="grid grid-cols-2 gap-2">
-                        <input value={finaleResultData.f12_first_to_score} onChange={e => setFinaleResultData({...finaleResultData, f12_first_to_score: e.target.value})} type="text" placeholder="SQUADRA 1° GOL" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
-                        <input value={finaleResultData.f12_scorer} onChange={e => setFinaleResultData({...finaleResultData, f12_scorer: e.target.value})} type="text" placeholder="MARCATORE MATCH" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
+                      <div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">MVP Reale Ufficiale</span>
+                        <select value={finaleResultData.f12_mvp} onChange={e => setFinaleResultData({...finaleResultData, f12_mvp: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-white uppercase outline-none focus:border-yellow-500 cursor-pointer">
+                          <option value="">-- Seleziona MVP --</option>
+                          <optgroup label="Spagna" className="bg-slate-950 text-yellow-500">
+                            {PLAYERS_SPAGNA.map(p => <option key={`mvp-f12-${p}`} value={p}>{p}</option>)}
+                          </optgroup>
+                          <optgroup label="Argentina" className="bg-slate-950 text-sky-400">
+                            {PLAYERS_ARGENTINA.map(p => <option key={`mvp-f12-${p}`} value={p}>{p}</option>)}
+                          </optgroup>
+                        </select>
                       </div>
-                      <input value={finaleResultData.first_goal_minute} onChange={e => setFinaleResultData({...finaleResultData, first_goal_minute: e.target.value})} type="number" placeholder="MINUTO 1° GOL (TIE-BREAKER)" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-center focus:border-yellow-500 outline-none" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Squadra 1° Gol</span>
+                          <select value={finaleResultData.f12_first_to_score} onChange={e => setFinaleResultData({...finaleResultData, f12_first_to_score: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-white uppercase outline-none focus:border-yellow-500 cursor-pointer">
+                            <option value="">-- Scegli Squadra --</option>
+                            <option value="Spagna">🇪🇸 Spagna</option>
+                            <option value="Argentina">🇦🇷 Argentina</option>
+                            <option value="Nessuno">❌ Nessun Gol (0-0)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Marcatore 1° Gol</span>
+                          <select value={finaleResultData.f12_scorer} onChange={e => setFinaleResultData({...finaleResultData, f12_scorer: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-white uppercase outline-none focus:border-yellow-500 cursor-pointer">
+                            <option value="">-- Seleziona Marcatore --</option>
+                            <option value="Nessuno">❌ Nessuno / Solo Autogol</option>
+                            <optgroup label="Spagna" className="bg-slate-950 text-yellow-500">
+                              {PLAYERS_SPAGNA.map(p => <option key={`scr-f12-${p}`} value={p}>{p}</option>)}
+                            </optgroup>
+                            <optgroup label="Argentina" className="bg-slate-950 text-sky-400">
+                              {PLAYERS_ARGENTINA.map(p => <option key={`scr-f12-${p}`} value={p}>{p}</option>)}
+                            </optgroup>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Minuto 1° Gol</span>
+                        <input value={finaleResultData.first_goal_minute} onChange={e => setFinaleResultData({...finaleResultData, first_goal_minute: e.target.value})} type="number" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-center focus:border-yellow-500 outline-none" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-800/60 text-center text-[8px] font-black text-slate-400">
-                      <div><span>Falli</span><input value={finaleResultData.f12_fouls} onChange={e => setFinaleResultData({...finaleResultData, f12_fouls: e.target.value})} type="number" placeholder="20" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
-                      <div><span>🟨 Gialli</span><input value={finaleResultData.f12_yellow_cards} onChange={e => setFinaleResultData({...finaleResultData, f12_yellow_cards: e.target.value})} type="number" placeholder="4" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
-                      <div><span>🟥 Rossi</span><input value={finaleResultData.f12_red_cards} onChange={e => setFinaleResultData({...finaleResultData, f12_red_cards: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
-                      <div><span>🥅 Rigori</span><input value={finaleResultData.f12_penalties} onChange={e => setFinaleResultData({...finaleResultData, f12_penalties: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>Falli</span><input value={finaleResultData.f12_fouls} onChange={e => setFinaleResultData({...finaleResultData, f12_fouls: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
+                      <div><span>🟨 Gialli</span><input value={finaleResultData.f12_yellow_cards} onChange={e => setFinaleResultData({...finaleResultData, f12_yellow_cards: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
+                      <div><span>🟥 Rossi</span><input value={finaleResultData.f12_red_cards} onChange={e => setFinaleResultData({...finaleResultData, f12_red_cards: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
+                      <div><span>🥅 Rigori</span><input value={finaleResultData.f12_penalties} onChange={e => setFinaleResultData({...finaleResultData, f12_penalties: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
                     </div>
                   </div>
                 ) : (
@@ -1425,12 +1499,14 @@ export default function AdminPage() {
                     <h4 className="text-[10px] text-amber-500 font-black uppercase tracking-widest text-center border-b border-slate-800 pb-2">Inserimento Reale: Finale 3°/4° Posto</h4>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Casa Finali</span>
-                        <input value={finaleResultData.f34_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_home_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Francia</span>
+                        {/* salva visivamente in f34_away_score per mantenere integra la vecchia mappatura del DB */}
+                        <input value={finaleResultData.f34_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_away_score: e.target.value})} type="number" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Ospiti Finali</span>
-                        <input value={finaleResultData.f34_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_away_score: e.target.value})} type="number" placeholder="0" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Gol Inghilterra</span>
+                        {/* salva visivamente in f34_home_score per mantenere integra la vecchia mappatura del DB */}
+                        <input value={finaleResultData.f34_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_home_score: e.target.value})} type="number" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
@@ -1441,36 +1517,70 @@ export default function AdminPage() {
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
                       <div className="flex flex-col gap-1">
                         <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 1° Tempo</span>
-                        <div className="flex gap-1"><input value={finaleResultData.f34_ht_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_ht_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f34_ht_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_ht_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                        <div className="flex gap-1"><input value={finaleResultData.f34_ht_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_ht_away_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f34_ht_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_ht_home_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-[8px] font-black text-slate-400 uppercase">Esatto 2° Tempo</span>
-                        <div className="flex gap-1"><input value={finaleResultData.f34_2nd_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_2nd_home_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f34_2nd_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_2nd_away_score: e.target.value})} type="number" placeholder="0" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
+                        <div className="flex gap-1"><input value={finaleResultData.f34_2nd_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_2nd_away_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /><input value={finaleResultData.f34_2nd_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_2nd_home_score: e.target.value})} type="number" className="w-1/2 bg-slate-950 border border-slate-800 p-2 rounded-xl text-center font-black" /></div>
                       </div>
                     </div>
                     <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                      <input value={finaleResultData.f34_mvp} onChange={e => setFinaleResultData({...finaleResultData, f34_mvp: e.target.value})} type="text" placeholder="MVP FIFA UFFICIALE" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center focus:border-amber-500 outline-none" />
-                      <div className="grid grid-cols-2 gap-2">
-                        <input value={finaleResultData.f34_first_to_score} onChange={e => setFinaleResultData({...finaleResultData, f34_first_to_score: e.target.value})} type="text" placeholder="SQUADRA 1° GOL" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
-                        <input value={finaleResultData.f34_scorer} onChange={e => setFinaleResultData({...finaleResultData, f34_scorer: e.target.value})} type="text" placeholder="MARCATORE MATCH" className="bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black uppercase text-center outline-none" />
+                      <div>
+                        <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">MVP Reale Ufficiale</span>
+                        <select value={finaleResultData.f34_mvp} onChange={e => setFinaleResultData({...finaleResultData, f34_mvp: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-white uppercase outline-none focus:border-amber-500 cursor-pointer">
+                          <option value="">-- Seleziona MVP --</option>
+                          <optgroup label="Francia" className="bg-slate-950 text-blue-400">
+                            {PLAYERS_FRANCIA.map(p => <option key={`mvp-f34-${p}`} value={p}>{p}</option>)}
+                          </optgroup>
+                          <optgroup label="Inghilterra" className="bg-slate-950 text-white">
+                            {PLAYERS_INGHILTERRA.map(p => <option key={`mvp-f34-${p}`} value={p}>{p}</option>)}
+                          </optgroup>
+                        </select>
                       </div>
-                      <input value={finaleResultData.f34_first_goal_minute} onChange={e => setFinaleResultData({...finaleResultData, f34_first_goal_minute: e.target.value})} type="number" placeholder="MINUTO 1° GOL" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-center focus:border-amber-500 outline-none" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Squadra 1° Gol</span>
+                          <select value={finaleResultData.f34_first_to_score} onChange={e => setFinaleResultData({...finaleResultData, f34_first_to_score: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-white uppercase outline-none focus:border-yellow-500 cursor-pointer">
+                            <option value="">-- Scegli Squadra --</option>
+                            <option value="Francia">🇫🇷 Francia</option>
+                            <option value="Inghilterra">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra</option>
+                            <option value="Nessuno">❌ Nessun Gol (0-0)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Marcatore 1° Gol</span>
+                          <select value={finaleResultData.f34_scorer} onChange={e => setFinaleResultData({...finaleResultData, f34_scorer: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-white uppercase outline-none focus:border-yellow-500 cursor-pointer">
+                            <option value="">-- Seleziona Marcatore --</option>
+                            <option value="Nessuno">❌ Nessuno / Solo Autogol</option>
+                            <optgroup label="Francia" className="bg-slate-950 text-blue-400">
+                              {PLAYERS_FRANCIA.map(p => <option key={`scr-f34-${p}`} value={p}>{p}</option>)}
+                            </optgroup>
+                            <optgroup label="Inghilterra" className="bg-slate-950 text-white">
+                              {PLAYERS_INGHILTERRA.map(p => <option key={`scr-f34-${p}`} value={p}>{p}</option>)}
+                            </optgroup>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase">Minuto 1° Gol</span>
+                        <input value={finaleResultData.f34_first_goal_minute} onChange={e => setFinaleResultData({...finaleResultData, f34_first_goal_minute: e.target.value})} type="number" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs font-black text-center focus:border-amber-500 outline-none" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-800/60 text-center text-[8px] font-black text-slate-400">
-                      <div><span>Falli</span><input value={finaleResultData.f34_fouls} onChange={e => setFinaleResultData({...finaleResultData, f34_fouls: e.target.value})} type="number" placeholder="18" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
-                      <div><span>🟨 Gialli</span><input value={finaleResultData.f34_yellow_cards} onChange={e => setFinaleResultData({...finaleResultData, f34_yellow_cards: e.target.value})} type="number" placeholder="3" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
-                      <div><span>🟥 Rossi</span><input value={finaleResultData.f34_red_cards} onChange={e => setFinaleResultData({...finaleResultData, f34_red_cards: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
-                      <div><span>🥅 Rigori</span><input value={finaleResultData.f34_penalties} onChange={e => setFinaleResultData({...finaleResultData, f34_penalties: e.target.value})} type="number" placeholder="0" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white" /></div>
+                      <div><span>Falli</span><input value={finaleResultData.f34_fouls} onChange={e => setFinaleResultData({...finaleResultData, f34_fouls: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
+                      <div><span>🟨 Gialli</span><input value={finaleResultData.f34_yellow_cards} onChange={e => setFinaleResultData({...finaleResultData, f34_yellow_cards: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
+                      <div><span>🟥 Rossi</span><input value={finaleResultData.f34_red_cards} onChange={e => setFinaleResultData({...finaleResultData, f34_red_cards: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
+                      <div><span>🥅 Rigori</span><input value={finaleResultData.f34_penalties} onChange={e => setFinaleResultData({...finaleResultData, f34_penalties: e.target.value})} type="number" className="w-full bg-slate-950 p-2 mt-1 rounded-lg font-black text-center text-white border border-slate-800" /></div>
                     </div>
                   </div>
                 )}
 
-                <button type="button" onClick={handleSaveAndCalculateFinale} className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 py-4.5 mt-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95">
+                <button type="button" onClick={handleSaveAndCalculateFinale} className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 py-4.5 mt-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-[1.01] active:scale-95">
                   <Coins size={16}/> 🏆 Salva Risultati Ufficiali & Calcola Jackpot
                 </button>
               </div>
 
-              {/* BLOCCO DISPACCIO LOGS CALCOLATI */}
+              {/* LOGS REPORT REPORT DIALOG */}
               {finaleReportText && (
                 <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col gap-3 shadow-md animate-in fade-in duration-300">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -1486,6 +1596,7 @@ export default function AdminPage() {
           )}
         </section>
 
+        {/* Tutte le altre sezioni e navbar rimangono identiche */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, annuncio: !openSection.annuncio })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Megaphone className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Annuncio Globale</h2></div>
@@ -1503,7 +1614,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE 1: STATISTICHE LIVE ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-emerald-500">
           <button onClick={() => setOpenSection({ ...openSection, liveStats: !openSection.liveStats })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Activity className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Statistiche Live Dashboard</h2></div>
@@ -1533,7 +1643,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE 2: BONUS FINALI E CHIUSURA FASI ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-purple-500">
           <button onClick={() => setOpenSection({ ...openSection, bonus: !openSection.bonus })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Star className="text-purple-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Bonus Finali (Punti)</h2></div>
@@ -1550,7 +1659,7 @@ export default function AdminPage() {
               <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                   <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2 border-t border-slate-800/50 pt-6"><Trophy size={16}/> Chiusura Mondiale</h3>
                   <div className="space-y-1">
-                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">MVP Mondiale (Interruttore Finale)</span>
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest px-1">MVP Mondiale</span>
                     <AutocompleteInput value={bonusData.mvp_world_cup} onChange={val => setBonusData({ ...bonusData, mvp_world_cup: val })} placeholder="MVP MONDIALE" suggestions={[...WORLD_CUP_PLAYERS, ...WORLD_CUP_GOALKEEPERS]} />
                   </div>
                   <div className="space-y-1">
@@ -1599,7 +1708,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* SEZIONE: ISCRIZIONI E QUOTE */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, iscrizioni: !openSection.iscrizioni })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Users className="text-emerald-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Iscrizioni ({totalUsers})</h2></div>
@@ -1625,7 +1733,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE RISULTATI GIRONI ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, risultati: !openSection.risultati })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Zap className="text-yellow-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Risultati Gironi</h2></div>
@@ -1650,7 +1757,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* ----- SEZIONE INSERIMENTO TABELLONE UFFICIALE ----- */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl border-l-4 border-l-blue-500">
           <button onClick={() => setOpenSection({ ...openSection, tabellone: !openSection.tabellone })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Trophy className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">fase finale</h2></div>
@@ -1682,7 +1788,6 @@ export default function AdminPage() {
 
       </div>
 
-      {/* FOOTER BAR */}
       <nav className="fixed bottom-0 left-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-900 pb-safe-area shadow-2xl">
         <div className="max-w-md mx-auto flex items-center justify-around py-2 px-1">
           {navItems.map((item) => (

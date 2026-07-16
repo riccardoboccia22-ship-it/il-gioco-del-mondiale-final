@@ -24,6 +24,8 @@ import {
   Coins
 } from 'lucide-react';
 
+const FINALE_REVEAL_DATE = new Date('2026-07-18T23:00:00+02:00'); // Data e ora sblocco visualizzazione pronostici
+
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
 
 const TOURNAMENT_GROUPS = [
@@ -350,8 +352,9 @@ export default function LeaderboardPage() {
   const [finaleLeaderboard, setFinaleLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // STATO PER LA RICERCA
+  // STATO PER LA RICERCA E LOCK SBLOCCO
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFinaleVisible, setIsFinaleVisible] = useState(false);
 
   // --- STATI PER LA MODALE DETTAGLI PUNTI ---
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
@@ -378,6 +381,7 @@ export default function LeaderboardPage() {
   const [eliminatedTeams, setEliminatedTeams] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    setIsFinaleVisible(new Date() >= FINALE_REVEAL_DATE);
     fetchLeaderboard();
 
     const channel = supabase
@@ -907,9 +911,11 @@ export default function LeaderboardPage() {
               <button onClick={() => setDetailTab('BONUS')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'BONUS' ? 'bg-purple-500/20 border border-purple-500/30 text-purple-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
                 <Star size={12}/> Bonus
               </button>
+              
+              {/* Il TAB LA FINALE compare SEMPRE se isFinaleActive è true, ma il contenuto sarà bloccato */}
               {isFinaleActive && (
                 <button onClick={() => setDetailTab('FINALE')} className={`flex-1 py-2 rounded-lg font-black text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${detailTab === 'FINALE' ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400 shadow-md' : 'text-slate-500 hover:text-white'}`}>
-                  <Award size={12}/> La Finale
+                  {isFinaleVisible ? <Award size={12}/> : <Lock size={12}/>} La Finale
                 </button>
               )}
             </div>
@@ -1036,7 +1042,15 @@ export default function LeaderboardPage() {
                    {/* TAB LA FINALE */}
                    {detailTab === 'FINALE' && (
                      <div className="flex flex-col h-full">
-                       {playerFinale.length === 0 ? (
+                       {!isFinaleVisible ? (
+                         <div className="text-center py-10 opacity-70 flex flex-col items-center justify-center h-full">
+                            <Lock className="mx-auto w-10 h-10 text-amber-500 mb-3" />
+                            <p className="text-amber-500 font-black uppercase tracking-widest text-sm mb-1">Pronostici Nascosti</p>
+                            <p className="text-slate-500 text-[10px] font-medium max-w-[250px] mx-auto leading-relaxed">
+                              Per non dare vantaggi, le schedine de LA FINALE saranno sbloccate e visibili a tutti solo Sabato 18 Luglio alle ore 23:00 (fischio d'inizio).
+                            </p>
+                         </div>
+                       ) : playerFinale.length === 0 ? (
                          <div className="text-center py-10 opacity-70">
                             <Award className="mx-auto w-10 h-10 text-slate-700 mb-2" />
                             <p className="text-slate-600 text-[10px] font-black uppercase tracking-widest">Nessun pronostico salvato</p>
