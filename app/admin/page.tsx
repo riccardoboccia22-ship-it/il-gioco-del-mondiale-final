@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -433,7 +434,6 @@ export default function AdminPage() {
       setIsFinaleActive(settingsRes.data.is_finale_active || false);
     }
 
-    // Caricamento Dati Ufficiali della finale dal record master (se salvato)
     const officialFinaleRow = fPredictions?.find(f => f.user_id === '00000000-0000-0000-0000-000000000000');
     if (officialFinaleRow) {
       setFinaleResultData({
@@ -585,7 +585,6 @@ export default function AdminPage() {
     }
   };
 
-  // FUNZIONE CHIRURGICA: Calcola lo score del singolo match basandosi sui pesi scelti
   const scoreSingleMatch = (p: any, o: any, isSunday: boolean) => {
     let pts = 0;
     
@@ -654,16 +653,13 @@ export default function AdminPage() {
   };
 
   const handleSaveAndCalculateFinale = async () => {
-    if (finaleResultData.home_score === '' || finaleResultData.away_score === '' || finaleResultData.f34_home_score === '' || finaleResultData.f34_away_score === '') {
-      return toast.error('Inserisci i Risultati Esatti di entrambe le finali (Sabato e Domenica) per ricalcolare!');
-    }
-
     const toastId = toast.loading('Salvataggio dati reali e ricalcolo classifiche Jackpot...');
     try {
       const parseNum = (val: string) => val === '' ? null : parseInt(val);
 
       const team1 = officialBracket.find(ob => ob.stage === 'F_FINALE_1')?.team_name || 'Spagna';
       const team2 = officialBracket.find(ob => ob.stage === 'F_FINALE_2')?.team_name || 'Argentina';
+      
       const hScore = parseNum(finaleResultData.home_score) ?? 0;
       const aScore = parseNum(finaleResultData.away_score) ?? 0;
       const calculatedChampion = hScore >= aScore ? team1 : team2;
@@ -1495,17 +1491,16 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ) : (
+                  /* INTERFACCIA SABATO (ORDINE VISIVO REALE: FRANCIA VS INGHILTERRA) */
                   <div className="space-y-4 animate-in fade-in duration-200">
                     <h4 className="text-[10px] text-amber-500 font-black uppercase tracking-widest text-center border-b border-slate-800 pb-2">Inserimento Reale: Finale 3°/4° Posto</h4>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
                         <span className="text-[8px] font-black text-slate-400 uppercase">Gol Francia</span>
-                        {/* salva visivamente in f34_away_score per mantenere integra la vecchia mappatura del DB */}
                         <input value={finaleResultData.f34_away_score} onChange={e => setFinaleResultData({...finaleResultData, f34_away_score: e.target.value})} type="number" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-[8px] font-black text-slate-400 uppercase">Gol Inghilterra</span>
-                        {/* salva visivamente in f34_home_score per mantenere integra la vecchia mappatura del DB */}
                         <input value={finaleResultData.f34_home_score} onChange={e => setFinaleResultData({...finaleResultData, f34_home_score: e.target.value})} type="number" className="bg-slate-950 border border-slate-800 p-3 rounded-xl font-black text-white text-center outline-none" />
                       </div>
                     </div>
@@ -1596,7 +1591,6 @@ export default function AdminPage() {
           )}
         </section>
 
-        {/* Tutte le altre sezioni e navbar rimangono identiche */}
         <section className="bg-slate-900 border border-slate-800 rounded-[1.5rem] overflow-hidden shadow-2xl">
           <button onClick={() => setOpenSection({ ...openSection, annuncio: !openSection.annuncio })} className="w-full p-5 flex items-center justify-between hover:bg-slate-800/30">
             <div className="flex items-center gap-3"><Megaphone className="text-blue-500" size={24} /><h2 className="text-lg font-black uppercase italic tracking-tight">Annuncio Globale</h2></div>
