@@ -24,7 +24,7 @@ import {
   Coins
 } from 'lucide-react';
 
-const FINALE_REVEAL_DATE = new Date('2026-06-18T23:00:00+02:00'); // Data e ora sblocco visualizzazione pronostici
+const FINALE_REVEAL_DATE = new Date('2026-07-18T23:00:00+02:00'); // Data e ora sblocco visualizzazione pronostici
 
 const GROUPS = ['Gruppo A', 'Gruppo B', 'Gruppo C', 'Gruppo D', 'Gruppo E', 'Gruppo F', 'Gruppo G', 'Gruppo H', 'Gruppo I', 'Gruppo J', 'Gruppo K', 'Gruppo L'];
 
@@ -1042,12 +1042,14 @@ export default function LeaderboardPage() {
                        ) : (
                          <div className="space-y-4 pb-4">
                            {Object.entries(
-                             playerFinale.reduce((acc, curr) => {
+                             playerFinale.reduce<Record<string, any[]>>((acc, curr) => {
                                if (!acc[curr.matchLabel]) acc[curr.matchLabel] = [];
                                acc[curr.matchLabel].push(curr);
                                return acc;
-                             }, {} as Record<string, any[]>)
-                           ).map(([groupLabel, items], gIdx) => (
+                             }, {})
+                           ).map(([groupLabel, items], gIdx) => {
+                             const matchItems = items as any[];
+                             return (
                              <div key={gIdx} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
                                <button 
                                  onClick={() => toggleFinaleGroup(groupLabel)}
@@ -1056,7 +1058,7 @@ export default function LeaderboardPage() {
                                  <div className="flex items-center gap-2">
                                    {groupLabel.includes('🏆') ? <Trophy className="text-yellow-500" size={16}/> : <Medal className="text-amber-500" size={16}/>}
                                    <span className={`text-[11px] font-black uppercase tracking-widest ${groupLabel.includes('🏆') ? 'text-yellow-500' : 'text-amber-500'}`}>
-                                     {groupLabel} {groupLabel.includes('🏆') ? '(Spagna - Argentina)' : '(Francia - Inghilterra)'}
+                                     {groupLabel}
                                    </span>
                                  </div>
                                  {expandedFinaleGroups[groupLabel] ? <ChevronUp size={18} className="text-slate-500" /> : <ChevronDown size={18} className="text-slate-500" />}
@@ -1064,7 +1066,7 @@ export default function LeaderboardPage() {
                                
                                {expandedFinaleGroups[groupLabel] && (
                                  <div className="p-3 pt-0 space-y-2 bg-slate-900/20">
-                                   {items.map((fin, idx) => {
+                                   {matchItems.map((fin, idx) => {
                                      const isCorrect = fin.status === 'CORRECT';
                                      const isWrong = fin.status === 'WRONG';
                                      return (
@@ -1092,7 +1094,8 @@ export default function LeaderboardPage() {
                                  </div>
                                )}
                              </div>
-                           ))}
+                           )
+                           })}
                          </div>
                        )}
                      </div>
