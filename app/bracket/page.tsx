@@ -545,23 +545,25 @@ export default function BracketPage() {
                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-yellow-900 mt-1.5 bg-yellow-400/60 inline-block px-3 py-0.5 rounded-full">Mini-Competizione a Schedina Doppia</p>
             </div>
             
-            {/* Switcher Tab per le due partite */}
+            {/* Switcher Tab per le due partite (PULITO PER MOBILE) */}
             <div className="flex bg-slate-950 p-1.5 border-b border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveFinaleTab('SUNDAY')}
-                className={`flex-1 py-3 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+                className={`flex-1 py-3 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
               >
-                <Trophy size={16} className={activeFinaleTab === 'SUNDAY' ? 'text-slate-950' : 'text-yellow-500'} />
-                <span>🇪🇸 SPAGNA - ARGENTINA 🇦🇷</span>
+                <img src="https://flagcdn.com/w40/es.png" className="w-5 h-3.5 object-cover rounded-[2px]" alt="ESP"/>
+                <span className="tracking-wider">ESP - ARG</span>
+                <img src="https://flagcdn.com/w40/ar.png" className="w-5 h-3.5 object-cover rounded-[2px]" alt="ARG"/>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveFinaleTab('SATURDAY')}
-                className={`flex-1 py-3 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+                className={`flex-1 py-3 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
               >
-                <Medal size={16} className={activeFinaleTab === 'SATURDAY' ? 'text-white' : 'text-amber-500'} />
-                <span>🇫🇷 FRANCIA - INGHILTERRA 🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+                <img src="https://flagcdn.com/w40/fr.png" className="w-5 h-3.5 object-cover rounded-[2px]" alt="FRA"/>
+                <span className="tracking-wider">FRA - ENG</span>
+                <img src="https://flagcdn.com/w40/gb-eng.png" className="w-5 h-3.5 object-cover rounded-[2px]" alt="ENG"/>
               </button>
             </div>
             
@@ -571,7 +573,11 @@ export default function BracketPage() {
               {/* === TAB 1: DOMENICA (FINALISSIMA - SPAGNA VS ARGENTINA) === */}
               {activeFinaleTab === 'SUNDAY' && (
                 <div className="space-y-6 animate-in fade-in duration-200">
-                  
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center gap-2 text-yellow-400 text-xs font-bold">
+                    <AlertCircle size={16} className="shrink-0 text-yellow-500" />
+                    <span>Pronostici per la Finale del 1° e 2° Posto: SPAGNA - ARGENTINA.</span>
+                  </div>
+
                   {/* RISULTATO FINALE NEI 90/120 */}
                   <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
                      <div className="flex justify-between items-center">
@@ -779,7 +785,11 @@ export default function BracketPage() {
               {/* === TAB 2: SABATO (FINALE 3°/4° POSTO - FRANCIA VS INGHILTERRA) === */}
               {activeFinaleTab === 'SATURDAY' && (
                 <div className="space-y-6 animate-in fade-in duration-200">
-                  
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl flex items-center gap-2 text-amber-400 text-xs font-bold">
+                    <AlertCircle size={16} className="shrink-0 text-amber-500" />
+                    <span>Pronostici per la Finale 3°/4° Posto: FRANCIA - INGHILTERRA.</span>
+                  </div>
+
                   {/* RISULTATO FINALE NEI 90/120 - INVERTITO VISIVAMENTE */}
                   <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
                      <div className="flex justify-between items-center">
@@ -966,7 +976,7 @@ export default function BracketPage() {
                     <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest block">Statistiche Disciplinari & Falli</label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Falli totali <span className="text-amber-400">+6PT</span></span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Falli Fischiati <span className="text-amber-400">+6PT</span></span>
                         <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_fouls} onChange={e => setFinalePrediction({...finalePrediction, f34_fouls: e.target.value})} className="w-full bg-slate-950 border border-slate-700 p-1.5 rounded-lg text-xs font-black text-center text-white outline-none focus:border-yellow-500" />
                       </div>
                       <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-center">
