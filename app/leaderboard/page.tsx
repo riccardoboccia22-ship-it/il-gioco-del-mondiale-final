@@ -350,14 +350,15 @@ export default function LeaderboardPage() {
   const [playerBrackets, setPlayerBrackets] = useState<any[]>([]);
   const [playerBonuses, setPlayerBonuses] = useState<any[]>([]);
   const [playerFinale, setPlayerFinale] = useState<any[]>([]);
+  const [officialFinale, setOfficialFinale] = useState<any>(null); // Nuovo stato per risultati live
   
   const [detailTab, setDetailTab] = useState<'MATCHES' | 'BRACKET' | 'BONUS' | 'FINALE'>('MATCHES');
 
-  // STATO PER I GRUPPI DELLA FINALE (Fisarmonica)
-  const [expandedFinaleGroups, setExpandedFinaleGroups] = useState<Record<string, boolean>>({
-    '🏆 FINALISSIMA': true,
-    '🥉 3°/4° POSTO': false
-  });
+ // STATO PER I GRUPPI DELLA FINALE (Fisarmonica)
+ const [expandedFinaleGroups, setExpandedFinaleGroups] = useState<Record<string, boolean>>({
+  '🏆 FINALISSIMA': false,
+  '🥉 3°/4° POSTO': false
+});
 
   const [officialBracket, setOfficialBracket] = useState<any[]>([]);
   const [officialBonuses, setOfficialBonuses] = useState<any>(null);
@@ -387,18 +388,24 @@ export default function LeaderboardPage() {
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (!profile || !profile.full_name) { router.push('/setup-profilo'); return; }
 
-      const [profRes, offBracketRes, offBonusRes, finaleRes, settingsRes] = await Promise.all([
+      // Aggiunto fetching dei risultati live della finale (utente admin: tutti zeri)
+      const [profRes, offBracketRes, offBonusRes, finaleRes, settingsRes, officialFinaleRes] = await Promise.all([
         supabase.from('profiles').select('*'),
         supabase.from('official_bracket').select('*'),
         supabase.from('official_bonuses').select('*').eq('id', '00000000-0000-0000-0000-000000000000').maybeSingle(),
         supabase.from('final_match_predictions').select('user_id, total_points'),
-        supabase.from('app_settings').select('is_finale_active').eq('id', 1).maybeSingle()
+        supabase.from('app_settings').select('is_finale_active').eq('id', 1).maybeSingle(),
+        supabase.from('final_match_predictions').select('*').eq('user_id', '00000000-0000-0000-0000-000000000000').maybeSingle()
       ]);
 
       if (profRes.error) throw profRes.error;
 
       if (settingsRes.data) {
         setIsFinaleActive(settingsRes.data.is_finale_active);
+      }
+
+      if (officialFinaleRes.data) {
+        setOfficialFinale(officialFinaleRes.data);
       }
 
       if (profRes.data) {
@@ -568,44 +575,189 @@ export default function LeaderboardPage() {
           return b.sortOrder - a.sortOrder;
       }));
 
+      // --- LOGICA DI CONFRONTO E ASSEGNAZIONE LIVE DEI PUNTI PER LA FINALE ---
       const { data: finaleData } = await supabase.from('final_match_predictions').select('*').eq('user_id', player.id).maybeSingle();
       const processedFinale: any[] = [];
+      
       if (finaleData) {
-        const addFin = (matchLabel: string, label: string, val: any, maxPts: number) => {
-          if (val === null || val === undefined || val === '') return;
+        const o = officialFinale || {}; // Risultati ufficiali inseriti dall'admin (es. in diretta)
+
+        const addFin = (matchLabel: string, label: string, userVal: any, maxPts: number, earnedPts: number, isEvaluated: boolean) => {
+          if (userVal === null || userVal === undefined || userVal === '') return;
+          let status = 'PENDING';
+          if (isEvaluated) {
+             status = earnedPts > 0 ? 'CORRECT' : 'WRONG';
+          }
           processedFinale.push({
-            matchLabel, label, answer: String(val), points: 0, status: 'PENDING', maxPts
+            matchLabel, label, answer: String(userVal), points: earnedPts, status, maxPts
           });
         };
 
+        // --- DOMENICA (F12) ---
         const l12 = '🏆 FINALISSIMA';
-        if (finaleData.home_score != null && finaleData.away_score != null) addFin(l12, 'Risultato Esatto', `${finaleData.home_score} - ${finaleData.away_score}`, 30);
-        addFin(l12, 'Esito e Modalità', finaleData.ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
-        addFin(l12, 'MVP (FIFA)', finaleData.f12_mvp, 12);
-        if (finaleData.f12_ht_home_score != null) addFin(l12, 'Esatto 1° Tempo', `${finaleData.f12_ht_home_score} - ${finaleData.f12_ht_away_score}`, 10);
-        if (finaleData.f12_2nd_home_score != null) addFin(l12, 'Esatto 2° Tempo', `${finaleData.f12_2nd_home_score} - ${finaleData.f12_2nd_away_score}`, 10);
-        addFin(l12, 'Squadra 1° Gol', finaleData.f12_first_to_score, 5);
-        addFin(l12, 'Marcatore', finaleData.f12_scorer, 11);
-        addFin(l12, 'Minuto 1° Gol', finaleData.first_goal_minute, 10);
-        addFin(l12, 'Falli Fischiati', finaleData.f12_fouls, 6);
-        addFin(l12, '🟨 Cartellini Gialli', finaleData.f12_yellow_cards, 3);
-        addFin(l12, '🟥 Cartellini Rossi', finaleData.f12_red_cards, 3);
-        addFin(l12, '🥅 Rigori Fischiati', finaleData.f12_penalties, 1);
 
+        // Risultato Esatto & Modalità
+        if (finaleData.home_score != null && finaleData.away_score != null) {
+          const isEval = o.home_score != null && o.home_score !== '' && o.away_score != null && o.away_score !== '';
+          const isCorrect = isEval && Number(finaleData.home_score) === Number(o.home_score) && Number(finaleData.away_score) === Number(o.away_score);
+          addFin(l12, 'Risultato Esatto', `${finaleData.home_score} - ${finaleData.away_score}`, 30, isCorrect ? 30 : 0, isEval);
+          
+          const methodCorrect = isEval && finaleData.ending_method === o.ending_method;
+          addFin(l12, 'Esito e Modalità', finaleData.ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10, methodCorrect ? 10 : 0, isEval);
+        }
+        
+        // MVP
+        if (finaleData.f12_mvp) {
+          const isEval = !!o.f12_mvp;
+          const isCorrect = isEval && cleanString(finaleData.f12_mvp) === cleanString(o.f12_mvp);
+          addFin(l12, 'MVP (FIFA)', finaleData.f12_mvp, 12, isCorrect ? 12 : 0, isEval);
+        }
+        
+        // Esatto 1° Tempo
+        if (finaleData.f12_ht_home_score != null && finaleData.f12_ht_away_score != null) {
+          const isEval = o.f12_ht_home_score != null && o.f12_ht_home_score !== '' && o.f12_ht_away_score != null && o.f12_ht_away_score !== '';
+          const isCorrect = isEval && Number(finaleData.f12_ht_home_score) === Number(o.f12_ht_home_score) && Number(finaleData.f12_ht_away_score) === Number(o.f12_ht_away_score);
+          addFin(l12, 'Esatto 1° Tempo', `${finaleData.f12_ht_home_score} - ${finaleData.f12_ht_away_score}`, 10, isCorrect ? 10 : 0, isEval);
+        }
+
+        // Esatto 2° Tempo
+        if (finaleData.f12_2nd_home_score != null && finaleData.f12_2nd_away_score != null) {
+          const isEval = o.f12_2nd_home_score != null && o.f12_2nd_home_score !== '' && o.f12_2nd_away_score != null && o.f12_2nd_away_score !== '';
+          const isCorrect = isEval && Number(finaleData.f12_2nd_home_score) === Number(o.f12_2nd_home_score) && Number(finaleData.f12_2nd_away_score) === Number(o.f12_2nd_away_score);
+          addFin(l12, 'Esatto 2° Tempo', `${finaleData.f12_2nd_home_score} - ${finaleData.f12_2nd_away_score}`, 10, isCorrect ? 10 : 0, isEval);
+        }
+
+        // Squadra 1° Gol
+        if (finaleData.f12_first_to_score) {
+          const isEval = !!o.f12_first_to_score;
+          const isCorrect = isEval && cleanString(finaleData.f12_first_to_score) === cleanString(o.f12_first_to_score);
+          addFin(l12, 'Squadra 1° Gol', finaleData.f12_first_to_score, 5, isCorrect ? 5 : 0, isEval);
+        }
+
+        // Marcatore
+        if (finaleData.f12_scorer) {
+          const isEval = !!o.f12_scorer;
+          const isCorrect = isEval && cleanString(finaleData.f12_scorer) === cleanString(o.f12_scorer);
+          addFin(l12, 'Marcatore', finaleData.f12_scorer, 11, isCorrect ? 11 : 0, isEval);
+        }
+
+        // Minuto 1° Gol
+        if (finaleData.first_goal_minute != null) {
+          const isEval = o.first_goal_minute != null && o.first_goal_minute !== '';
+          const isCorrect = isEval && Number(finaleData.first_goal_minute) === Number(o.first_goal_minute);
+          addFin(l12, 'Minuto 1° Gol', finaleData.first_goal_minute, 10, isCorrect ? 10 : 0, isEval);
+        }
+
+        // Falli Fischiati
+        if (finaleData.f12_fouls != null) {
+          const isEval = o.f12_fouls != null && o.f12_fouls !== '';
+          const isCorrect = isEval && Number(finaleData.f12_fouls) === Number(o.f12_fouls);
+          addFin(l12, 'Falli Fischiati', finaleData.f12_fouls, 6, isCorrect ? 6 : 0, isEval);
+        }
+        
+        // Cartellini Gialli
+        if (finaleData.f12_yellow_cards != null) {
+          const isEval = o.f12_yellow_cards != null && o.f12_yellow_cards !== '';
+          const isCorrect = isEval && Number(finaleData.f12_yellow_cards) === Number(o.f12_yellow_cards);
+          addFin(l12, '🟨 Cartellini Gialli', finaleData.f12_yellow_cards, 3, isCorrect ? 3 : 0, isEval);
+        }
+        
+        // Cartellini Rossi
+        if (finaleData.f12_red_cards != null) {
+          const isEval = o.f12_red_cards != null && o.f12_red_cards !== '';
+          const isCorrect = isEval && Number(finaleData.f12_red_cards) === Number(o.f12_red_cards);
+          addFin(l12, '🟥 Cartellini Rossi', finaleData.f12_red_cards, 3, isCorrect ? 3 : 0, isEval);
+        }
+        
+        // Rigori
+        if (finaleData.f12_penalties != null) {
+          const isEval = o.f12_penalties != null && o.f12_penalties !== '';
+          const isCorrect = isEval && Number(finaleData.f12_penalties) === Number(o.f12_penalties);
+          addFin(l12, '🥅 Rigori Fischiati', finaleData.f12_penalties, 1, isCorrect ? 1 : 0, isEval);
+        }
+
+        // --- SABATO (F34) ---
         const l34 = '🥉 3°/4° POSTO';
-        // Invertiamo l'ordine visuale pescando l'away_score (Francia) come prima cifra e home_score (Inghilterra) come seconda
-        if (finaleData.f34_home_score != null && finaleData.f34_away_score != null) addFin(l34, 'Risultato Esatto', `${finaleData.f34_away_score} - ${finaleData.f34_home_score}`, 30);
-        addFin(l34, 'Esito e Modalità', finaleData.f34_ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.f34_ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10);
-        addFin(l34, 'MVP (FIFA)', finaleData.f34_mvp, 12);
-        if (finaleData.f34_ht_home_score != null) addFin(l34, 'Esatto 1° Tempo', `${finaleData.f34_ht_away_score} - ${finaleData.f34_ht_home_score}`, 10);
-        if (finaleData.f34_2nd_home_score != null) addFin(l34, 'Esatto 2° Tempo', `${finaleData.f34_2nd_away_score} - ${finaleData.f34_2nd_home_score}`, 10);
-        addFin(l34, 'Squadra 1° Gol', finaleData.f34_first_to_score, 5);
-        addFin(l34, 'Marcatore', finaleData.f34_scorer, 11);
-        addFin(l34, 'Minuto 1° Gol', finaleData.f34_first_goal_minute, 10);
-        addFin(l34, 'Falli Fischiati', finaleData.f34_fouls, 6);
-        addFin(l34, '🟨 Cartellini Gialli', finaleData.f34_yellow_cards, 3);
-        addFin(l34, '🟥 Cartellini Rossi', finaleData.f34_red_cards, 3);
-        addFin(l34, '🥅 Rigori Fischiati', finaleData.f34_penalties, 1);
+        
+        // Risultato Esatto (Display Invertito away - home)
+        if (finaleData.f34_home_score != null && finaleData.f34_away_score != null) {
+          const isEval = o.f34_home_score != null && o.f34_away_score != null && o.f34_home_score !== '' && o.f34_away_score !== '';
+          const isCorrect = isEval && Number(finaleData.f34_home_score) === Number(o.f34_home_score) && Number(finaleData.f34_away_score) === Number(o.f34_away_score);
+          addFin(l34, 'Risultato Esatto', `${finaleData.f34_away_score} - ${finaleData.f34_home_score}`, 30, isCorrect ? 30 : 0, isEval);
+          
+          const methodCorrect = isEval && finaleData.f34_ending_method === o.f34_ending_method;
+          addFin(l34, 'Esito e Modalità', finaleData.f34_ending_method === 'REGULAR' ? 'Nei 90\'' : finaleData.f34_ending_method === 'OVERTIME' ? 'Supplementari' : 'Rigori', 10, methodCorrect ? 10 : 0, isEval);
+        }
+        
+        // MVP
+        if (finaleData.f34_mvp) {
+          const isEval = !!o.f34_mvp;
+          const isCorrect = isEval && cleanString(finaleData.f34_mvp) === cleanString(o.f34_mvp);
+          addFin(l34, 'MVP (FIFA)', finaleData.f34_mvp, 12, isCorrect ? 12 : 0, isEval);
+        }
+        
+        // Esatto 1° Tempo (Invertito away - home)
+        if (finaleData.f34_ht_home_score != null && finaleData.f34_ht_away_score != null) {
+          const isEval = o.f34_ht_home_score != null && o.f34_ht_away_score != null && o.f34_ht_home_score !== '' && o.f34_ht_away_score !== '';
+          const isCorrect = isEval && Number(finaleData.f34_ht_home_score) === Number(o.f34_ht_home_score) && Number(finaleData.f34_ht_away_score) === Number(o.f34_ht_away_score);
+          addFin(l34, 'Esatto 1° Tempo', `${finaleData.f34_ht_away_score} - ${finaleData.f34_ht_home_score}`, 10, isCorrect ? 10 : 0, isEval);
+        }
+        
+        // Esatto 2° Tempo (Invertito away - home)
+        if (finaleData.f34_2nd_home_score != null && finaleData.f34_2nd_away_score != null) {
+          const isEval = o.f34_2nd_home_score != null && o.f34_2nd_away_score != null && o.f34_2nd_home_score !== '' && o.f34_2nd_away_score !== '';
+          const isCorrect = isEval && Number(finaleData.f34_2nd_home_score) === Number(o.f34_2nd_home_score) && Number(finaleData.f34_2nd_away_score) === Number(o.f34_2nd_away_score);
+          addFin(l34, 'Esatto 2° Tempo', `${finaleData.f34_2nd_away_score} - ${finaleData.f34_2nd_home_score}`, 10, isCorrect ? 10 : 0, isEval);
+        }
+
+        // Squadra 1° Gol
+        if (finaleData.f34_first_to_score) {
+          const isEval = !!o.f34_first_to_score;
+          const isCorrect = isEval && cleanString(finaleData.f34_first_to_score) === cleanString(o.f34_first_to_score);
+          addFin(l34, 'Squadra 1° Gol', finaleData.f34_first_to_score, 5, isCorrect ? 5 : 0, isEval);
+        }
+
+        // Marcatore
+        if (finaleData.f34_scorer) {
+          const isEval = !!o.f34_scorer;
+          const isCorrect = isEval && cleanString(finaleData.f34_scorer) === cleanString(o.f34_scorer);
+          addFin(l34, 'Marcatore', finaleData.f34_scorer, 11, isCorrect ? 11 : 0, isEval);
+        }
+
+        // Minuto 1° Gol
+        if (finaleData.f34_first_goal_minute != null) {
+          const isEval = o.f34_first_goal_minute != null && o.f34_first_goal_minute !== '';
+          const isCorrect = isEval && Number(finaleData.f34_first_goal_minute) === Number(o.f34_first_goal_minute);
+          addFin(l34, 'Minuto 1° Gol', finaleData.f34_first_goal_minute, 10, isCorrect ? 10 : 0, isEval);
+        }
+
+        // Falli Fischiati
+        if (finaleData.f34_fouls != null) {
+          const isEval = o.f34_fouls != null && o.f34_fouls !== '';
+          const isCorrect = isEval && Number(finaleData.f34_fouls) === Number(o.f34_fouls);
+          addFin(l34, 'Falli Fischiati', finaleData.f34_fouls, 6, isCorrect ? 6 : 0, isEval);
+        }
+        
+        // Cartellini Gialli
+        if (finaleData.f34_yellow_cards != null) {
+          const isEval = o.f34_yellow_cards != null && o.f34_yellow_cards !== '';
+          const isCorrect = isEval && Number(finaleData.f34_yellow_cards) === Number(o.f34_yellow_cards);
+          addFin(l34, '🟨 Cartellini Gialli', finaleData.f34_yellow_cards, 3, isCorrect ? 3 : 0, isEval);
+        }
+        
+        // Cartellini Rossi
+        if (finaleData.f34_red_cards != null) {
+          const isEval = o.f34_red_cards != null && o.f34_red_cards !== '';
+          const isCorrect = isEval && Number(finaleData.f34_red_cards) === Number(o.f34_red_cards);
+          addFin(l34, '🟥 Cartellini Rossi', finaleData.f34_red_cards, 3, isCorrect ? 3 : 0, isEval);
+        }
+        
+        // Rigori
+        if (finaleData.f34_penalties != null) {
+          const isEval = o.f34_penalties != null && o.f34_penalties !== '';
+          const isCorrect = isEval && Number(finaleData.f34_penalties) === Number(o.f34_penalties);
+          addFin(l34, '🥅 Rigori Fischiati', finaleData.f34_penalties, 1, isCorrect ? 1 : 0, isEval);
+        }
       }
       setPlayerFinale(processedFinale);
 
@@ -1031,7 +1183,7 @@ export default function LeaderboardPage() {
                      </div>
                    )}
 
-                   {/* TAB LA FINALE CON FISARMONICA */}
+                   {/* TAB LA FINALE CON FISARMONICA (RISULTATI LIVE IN VERDE) */}
                    {detailTab === 'FINALE' && (
                      <div className="flex flex-col h-full">
                        {!isFinaleVisible ? (
@@ -1079,17 +1231,17 @@ export default function LeaderboardPage() {
                                      const isWrong = fin.status === 'WRONG';
                                      return (
                                        <div key={idx} className={`border rounded-xl p-3 flex justify-between items-center transition-colors ${
-                                         isCorrect ? 'bg-amber-950/20 border-amber-500/40' :
+                                         isCorrect ? 'bg-emerald-950/20 border-emerald-500/40' :
                                          isWrong ? 'bg-rose-950/10 border-rose-900/30 opacity-70' :
                                          'bg-slate-900/50 border-slate-800/80'
                                        }`}>
                                           <div className="flex flex-col min-w-0">
-                                             <span className={`text-[9px] font-bold uppercase tracking-widest ${isCorrect ? 'text-amber-400' : isWrong ? 'text-rose-400/70' : 'text-slate-300'}`}>{fin.label}</span>
+                                             <span className={`text-[9px] font-bold uppercase tracking-widest ${isCorrect ? 'text-emerald-400' : isWrong ? 'text-rose-400/70' : 'text-slate-300'}`}>{fin.label}</span>
                                              <span className={`text-[11px] font-black uppercase italic truncate mt-0.5 ${isWrong ? 'text-rose-500 line-through' : 'text-white'}`}>{fin.answer}</span>
                                           </div>
                                           <div className="flex flex-col items-end shrink-0 ml-2">
                                             <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${
-                                              isCorrect ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
+                                              isCorrect ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 
                                               isWrong ? 'text-rose-400/60 bg-rose-500/5 border-rose-500/10' : 
                                               'text-slate-500 bg-slate-800/80 border-slate-700'
                                             }`}>
