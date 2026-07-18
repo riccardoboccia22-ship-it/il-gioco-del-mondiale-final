@@ -630,24 +630,49 @@ export default function AdminPage() {
     const pPen = isSunday ? p.f12_penalties : p.f34_penalties;
     const oPen = isSunday ? o.f12_penalties : o.f34_penalties;
 
-    if (pHome !== null && pAway !== null && oHome !== null && oAway !== null) {
-      if (parseInt(pHome) === parseInt(oHome) && parseInt(pAway) === parseInt(oAway)) pts += 30;
+    // --- CALCOLO CONDIZIONALE PER I LIVE ---
+    
+    // Risultato finale e modalità di conclusione (assegnato SOLO a fine partita)
+    if (oHome !== null && oAway !== null && oHome !== '' && oAway !== '') {
+      if (pHome !== null && pAway !== null) {
+        if (parseInt(pHome) === parseInt(oHome) && parseInt(pAway) === parseInt(oAway)) pts += 30;
+      }
+      if (pMethod && oMethod && pMethod === oMethod) pts += 10;
     }
-    if (pMethod && oMethod && pMethod === oMethod) pts += 10;
-    if (pMvp && oMvp && cleanString(pMvp) === cleanString(oMvp)) pts += 12;
-    if (pHtH !== null && pHtA !== null && oHtH !== null && oHtA !== null) {
-      if (parseInt(pHtH) === parseInt(oHtH) && parseInt(pHtA) === parseInt(oHtA)) pts += 10;
+    
+    // MVP
+    if (oMvp && pMvp && oMvp !== '' && cleanString(pMvp) === cleanString(oMvp)) pts += 12;
+    
+    // Risultato Esatto 1° Tempo
+    if (oHtH !== null && oHtA !== null && oHtH !== '' && oHtA !== '') {
+      if (pHtH !== null && pHtA !== null) {
+        if (parseInt(pHtH) === parseInt(oHtH) && parseInt(pHtA) === parseInt(oHtA)) pts += 10;
+      }
     }
-    if (p2ndH !== null && p2ndA !== null && o2ndH !== null && o2ndA !== null) {
-      if (parseInt(p2ndH) === parseInt(o2ndH) && parseInt(p2ndA) === parseInt(o2ndA)) pts += 10;
+    
+    // Risultato Esatto 2° Tempo
+    if (o2ndH !== null && o2ndA !== null && o2ndH !== '' && o2ndA !== '') {
+      if (p2ndH !== null && p2ndA !== null) {
+        if (parseInt(p2ndH) === parseInt(o2ndH) && parseInt(p2ndA) === parseInt(o2ndA)) pts += 10;
+      }
     }
-    if (pFirst && oFirst && cleanString(pFirst) === cleanString(oFirst)) pts += 5;
-    if (pScorer && oScorer && cleanString(pScorer) === cleanString(oScorer)) pts += 11;
-    if (pMin !== null && oMin !== null && parseInt(pMin) === parseInt(oMin)) pts += 10;
-    if (pFouls !== null && oFouls !== null && parseInt(pFouls) === parseInt(oFouls)) pts += 6;
-    if (pYel !== null && oYel !== null && parseInt(pYel) === parseInt(oYel)) pts += 3;
-    if (pRed !== null && oRed !== null && parseInt(pRed) === parseInt(oRed)) pts += 3;
-    if (pPen !== null && oPen !== null && parseInt(pPen) === parseInt(oPen)) pts += 1;
+    
+    // Squadra 1° Gol
+    if (oFirst && pFirst && oFirst !== '' && cleanString(pFirst) === cleanString(oFirst)) pts += 5;
+    
+    // Marcatore
+    if (oScorer && pScorer && oScorer !== '' && cleanString(pScorer) === cleanString(oScorer)) pts += 11;
+    
+    // Minuto 1° Gol
+    if (oMin !== null && oMin !== '' && pMin !== null) {
+      if (parseInt(pMin) === parseInt(oMin)) pts += 10;
+    }
+    
+    // Statistiche (Falli, Gialli, Rossi, Rigori)
+    if (oFouls !== null && oFouls !== '' && pFouls !== null && parseInt(pFouls) === parseInt(oFouls)) pts += 6;
+    if (oYel !== null && oYel !== '' && pYel !== null && parseInt(pYel) === parseInt(oYel)) pts += 3;
+    if (oRed !== null && oRed !== '' && pRed !== null && parseInt(pRed) === parseInt(oRed)) pts += 3;
+    if (oPen !== null && oPen !== '' && pPen !== null && parseInt(pPen) === parseInt(oPen)) pts += 1;
 
     return pts;
   };
