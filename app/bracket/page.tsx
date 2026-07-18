@@ -376,7 +376,7 @@ export default function BracketPage() {
           f12_ht_home_score: '', f12_ht_away_score: '', f12_2nd_home_score: '', f12_2nd_away_score: '',
           f12_first_to_score: '', f12_scorer: '', first_goal_minute: '', f12_fouls: '',
           f12_yellow_cards: '', f12_red_cards: '', f12_penalties: '',
-          f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '', // PEZZA APPLICATA QUI (f34_away_score)
+          f34_home_score: '', f34_away_score: '', f34_ending_method: 'REGULAR', f34_mvp: '',
           f34_ht_home_score: '', f34_ht_away_score: '', f34_2nd_home_score: '', f34_2nd_away_score: '',
           f34_first_to_score: '', f34_scorer: '', f34_first_goal_minute: '', f34_fouls: '',
           f34_yellow_cards: '', f34_red_cards: '', f34_penalties: ''
@@ -423,7 +423,7 @@ export default function BracketPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Utente non trovato');
       const rows = Object.entries(selections).filter(([_, t]) => t !== '' && t !== null).map(([k, t]) => ({
-        user_id: user.id, stage: k.split('-')[0], team_name: t,
+        user_id: user.id, stage: k.split('-')[0], team_name: t as string,
       }));
       
       await supabase.from('brackets').delete().eq('user_id', user.id);
@@ -552,23 +552,27 @@ export default function BracketPage() {
                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-yellow-900 mt-1.5 bg-yellow-400/60 inline-block px-3 py-0.5 rounded-full">Mini-Competizione a Schedina Doppia</p>
             </div>
             
-            {/* Switcher Tab per le due partite */}
+            {/* Switcher Tab per le due partite CON BANDIERE */}
             <div className="flex bg-slate-950 p-1.5 border-b border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveFinaleTab('SUNDAY')}
-                className={`flex-1 py-3 px-2 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+                className={`flex-1 py-3 px-1 sm:px-2 rounded-xl font-black uppercase tracking-wider text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
               >
-                <Trophy size={16} className={activeFinaleTab === 'SUNDAY' ? 'text-slate-950' : 'text-yellow-500'} />
-                <span>🏆 1°/2° Posto (Dom 19/07)</span>
+                <img src={getFileFlag('Spagna')!} className="w-4 h-3 sm:w-5 sm:h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700/50" alt="ESP" />
+                <span className="hidden sm:inline">1°/2° Spagna - Argentina</span>
+                <span className="sm:hidden">1°/2° ESP-ARG</span>
+                <img src={getFileFlag('Argentina')!} className="w-4 h-3 sm:w-5 sm:h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700/50" alt="ARG" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveFinaleTab('SATURDAY')}
-                className={`flex-1 py-3 px-2 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+                className={`flex-1 py-3 px-1 sm:px-2 rounded-xl font-black uppercase tracking-wider text-[10px] sm:text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
               >
-                <Medal size={16} className={activeFinaleTab === 'SATURDAY' ? 'text-white' : 'text-amber-500'} />
-                <span>🥉 3°/4° Posto (Sab 18/07)</span>
+                <img src={getFileFlag('Inghilterra')!} className="w-4 h-3 sm:w-5 sm:h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700/50" alt="ENG" />
+                <span className="hidden sm:inline">3°/4° Inghilterra - Francia</span>
+                <span className="sm:hidden">3°/4° ENG-FRA</span>
+                <img src={getFileFlag('Francia')!} className="w-4 h-3 sm:w-5 sm:h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-700/50" alt="FRA" />
               </button>
             </div>
             
@@ -588,15 +592,21 @@ export default function BracketPage() {
                      <div className="flex justify-between items-center">
                         <label className="text-[11px] font-black text-yellow-500 uppercase tracking-widest flex items-center gap-2">
                            <span className="bg-yellow-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
-                           Risultato Esatto Finale (Spagna - Argentina)
+                           Risultato Esatto Finale
                         </label>
                         <span className="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded font-black">+30 PT</span>
                      </div>
-                     <p className="text-[10px] text-slate-400 font-medium">Punteggio al termine dei 90' o 120' minuti (esclusi rigori).</p>
+                     <p className="text-[10px] text-slate-400 font-medium text-center mt-2 border-b border-slate-800/50 pb-2 mb-2">Punteggio al termine dei 90' o 120' minuti (esclusi rigori).</p>
                      <div className="flex items-center gap-4 justify-center pt-1">
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.home_score} onChange={e => setFinalePrediction({...finalePrediction, home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
-                        <span className="text-2xl font-black text-slate-600">-</span>
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.away_score} onChange={e => setFinalePrediction({...finalePrediction, away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                        <div className="flex flex-col items-center gap-2">
+                           <img src={getFileFlag('Spagna')!} className="w-8 h-5 object-cover rounded shadow-sm border border-slate-700" alt="ESP"/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.home_score} onChange={e => setFinalePrediction({...finalePrediction, home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                        </div>
+                        <span className="text-2xl font-black text-slate-600 mt-6">-</span>
+                        <div className="flex flex-col items-center gap-2">
+                           <img src={getFileFlag('Argentina')!} className="w-8 h-5 object-cover rounded shadow-sm border border-slate-700" alt="ARG"/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.away_score} onChange={e => setFinalePrediction({...finalePrediction, away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-yellow-500 focus:border-yellow-500 outline-none shadow-inner" placeholder="0" />
+                        </div>
                      </div>
                   </div>
 
@@ -634,9 +644,15 @@ export default function BracketPage() {
                         <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
                       <div className="flex items-center gap-2 justify-center">
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_ht_home_score} onChange={e => setFinalePrediction({...finalePrediction, f12_ht_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <img src={getFileFlag('Spagna')!} className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_ht_home_score} onChange={e => setFinalePrediction({...finalePrediction, f12_ht_home_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none pl-6" placeholder="0" />
+                        </div>
                         <span className="font-bold text-slate-600">-</span>
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_ht_away_score} onChange={e => setFinalePrediction({...finalePrediction, f12_ht_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_ht_away_score} onChange={e => setFinalePrediction({...finalePrediction, f12_ht_away_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none pr-6" placeholder="0" />
+                           <img src={getFileFlag('Argentina')!} className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                        </div>
                       </div>
                     </div>
 
@@ -646,9 +662,15 @@ export default function BracketPage() {
                         <span className="text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
                       <div className="flex items-center gap-2 justify-center">
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_2nd_home_score} onChange={e => setFinalePrediction({...finalePrediction, f12_2nd_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <img src={getFileFlag('Spagna')!} className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_2nd_home_score} onChange={e => setFinalePrediction({...finalePrediction, f12_2nd_home_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none pl-6" placeholder="0" />
+                        </div>
                         <span className="font-bold text-slate-600">-</span>
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_2nd_away_score} onChange={e => setFinalePrediction({...finalePrediction, f12_2nd_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f12_2nd_away_score} onChange={e => setFinalePrediction({...finalePrediction, f12_2nd_away_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-yellow-500 outline-none pr-6" placeholder="0" />
+                           <img src={getFileFlag('Argentina')!} className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -679,9 +701,9 @@ export default function BracketPage() {
                         </div>
                         <select disabled={isFinaleExpired} value={finalePrediction.f12_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f12_first_to_score: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
                           <option value="">-- Scegli Squadra --</option>
-                          <option value="Spagna">Spagna</option>
-                          <option value="Argentina">Argentina</option>
-                          <option value="Nessuno">Nessun Gol (0-0)</option>
+                          <option value="Spagna">🇪🇸 Spagna</option>
+                          <option value="Argentina">🇦🇷 Argentina</option>
+                          <option value="Nessuno">❌ Nessun Gol (0-0)</option>
                         </select>
                       </div>
                       <div className="space-y-1">
@@ -749,15 +771,21 @@ export default function BracketPage() {
                      <div className="flex justify-between items-center">
                         <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
                            <span className="bg-amber-500 text-slate-950 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold">1</span>
-                           Risultato Esatto Finale (Inghilterra - Francia)
+                           Risultato Esatto Finale
                         </label>
                         <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-black">+30 PT</span>
                      </div>
-                     <p className="text-[10px] text-slate-400 font-medium">Punteggio al termine dei 90' o 120' minuti (esclusi rigori).</p>
+                     <p className="text-[10px] text-slate-400 font-medium text-center mt-2 border-b border-slate-800/50 pb-2 mb-2">Punteggio al termine dei 90' o 120' minuti (esclusi rigori).</p>
                      <div className="flex items-center gap-4 justify-center pt-1">
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-amber-500 focus:border-amber-500 outline-none shadow-inner" placeholder="0" />
-                        <span className="text-2xl font-black text-slate-600">-</span>
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-amber-500 focus:border-amber-500 outline-none shadow-inner" placeholder="0" />
+                        <div className="flex flex-col items-center gap-2">
+                           <img src={getFileFlag('Inghilterra')!} className="w-8 h-5 object-cover rounded shadow-sm border border-slate-700" alt="ENG"/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_home_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-amber-500 focus:border-amber-500 outline-none shadow-inner" placeholder="0" />
+                        </div>
+                        <span className="text-2xl font-black text-slate-600 mt-6">-</span>
+                        <div className="flex flex-col items-center gap-2">
+                           <img src={getFileFlag('Francia')!} className="w-8 h-5 object-cover rounded shadow-sm border border-slate-700" alt="FRA"/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_away_score: e.target.value})} className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 border border-slate-700 rounded-2xl text-center text-3xl font-black text-amber-500 focus:border-amber-500 outline-none shadow-inner" placeholder="0" />
+                        </div>
                      </div>
                   </div>
 
@@ -795,9 +823,15 @@ export default function BracketPage() {
                         <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
                       <div className="flex items-center gap-2 justify-center">
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_ht_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_ht_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <img src={getFileFlag('Inghilterra')!} className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_ht_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_ht_home_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none pl-6" placeholder="0" />
+                        </div>
                         <span className="font-bold text-slate-600">-</span>
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_ht_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_ht_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_ht_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_ht_away_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none pr-6" placeholder="0" />
+                           <img src={getFileFlag('Francia')!} className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                        </div>
                       </div>
                     </div>
 
@@ -807,9 +841,15 @@ export default function BracketPage() {
                         <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
                       <div className="flex items-center gap-2 justify-center">
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_2nd_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_2nd_home_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <img src={getFileFlag('Inghilterra')!} className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_2nd_home_score} onChange={e => setFinalePrediction({...finalePrediction, f34_2nd_home_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none pl-6" placeholder="0" />
+                        </div>
                         <span className="font-bold text-slate-600">-</span>
-                        <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_2nd_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_2nd_away_score: e.target.value})} className="w-12 h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none" placeholder="0" />
+                        <div className="relative w-1/2">
+                           <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_2nd_away_score} onChange={e => setFinalePrediction({...finalePrediction, f34_2nd_away_score: e.target.value})} className="w-full h-12 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-black text-white focus:border-amber-500 outline-none pr-6" placeholder="0" />
+                           <img src={getFileFlag('Francia')!} className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-3 object-cover rounded-[2px] opacity-70" alt=""/>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -840,9 +880,9 @@ export default function BracketPage() {
                         </div>
                         <select disabled={isFinaleExpired} value={finalePrediction.f34_first_to_score} onChange={e => setFinalePrediction({...finalePrediction, f34_first_to_score: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 cursor-pointer">
                           <option value="">-- Scegli Squadra --</option>
-                          <option value="Inghilterra">Inghilterra</option>
-                          <option value="Francia">Francia</option>
-                          <option value="Nessuno">Nessun Gol (0-0)</option>
+                          <option value="Inghilterra">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra</option>
+                          <option value="Francia">🇫🇷 Francia</option>
+                          <option value="Nessuno">❌ Nessun Gol (0-0)</option>
                         </select>
                       </div>
                       <div className="space-y-1">
@@ -868,7 +908,7 @@ export default function BracketPage() {
                         <label className="text-[10px] font-black text-slate-300 uppercase">Minuto 1° Gol</label>
                         <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-black">+10 PT</span>
                       </div>
-                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se non si segna, lascia vuoto o 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-yellow-500 text-center" />
+                      <input type="number" disabled={isFinaleExpired} value={finalePrediction.f34_first_goal_minute} onChange={e => setFinalePrediction({...finalePrediction, f34_first_goal_minute: e.target.value})} placeholder="Es: 15 (Se non si segna, lascia vuoto o 0)" className="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-xl text-xs font-black text-white outline-none focus:border-amber-500 text-center" />
                     </div>
                   </div>
 

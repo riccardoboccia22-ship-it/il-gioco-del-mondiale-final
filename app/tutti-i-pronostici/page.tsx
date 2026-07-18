@@ -10,9 +10,8 @@ import {
 } from 'lucide-react';
 
 const WORLD_CUP_START_DATE = new Date('2026-06-11T21:00:00+02:00');
-const FINALE_START_DATE = new Date('2026-07-18T23:00:00+02:00'); // Aggiornato a Sabato ore 23:00
+const FINALE_START_DATE = new Date('2026-07-18T23:00:00+02:00'); 
 
-// Punteggi assegnati per ogni fase
 const STAGE_POINTS: { [key: string]: number } = { R32: 2, R16: 4, QF: 6, SF: 8, F: 10, WINNER: 20 };
 const STAGE_CAPACITY: { [key: string]: number } = { R32: 32, R16: 16, QF: 8, SF: 4, F: 2, WINNER: 1 };
 const STAGE_LABELS: Record<string, string> = { R32: 'Sedicesimi', R16: 'Ottavi', QF: 'Quarti', SF: 'Semifinali', F: 'Finale', WINNER: 'Campione' };
@@ -63,7 +62,6 @@ const BRACKET_ROUNDS: { id: BracketStageType, title: string }[] = [
   { id: 'WINNER', title: 'CAMPIONE' }
 ];
 
-// Mappa esatta degli incroci del Tabellone per calcolare le sfide in tempo reale
 const BRACKET_LINKS = [
   { stage1: ['R32_SEDICESIMI_1E', 'R32_SEDICESIMI_3M1'], winner: 'R16_OTTAVI_V1' },
   { stage1: ['R32_SEDICESIMI_1I', 'R32_SEDICESIMI_3M2'], winner: 'R16_OTTAVI_V2' },
@@ -264,7 +262,7 @@ const fetchAllRecords = async (table: string, orderCol1?: string, orderCol2?: st
 
 export default function TuttiPronosticiPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'BONUS' | 'STATS'>('BRACKET');
+  const [activeTab, setActiveTab] = useState<'GIRONI' | 'BRACKET' | 'FINALE' | 'BONUS' | 'STATS'>('BRACKET');
   const [gironiViewMode, setGironiViewMode] = useState<'CHRONO' | 'GROUP'>('CHRONO');
   const [bracketViewMode, setBracketViewMode] = useState<'TREE' | 'MATCHES' | 'LIST'>('TREE');
   
@@ -415,11 +413,17 @@ export default function TuttiPronosticiPage() {
     );
   }, [data.profiles, searchQuery]);
 
-  const getAggregatedMatchPicks = (matchId: number) => {
+  // Modificato per gestire lo swap visuale per la partita del terzo posto
+  const getAggregatedMatchPicks = (match: any) => {
+    const isSwapped = cleanString(match.home_team) === 'inghilterra' && cleanString(match.away_team) === 'francia';
     const agg: Record<string, { users: any[], predObj: any }> = {};
+    
     filteredProfiles.forEach((p: any) => {
-      const pred = data.predictionsMap[matchId]?.[p.id];
-      const resKey = (pred && pred.home_score !== null && pred.away_score !== null) ? `${pred.home_score} - ${pred.away_score}` : 'Nessun pronostico';
+      const pred = data.predictionsMap[match.id]?.[p.id];
+      let resKey = 'Nessun pronostico';
+      if (pred && pred.home_score !== null && pred.away_score !== null) {
+         resKey = isSwapped ? `${pred.away_score} - ${pred.home_score}` : `${pred.home_score} - ${pred.away_score}`;
+      }
       if (!agg[resKey]) agg[resKey] = { users: [], predObj: pred };
       agg[resKey].users.push(p);
     });
@@ -708,9 +712,17 @@ export default function TuttiPronosticiPage() {
     { id: 'F', title: 'FINALE', matches: BRACKET_MATCHES.F },
   ];
 
+  // Modificato per gestire lo swap visuale per la partita del terzo posto nel tab Partite
   const renderMatchCard = (match: any) => {
-    const hFlag = getFlagUrl(match.home_team);
-    const aFlag = getFlagUrl(match.away_team);
+    const isSwapped = cleanString(match.home_team) === 'inghilterra' && cleanString(match.away_team) === 'francia';
+    
+    const displayHome = isSwapped ? match.away_team : match.home_team;
+    const displayAway = isSwapped ? match.home_team : match.away_team;
+    const displayHomeScore = isSwapped ? match.away_score_final : match.home_score_final;
+    const displayAwayScore = isSwapped ? match.home_score_final : match.away_score_final;
+
+    const hFlag = getFlagUrl(displayHome);
+    const aFlag = getFlagUrl(displayAway);
     const isExpanded = expandedMatch === match.id;
     const isFinished = match.is_finished && match.home_score_final !== null;
 
@@ -726,15 +738,15 @@ export default function TuttiPronosticiPage() {
 
           <div className="flex-1 flex items-center justify-center gap-2 sm:gap-4 w-full">
             <div className="flex flex-1 items-center justify-end gap-2 text-right min-w-0">
-              <span className="font-black uppercase italic text-[10px] sm:text-xs tracking-tight truncate">{formatTeamName(match.home_team)}</span>
+              <span className="font-black uppercase italic text-[10px] sm:text-xs tracking-tight truncate">{formatTeamName(displayHome)}</span>
               {hFlag ? <img src={hFlag} className="w-6 h-4 rounded-sm shadow-md object-cover" alt="" /> : <Shield size={16} className="text-slate-600" />}
             </div>
             <div className="w-14 sm:w-16 shrink-0 text-center bg-slate-950 py-1.5 rounded-xl font-black text-yellow-500 border border-slate-800 text-xs sm:text-base shadow-inner">
-              {isFinished ? `${match.home_score_final}-${match.away_score_final}` : 'VS'}
+              {isFinished ? `${displayHomeScore}-${displayAwayScore}` : 'VS'}
             </div>
             <div className="flex flex-1 items-center justify-start gap-2 text-left min-w-0">
               {aFlag ? <img src={aFlag} className="w-6 h-4 rounded-sm shadow-md object-cover" alt="" /> : <Shield size={16} className="text-slate-600" />}
-              <span className="font-black uppercase italic text-[10px] sm:text-xs tracking-tight truncate">{formatTeamName(match.away_team)}</span>
+              <span className="font-black uppercase italic text-[10px] sm:text-xs tracking-tight truncate">{formatTeamName(displayAway)}</span>
             </div>
           </div>
           <div className="hidden sm:flex w-16 justify-end">
@@ -744,7 +756,7 @@ export default function TuttiPronosticiPage() {
 
         {isExpanded && (
           <div className="bg-slate-950/80 p-4 space-y-3 border-t border-slate-800/50">
-            {getAggregatedMatchPicks(match.id).map(([resKey, group]: any, idx) => {
+            {getAggregatedMatchPicks(match).map(([resKey, group]: any, idx) => {
               const info = getMatchResultInfo(group.predObj, match);
               const isUnset = resKey === 'Nessun pronostico';
               const isMe = group.users.some((u: any) => u.username === data.currentUserUsername);
@@ -818,7 +830,7 @@ export default function TuttiPronosticiPage() {
      return rankA - rankB;
   });
 
-  // LOGICA AGGREGAZIONE DOPPIA SCHEDA (Sabato e Domenica)
+  // LOGICA AGGREGAZIONE DOPPIA SCHEDA (Sabato e Domenica) - OTTIMIZZATA
   const getAggregatedFinalePicks = () => {
     const agg: Record<string, { users: any[], count: number, details: any }> = {};
 
@@ -828,30 +840,30 @@ export default function TuttiPronosticiPage() {
 
       if (activeFinaleTab === 'SUNDAY') {
         if (pred.home_score == null || pred.away_score == null) return;
-        const camp = formatTeamName(pred.champion_team || '');
-        const score = `${pred.home_score}-${pred.away_score}`;
+        
+        const score = `${pred.home_score} - ${pred.away_score}`;
         let meth = '';
-        if (pred.ending_method === 'REGULAR') meth = '90\'';
-        if (pred.ending_method === 'OVERTIME') meth = 'Suppl.';
+        if (pred.ending_method === 'REGULAR') meth = 'Nei 90\'';
+        if (pred.ending_method === 'OVERTIME') meth = 'Supplementari';
         if (pred.ending_method === 'PENALTIES') meth = 'Rigori';
 
-        const key = `${camp}_${score}_${meth}`;
+        const key = `12_${score}_${meth}`;
         if (!agg[key]) {
-          agg[key] = { users: [], count: 0, details: { camp, score, meth, flag: getFlagUrl(camp) } };
+          agg[key] = { users: [], count: 0, details: { score, meth, flag: null } };
         }
         agg[key].users.push({ ...p, minute: pred.first_goal_minute });
         agg[key].count += 1;
       } else {
         if (pred.f34_home_score == null || pred.f34_away_score == null) return;
-        const score = `${pred.f34_home_score}-${pred.f34_away_score}`;
+        const score = `${pred.f34_away_score} - ${pred.f34_home_score}`;
         let meth = '';
-        if (pred.f34_ending_method === 'REGULAR') meth = '90\'';
-        if (pred.f34_ending_method === 'OVERTIME') meth = 'Suppl.';
+        if (pred.f34_ending_method === 'REGULAR') meth = 'Nei 90\'';
+        if (pred.f34_ending_method === 'OVERTIME') meth = 'Supplementari';
         if (pred.f34_ending_method === 'PENALTIES') meth = 'Rigori';
 
         const key = `34_${score}_${meth}`;
         if (!agg[key]) {
-          agg[key] = { users: [], count: 0, details: { camp: 'Finale 3°/4° Posto', score, meth, flag: null } };
+          agg[key] = { users: [], count: 0, details: { score, meth, flag: null } };
         }
         agg[key].users.push({ ...p, minute: pred.f34_first_goal_minute });
         agg[key].count += 1;
@@ -862,6 +874,19 @@ export default function TuttiPronosticiPage() {
   };
 
   const aggregatedFinalePicks = getAggregatedFinalePicks();
+
+  // Generiamo l'array dei Tab in modo dinamico
+  const tabsArr = [
+    { id: 'GIRONI', icon: <LayoutGrid size={14} /> },
+    { id: 'BRACKET', icon: <GitMerge size={14} /> },
+  ];
+  if (isFinaleActive) {
+    tabsArr.push({ id: 'FINALE', icon: <Trophy size={14} /> });
+  }
+  tabsArr.push(
+    { id: 'BONUS', icon: <Star size={14} /> },
+    { id: 'STATS', icon: <Activity size={14} /> }
+  );
 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-4 pb-32 font-sans overflow-x-hidden">
@@ -880,23 +905,19 @@ export default function TuttiPronosticiPage() {
           />
         </div>
 
-        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mt-6 max-w-[400px] mx-auto overflow-x-auto custom-scrollbar">
-          {[
-            { id: 'GIRONI', icon: <LayoutGrid size={14} /> },
-            { id: 'BRACKET', icon: <Trophy size={14} /> },
-            { id: 'BONUS', icon: <Star size={14} /> },
-            { id: 'STATS', icon: <Activity size={14} /> },
-          ].map((tab: any) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl text-[10px] font-black transition-all whitespace-nowrap min-w-max ${activeTab === tab.id ? 'bg-yellow-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'}`}>
+        {/* BARRA DEI TAB DINAMICA */}
+        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-slate-800 mt-6 max-w-[450px] mx-auto overflow-x-auto custom-scrollbar">
+          {tabsArr.map((tab: any) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl text-[10px] font-black transition-all whitespace-nowrap min-w-max ${activeTab === tab.id ? 'bg-yellow-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-white'}`}>
               {tab.icon} {tab.id}
             </button>
           ))}
         </div>
       </header>
 
-      {/* --- SEZIONE "LA FINALE" IN CIMA SE ATTIVA --- */}
-      {isFinaleActive && (
-        <div className="max-w-4xl mx-auto mb-8 px-2 sm:px-0">
+      {/* --- SEZIONE "LA FINALE" ORA VISIBILE SOLO SE SELEZIONATA NEL TAB --- */}
+      {activeTab === 'FINALE' && isFinaleActive && (
+        <div className="max-w-4xl mx-auto space-y-6">
           <div className="bg-slate-900 border-2 border-yellow-500/50 rounded-[2rem] overflow-hidden shadow-[0_0_30px_rgba(234,179,8,0.1)] relative">
             <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 p-4 text-center border-b border-yellow-400/50">
               <h2 className="text-xl sm:text-2xl font-black text-slate-950 uppercase italic tracking-tighter flex items-center justify-center gap-2">
@@ -912,8 +933,8 @@ export default function TuttiPronosticiPage() {
                 className={`flex-1 py-3 px-2 font-black uppercase tracking-wider text-[10px] sm:text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SUNDAY' ? 'bg-yellow-500 text-slate-950 rounded-xl shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl'}`}
               >
                 <Trophy size={16} className={activeFinaleTab === 'SUNDAY' ? 'text-slate-950' : 'text-yellow-500'} />
-                <span className="hidden sm:inline">1°/2° Posto (Dom 19/07)</span>
-                <span className="sm:hidden">1°/2° P.</span>
+                <span className="hidden sm:inline">1°/2° Spagna - Argentina</span>
+                <span className="sm:hidden">1°/2° ESP-ARG</span>
               </button>
               <button
                 type="button"
@@ -921,8 +942,8 @@ export default function TuttiPronosticiPage() {
                 className={`flex-1 py-3 px-2 font-black uppercase tracking-wider text-[10px] sm:text-xs flex items-center justify-center gap-2 transition-all ${activeFinaleTab === 'SATURDAY' ? 'bg-amber-600 text-white rounded-xl shadow-md' : 'text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl'}`}
               >
                 <Medal size={16} className={activeFinaleTab === 'SATURDAY' ? 'text-white' : 'text-amber-500'} />
-                <span className="hidden sm:inline">3°/4° Posto (Sab 18/07)</span>
-                <span className="sm:hidden">3°/4° P.</span>
+                <span className="hidden sm:inline">3°/4° Francia - Inghilterra</span>
+                <span className="sm:hidden">3°/4° FRA-ENG</span>
               </button>
             </div>
             
@@ -944,20 +965,19 @@ export default function TuttiPronosticiPage() {
                         
                         <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-3">
                           <div className="flex items-center gap-3">
-                            {pick.details.flag ? (
-                               <img src={pick.details.flag} className="w-8 h-5 object-cover rounded shadow-md border border-slate-700" alt=""/> 
+                            {activeFinaleTab === 'SUNDAY' ? (
+                               <Trophy size={24} className="text-yellow-500"/>
                             ) : (
                                <Medal size={24} className="text-amber-600"/>
                             )}
                             <div className="flex flex-col">
-                              <span className="text-sm font-black uppercase italic text-white leading-none mb-1">{pick.details.camp}</span>
-                              <div className="flex gap-2 text-[10px] font-black uppercase tracking-wider">
-                                <span className={activeFinaleTab === 'SUNDAY' ? 'text-yellow-500' : 'text-amber-500'}>Ris: {pick.details.score}</span>
-                                <span className="text-slate-500">({pick.details.meth})</span>
-                              </div>
+                              <span className="text-2xl font-black italic text-white leading-none mb-1">{pick.details.score}</span>
+                              <span className={`text-[10px] font-black uppercase tracking-wider ${activeFinaleTab === 'SUNDAY' ? 'text-yellow-500/70' : 'text-amber-500/70'}`}>
+                                 Esito: {pick.details.meth}
+                              </span>
                             </div>
                           </div>
-                          <div className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner text-center shrink-0">
+                          <div className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner text-center shrink-0 h-fit">
                             <span className="text-slate-400 font-black text-[10px] block leading-none">{pick.count}</span>
                             <span className="text-slate-600 font-bold uppercase text-[7px] tracking-widest">Scelte</span>
                           </div>
@@ -983,7 +1003,7 @@ export default function TuttiPronosticiPage() {
 
       <div className="max-w-4xl mx-auto space-y-6">
         
-        {/* --- 1. GIRONI --- */}
+        {/* --- 1. GIRONI E RESTANTI MATCH --- */}
         {activeTab === 'GIRONI' && (
           <div className="space-y-6 max-w-2xl mx-auto">
              <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 mb-6 mx-auto">
