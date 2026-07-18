@@ -819,7 +819,8 @@ export default function LeaderboardPage() {
         {viewMode === 'FINALE' && (
           <div className="animate-in fade-in duration-300">
             <div className="flex px-4 sm:px-6 mb-4 text-[8px] sm:text-[9px] font-black text-slate-600 uppercase tracking-widest italic border-b border-slate-800/50 pb-2">
-              <div className="flex-1 pl-4">Giocatore a Jackpot</div>
+              {/* Padding allineato per fare spazio alle medaglie */}
+              <div className="flex-1 pl-14 sm:pl-16">Giocatore a Jackpot</div>
               <div className="w-16 sm:w-20 text-right text-yellow-500 pr-2">Punti Jkpt</div>
             </div>
 
@@ -827,10 +828,17 @@ export default function LeaderboardPage() {
               {filteredFinaleLeaderboard.map((player, idx) => {
                 const currentAvatar = AVATARS.find(a => a.id === player.avatar_id) || AVATARS[0];
                 const isLeader = idx === 0;
+                const currentRank = idx + 1; // Calcola la posizione in tempo reale
                 
                 return (
                   <div key={player.id} onClick={() => handlePlayerClick(player, 'FINALE')} className={`flex items-center p-4 sm:p-5 rounded-[2rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${isLeader ? 'bg-gradient-to-r from-amber-500/10 to-slate-900/40 border-amber-500/40 shadow-2xl shadow-amber-500/5 hover:scale-[1.02]' : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-800/80 hover:border-slate-700'}`}>
                     <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
+                      
+                      {/* BOX POSIZIONE AGGIUNTO */}
+                      <div className="w-12 sm:w-14 flex items-center justify-center shrink-0 bg-slate-950/80 p-2 rounded-xl border border-slate-800/80 shadow-inner">
+                        {getRankIcon(currentRank)}
+                      </div>
+
                       <div className="flex items-center gap-3 min-w-0 flex-1 pr-1">
                         <div className={`w-10 sm:w-12 h-10 sm:h-12 shrink-0 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-inner overflow-hidden bg-gradient-to-br ${currentAvatar.color} border border-slate-800`} title={currentAvatar.name}>
                           {currentAvatar.flagCode ? <img src={`https://flagcdn.com/w80/${currentAvatar.flagCode}.png`} alt={currentAvatar.name} className="w-full h-full object-cover" /> : <span className="drop-shadow-md">{currentAvatar.emoji}</span>}
